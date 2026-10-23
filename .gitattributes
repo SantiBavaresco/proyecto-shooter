@@ -1,0 +1,27 @@
+# Fin de línea normalizado para texto
+* text=auto eol=lf
+
+# Archivos binarios (sin conversión de fin de línea)
+*.glb binary
+*.fbx binary
+*.obj binary
+*.blend binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.exr binary
+*.hdr binary
+*.ktx2 binary
+*.r16 binary
+*.raw binary
+*.wav binary
+*.ogg binary
+*.mp3 binary
+*.ttf binary
+*.otf binary
+*.res binary
+
+# Capturas de documentación: chicas, quedan en git normal
+docs/screenshots/*.png -filter -diff -merge binary
+docs/screenshots/*.jpg -filter -diff -merge binary

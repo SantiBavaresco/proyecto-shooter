@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="PlayerMovementConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/player_movement_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+walk_speed = 4.0
+sprint_speed = 6.5
+crouch_speed = 2.0
+air_control = 0.3
+ground_accel = 16.0
+ground_decel = 20.0
+jump_velocity = 4.6
+coyote_time = 0.12
+jump_buffer = 0.12
+stand_height = 1.8
+crouch_height = 1.1
+capsule_radius = 0.35
+eye_from_top = 0.14
+stance_lerp_speed = 10.0
+slide_start_speed = 8.5
+slide_duration = 0.85
+slide_min_entry_speed = 5.2
+slide_cooldown = 0.6
+slide_steer = 1.5
+lean_offset = 0.38
+lean_angle_deg = 11.0
+lean_speed = 6.0
+stamina_max = 100.0
+stamina_regen = 18.0
+stamina_regen_delay = 1.0
+stamina_recover_threshold = 25.0
+sprint_cost_per_sec = 12.0
+jump_cost = 10.0
+slide_cost = 15.0
+bob_frequency = 1.8
+bob_amplitude = 0.035
+sprint_fov_bonus = 4.0
+slide_fov_bonus = 7.0
+fov_lerp_speed = 8.0
