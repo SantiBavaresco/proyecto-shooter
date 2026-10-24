@@ -7,26 +7,68 @@ const MOUSE_BASE := 0.0022
 ## Radianes por segundo con el stick a fondo y sensibilidad 1.0.
 const STICK_BASE := 3.2
 
+const SLOT_ACTIONS: Array[String] = ["weapon_1", "weapon_2", "weapon_3", "weapon_4"]
+
 var _mouse_accum: Vector2 = Vector2.ZERO
+# Pulsaciones encoladas en _unhandled_input para no perderlas entre ticks de física.
 var _jump_queued: bool = false
+var _fire_queued: bool = false
+var _reload_queued: bool = false
+var _mode_queued: bool = false
+var _interact_queued: bool = false
+var _slot_queued: int = -1
+var _aim_state: bool = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		_mouse_accum += (event as InputEventMouseMotion).screen_relative
-	elif event.is_action_pressed("jump"):
-		# Se encola acá para no perder pulsaciones entre ticks de física.
+	if event is InputEventMouseMotion:
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			_mouse_accum += (event as InputEventMouseMotion).screen_relative
+		return
+	if event.is_echo():
+		return
+	if event.is_action_pressed("jump"):
 		_jump_queued = true
+	if event.is_action_pressed("fire"):
+		_fire_queued = true
+	if event.is_action_pressed("reload"):
+		_reload_queued = true
+	if event.is_action_pressed("fire_mode"):
+		_mode_queued = true
+	if event.is_action_pressed("interact"):
+		_interact_queued = true
+	for i in SLOT_ACTIONS.size():
+		if event.is_action_pressed(SLOT_ACTIONS[i]):
+			_slot_queued = i + 1
+	if event.is_action("aim"):
+		var toggle: bool = Settings.get_value("controls", "aim_toggle")
+		if toggle:
+			if event.is_pressed():
+				_aim_state = not _aim_state
+		else:
+			_aim_state = event.is_pressed()
 
 
 func poll_command(_delta: float) -> PlayerCommand:
 	var cmd := PlayerCommand.new()
 	cmd.move = Input.get_vector("move_left", "move_right", "move_back", "move_forward")
 	cmd.jump = _jump_queued
-	_jump_queued = false
 	cmd.sprint = Input.is_action_pressed("sprint")
 	cmd.crouch = Input.is_action_pressed("crouch")
 	cmd.lean = Input.get_action_strength("lean_right") - Input.get_action_strength("lean_left")
+	cmd.fire = Input.is_action_pressed("fire")
+	cmd.fire_pressed = _fire_queued
+	cmd.aim = _aim_state
+	cmd.reload = _reload_queued
+	cmd.fire_mode = _mode_queued
+	cmd.interact = _interact_queued
+	cmd.weapon_slot = _slot_queued
+	_jump_queued = false
+	_fire_queued = false
+	_reload_queued = false
+	_mode_queued = false
+	_interact_queued = false
+	_slot_queued = -1
 	return cmd
 
 
@@ -39,3 +81,7 @@ func consume_look(delta: float) -> Vector2:
 	if Settings.get_value("controls", "invert_y"):
 		look.y = -look.y
 	return look
+
+
+func cancel_aim() -> void:
+	_aim_state = false

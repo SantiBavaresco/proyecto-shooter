@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="DamageModel" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/damage_model.gd" id="1_dm"]
+
+[resource]
+script = ExtResource("1_dm")
+head = 2.5
+torso = 1.0
+limb = 0.6
+weak_point = 2.0

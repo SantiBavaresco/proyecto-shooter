@@ -34,6 +34,18 @@ var capsule_height: float = 1.8
 ## Altura de ojos suavizada (la cámara baja/sube con transición).
 var eye_height: float = 1.66
 var is_sprinting: bool = false
+## Armas del jugador (se crean en _ready).
+var weapons: WeaponController
+## Rotación de mirada aplicada en el último frame (la usa el balanceo del arma).
+var last_look: Vector2 = Vector2.ZERO
+
+# Retroceso: lo que falta aplicar de la patada, lo acumulado en la ráfaga
+# y lo que la cámara recupera sola al soltar el gatillo.
+var _recoil_pending: Vector2 = Vector2.ZERO
+var _recoil_accum: Vector2 = Vector2.ZERO
+var _recoil_recover: Vector2 = Vector2.ZERO
+var _recoil_recovery_frac: float = 0.6
+var _since_recoil: float = 999.0
 
 var _coyote: float = 0.0
 var _jump_buffer: float = 0.0
@@ -72,6 +84,10 @@ func _ready() -> void:
 		human.name = "HumanInput"
 		add_child(human)
 		input_provider = human
+	weapons = WeaponController.new()
+	weapons.name = "Weapons"
+	add_child(weapons)
+	weapons.setup(self)
 	_update_head_transform()
 	EventBus.player_spawned.emit(self)
 	EventBus.stamina_changed.emit(stamina.current, stamina.maximum)
@@ -100,12 +116,47 @@ func teleport(pos: Vector3, facing_yaw: float = NAN) -> void:
 
 func _process(delta: float) -> void:
 	var look := input_provider.consume_look(delta)
+	last_look = look
 	yaw = wrapf(yaw - look.x, -PI, PI)
 	pitch_angle = clampf(pitch_angle - look.y, -PITCH_LIMIT, PITCH_LIMIT)
+	_update_recoil(delta)
 	eye_height = lerpf(eye_height, _target_eye_height(), 1.0 - exp(-config.stance_lerp_speed * delta))
 	_update_lean(delta)
 	_update_camera_effects(delta)
 	_update_head_transform()
+
+
+## Patada de retroceso: sube la mira (pitch) y la desvía (yaw), en radianes.
+## `recovery` es la fracción que la cámara recupera sola al dejar de disparar.
+func apply_recoil(pitch: float, yaw_kick: float, recovery: float) -> void:
+	_recoil_pending += Vector2(yaw_kick, pitch)
+	_recoil_recovery_frac = recovery
+	_since_recoil = 0.0
+	_recoil_recover = Vector2.ZERO
+
+
+func _update_recoil(delta: float) -> void:
+	_since_recoil += delta
+	# La patada se aplica en ~50 ms para que no sea un salto seco
+	if _recoil_pending.length_squared() > 0.0:
+		var step := _recoil_pending * minf(1.0, delta * 28.0)
+		if _recoil_pending.length() < 0.0005:
+			step = _recoil_pending
+		_recoil_pending -= step
+		_recoil_accum += step
+		yaw = wrapf(yaw - step.x, -PI, PI)
+		pitch_angle = clampf(pitch_angle + step.y, -PITCH_LIMIT, PITCH_LIMIT)
+	# Al dejar de disparar, la cámara vuelve una parte hacia donde apuntabas
+	if _since_recoil > 0.12 and _recoil_accum.length_squared() > 0.0:
+		_recoil_recover = _recoil_accum * _recoil_recovery_frac
+		_recoil_accum = Vector2.ZERO
+	if _recoil_recover.length_squared() > 0.0:
+		var back := _recoil_recover * minf(1.0, delta * 7.0)
+		if _recoil_recover.length() < 0.0003:
+			back = _recoil_recover
+		_recoil_recover -= back
+		yaw = wrapf(yaw + back.x, -PI, PI)
+		pitch_angle = clampf(pitch_angle - back.y, -PITCH_LIMIT, PITCH_LIMIT)
 
 
 func _update_head_transform() -> void:
@@ -142,7 +193,7 @@ func _lean_free_space(side: float) -> float:
 
 func _update_camera_effects(delta: float) -> void:
 	var base_fov: float = Settings.get_value("video", "fov")
-	var target_fov := base_fov
+	var target_fov := base_fov * (weapons.fov_mult() if weapons != null else 1.0)
 	if stance == Stance.SLIDING:
 		target_fov += config.slide_fov_bonus
 	elif is_sprinting:
@@ -150,7 +201,7 @@ func _update_camera_effects(delta: float) -> void:
 	camera.fov = lerpf(camera.fov, target_fov, 1.0 - exp(-config.fov_lerp_speed * delta))
 
 	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
-	var bob_on: bool = Settings.get_value("controls", "head_bob")
+	var bob_on: bool = Settings.get_value("controls", "head_bob") and (weapons == null or weapons.ads_amount < 0.5)
 	if bob_on and is_on_floor() and horizontal_speed > 0.5 and stance != Stance.SLIDING:
 		_bob_time += delta * config.bob_frequency * TAU * (horizontal_speed / config.walk_speed) * 0.5
 		var amp := config.bob_amplitude * clampf(horizontal_speed / config.walk_speed, 0.0, 1.6)
@@ -211,6 +262,9 @@ func _physics_process(delta: float) -> void:
 		EventBus.player_landed.emit(-_prev_vel_y)
 	_was_on_floor = now_on_floor
 
+	if weapons != null:
+		weapons.physics_tick(cmd, delta)
+
 	_stamina_emit_accum += delta
 	if _stamina_emit_accum >= 0.05:
 		_stamina_emit_accum = 0.0
@@ -226,14 +280,16 @@ func _wish_direction(cmd: PlayerCommand) -> Vector3:
 func _can_sprint(cmd: PlayerCommand, on_floor: bool) -> bool:
 	return cmd.sprint and stance == Stance.STANDING and on_floor \
 		and cmd.move.y > 0.3 and stamina.can_sprint() and absf(lean_amount) < 0.2
+	# Correr cancela el apuntado (lo resuelve WeaponController).
 
 
 func _target_speed() -> float:
 	match stance:
 		Stance.CROUCHING:
-			return config.crouch_speed
+			return config.crouch_speed * (weapons.move_speed_mult() if weapons != null else 1.0)
 		_:
-			return config.sprint_speed if is_sprinting else config.walk_speed
+			var base := config.sprint_speed if is_sprinting else config.walk_speed
+			return base * (weapons.move_speed_mult() if weapons != null and not is_sprinting else 1.0)
 
 
 func _try_jump() -> bool:
@@ -345,4 +401,6 @@ func get_debug_info() -> Dictionary:
 		"Estamina": "%.0f / %.0f%s" % [stamina.current, stamina.maximum, " (agotado)" if stamina.exhausted else ""],
 		"En el piso": is_on_floor(),
 		"Inclinación": "%.2f" % lean_amount,
+		"Arma": "%s · %s" % [tr(weapons.current_data().name_key), WeaponController.State.keys()[weapons.state]] if weapons != null else "-",
+		"Apuntado": "%.2f" % (weapons.ads_amount if weapons != null else 0.0),
 	}

@@ -36,6 +36,7 @@ const DEFAULTS: Dictionary = {
 	"fire": [{"mouse": MOUSE_BUTTON_LEFT}, {"joy_axis": JOY_AXIS_TRIGGER_RIGHT, "dir": 1.0}],
 	"aim": [{"mouse": MOUSE_BUTTON_RIGHT}, {"joy_axis": JOY_AXIS_TRIGGER_LEFT, "dir": 1.0}],
 	"reload": [{"key": KEY_R}, {"joy_button": JOY_BUTTON_X}],
+	"fire_mode": [{"key": KEY_B}],
 	"interact": [{"key": KEY_F}, {"joy_button": JOY_BUTTON_X}],
 	"weapon_1": [{"key": KEY_1}],
 	"weapon_2": [{"key": KEY_2}],
@@ -57,6 +58,8 @@ const DEFAULTS: Dictionary = {
 	# Desarrollo
 	"debug_overlay": [{"key": KEY_F1}],
 	"bug_report": [{"key": KEY_F12}],
+	"debug_trajectories": [{"key": KEY_F3}],
+	"debug_infinite_ammo": [{"key": KEY_F4}],
 }
 
 ## Acciones que el jugador puede remapear desde Opciones (teclado/mouse),
@@ -64,7 +67,7 @@ const DEFAULTS: Dictionary = {
 const REBINDABLE: Array[String] = [
 	"move_forward", "move_back", "move_left", "move_right",
 	"jump", "sprint", "crouch", "lean_left", "lean_right",
-	"fire", "aim", "reload", "interact",
+	"fire", "aim", "reload", "fire_mode", "interact",
 	"weapon_1", "weapon_2", "weapon_3", "weapon_4",
 	"grenade", "melee", "quick_1", "quick_2", "quick_3", "quick_4",
 	"inventory", "pda", "flashlight", "detector",

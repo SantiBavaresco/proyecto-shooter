@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "shotgun"
+name_key = "weapon.shotgun"
+slot = 2
+model = "shotgun"
+sight = "bead"
+fire_modes = PackedStringArray("semi")
+rpm = 400.0
+damage = 11.0
+pellets = 9
+muzzle_velocity = 400.0
+drag = 0.0095
+max_ricochets = 1
+tracer_every = 0
+mag_size = 2
+start_reserve = 24
+spread_hip = 1.6
+spread_ads = 1.0
+pellet_spread = 2.2
+spread_move_mult = 1.4
+spread_air_mult = 2.0
+spread_crouch_mult = 0.9
+recoil_pitch = 5.0
+recoil_yaw = 1.2
+recoil_recovery = 0.7
+kick_back = 0.09
+kick_rot = 10.0
+recoil_ads_mult = 0.8
+reload_time = 1.6
+reload_time_empty = 2.3
+ads_time = 0.23
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.88
+sfx_tail = 0.6
+sfx_body_hz = 55.0
+sfx_volume_db = 1.0

@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "pistol"
+name_key = "weapon.pistol"
+slot = 3
+model = "pistol"
+sight = "iron"
+fire_modes = PackedStringArray("semi")
+rpm = 420.0
+damage = 26.0
+pellets = 1
+muzzle_velocity = 360.0
+drag = 0.0012
+max_ricochets = 2
+tracer_every = 0
+mag_size = 13
+start_reserve = 52
+spread_hip = 1.8
+spread_ads = 0.35
+pellet_spread = 0.0
+spread_move_mult = 1.6
+spread_air_mult = 2.5
+spread_crouch_mult = 0.8
+recoil_pitch = 1.6
+recoil_yaw = 0.5
+recoil_recovery = 0.75
+kick_back = 0.035
+kick_rot = 6.0
+recoil_ads_mult = 0.75
+reload_time = 1.5
+reload_time_empty = 1.9
+ads_time = 0.17
+draw_time = 0.3
+holster_time = 0.18
+ads_fov_mult = 0.9
+eye_relief = 0.55
+sfx_tail = 0.25
+sfx_body_hz = 110.0
+sfx_volume_db = -3.0

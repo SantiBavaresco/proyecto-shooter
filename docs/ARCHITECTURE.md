@@ -56,3 +56,23 @@ Player (CharacterBody3D, origen en los pies)
 - `TestCase` (base) con asserts y esperas por frames.
 - `BotInputProvider` maneja al jugador real en la pista de pruebas.
 - Correr con `--fixed-fps 60`: cada frame avanza exactamente 1/60 s, así los tests son deterministas y rápidos.
+
+## Combate (F1)
+
+```
+Player
+└─ Weapons (WeaponController)
+   ├─ lógica en physics_tick(cmd): estados READY / RELOADING / HOLSTER / DRAW, disparo, apuntado
+   └─ ViewmodelLayer (CanvasLayer 1) → SubViewport (mundo propio)
+      ├─ Camera3D (FOV 62 → 52 apuntando), luces, ambiente
+      └─ Rig → modelos de armas (WeaponModelBuilder)
+
+CombatWorld (uno por nivel, grupo "combat_world")
+├─ proyectiles (Projectile): integración + raycast por tramo + rebotes
+└─ pools: marcas, partículas, trazadoras, casquillos, sonidos 3D, luz de fogonazo
+```
+
+- Datos: `WeaponData` (`data/weapons`), `DamageModel` (`data/combat`), superficies en `core/combat/surface.gd`.
+- Recibir daño: cualquier nodo con `apply_hit(info: HitInfo) -> bool` (devuelve true si fue derribado). La zona sale de la metadata `hit_zone` del cuerpo golpeado.
+- Interacción: cualquier nodo con `interact(player)` y `get_interact_text() -> String` (clave de traducción con `%s` para la tecla).
+- El jugador expone `apply_recoil(pitch, yaw, recovery)` y `last_look`; el arma expone `fov_mult()`, `move_speed_mult()`, `blocks_sprint()`.

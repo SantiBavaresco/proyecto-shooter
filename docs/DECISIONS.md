@@ -32,3 +32,21 @@ Con 9,8 m/s² el salto se sentía "como un papel" (prueba en tu PC). Ahora la su
 
 ## 2026-10-24 — Entregas como .exe
 Cada fase se entrega también como `Medoreador.exe` (preset "Windows" en `export_presets.cfg`, todo embebido en un solo archivo) para probar sin instalar Godot.
+
+## 2026-10-24 — Vista del arma en un SubViewport con mundo propio
+Godot no tiene "FOV de arma" ni capa sin profundidad nativa. Un SubViewport transparente con su propia cámara, luz y ambiente evita que el arma atraviese paredes y permite FOV independiente. La luz del arma copia la dirección del sol del nivel en espacio de cámara. Costo: un render extra de pocos objetos.
+
+## 2026-10-24 — Proyectiles simulados, no hitscan
+Cada bala se integra por tick (gravedad + resistencia cuadrática) con raycast por tramo. Permite caída, tiempo de vuelo, rebotes y, a futuro, penetración. Hasta 256 proyectiles simultáneos, vida máxima 3 s.
+
+## 2026-10-24 — Rebotes: ángulo crítico + probabilidad por material
+`core/combat/surface.gd`. El material se declara con metadata `surface` en el cuerpo físico. Solo rebota si el ángulo con la superficie es menor al crítico del material; la probabilidad baja linealmente con el ángulo.
+
+## 2026-10-24 — Daño proporcional a la velocidad remanente
+Simple y coherente con la caída de energía por distancia y por rebote. Se ajusta más adelante si hace falta (por ejemplo, curva por calibre).
+
+## 2026-10-24 — Escopeta doble caño, perdigones independientes
+Cada perdigón es un proyectil (9 por disparo). Dos disparos antes de recargar; mínimo 0,15 s entre caños.
+
+## 2026-10-24 — Sonidos sintéticos
+`core/audio/synth_sfx.gd` genera disparos, clicks, impactos y rebotes por código para que el juego no sea mudo. Se reemplazan por audio real en F8.

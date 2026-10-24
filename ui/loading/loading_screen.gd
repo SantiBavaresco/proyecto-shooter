@@ -5,7 +5,7 @@ extends Control
 const TitleBackground := preload("res://ui/title/title_background.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const MIN_TIME := 0.4
-const TIP_KEYS: Array[String] = ["tip.1", "tip.2", "tip.3", "tip.4", "tip.5"]
+const TIP_KEYS: Array[String] = ["tip.1", "tip.2", "tip.3", "tip.4", "tip.5", "tip.6"]
 
 var _bar: ProgressBar
 var _elapsed: float = 0.0

@@ -17,3 +17,8 @@ func poll_command(_delta: float) -> PlayerCommand:
 ## Se consume en _process (cada frame) para que la mirada no tenga latencia.
 func consume_look(_delta: float) -> Vector2:
 	return Vector2.ZERO
+
+
+## El juego pide salir del apuntado (ej. al correr o recargar con alternar).
+func cancel_aim() -> void:
+	pass

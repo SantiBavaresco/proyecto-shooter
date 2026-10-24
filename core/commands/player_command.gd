@@ -18,6 +18,20 @@ var crouch: bool = false
 ## Inclinación: −1 izquierda, 0 nada, +1 derecha.
 var lean: float = 0.0
 
+# --- Combate ---
+## Gatillo mantenido.
+var fire: bool = false
+## true solo en el tick en que se apretó el gatillo.
+var fire_pressed: bool = false
+## Estado de apuntado deseado (el proveedor resuelve alternar/mantener).
+var aim: bool = false
+var reload: bool = false
+var fire_mode: bool = false
+var interact: bool = false
+## Slot de arma pedido este tick (1–4) o −1.
+var weapon_slot: int = -1
+
 
 func _to_string() -> String:
-	return "PlayerCommand(move=%s jump=%s sprint=%s crouch=%s lean=%.1f)" % [move, jump, sprint, crouch, lean]
+	return "PlayerCommand(move=%s jump=%s sprint=%s crouch=%s lean=%.1f fire=%s aim=%s)" % [
+		move, jump, sprint, crouch, lean, fire, aim]

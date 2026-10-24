@@ -11,11 +11,13 @@ const DEFAULTS: Dictionary = {
 		"fullscreen": false,
 		"vsync": true,
 		"show_fps": false,
+		"show_hud": true,
 	},
 	"controls": {
 		"mouse_sensitivity": 1.0,
 		"invert_y": false,
 		"head_bob": true,
+		"aim_toggle": true,
 	},
 	"audio": {
 		"master": 1.0,

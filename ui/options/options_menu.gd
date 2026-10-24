@@ -103,6 +103,7 @@ func _video_tab() -> Control:
 	_add_check(grid, tr("options.fullscreen"), "video", "fullscreen")
 	_add_check(grid, tr("options.vsync"), "video", "vsync")
 	_add_check(grid, tr("options.show_fps"), "video", "show_fps")
+	_add_check(grid, tr("options.show_hud"), "video", "show_hud")
 	return grid.get_parent().get_parent()
 
 
@@ -111,6 +112,7 @@ func _controls_tab() -> Control:
 	_add_slider(grid, tr("options.mouse_sens"), "controls", "mouse_sensitivity", 0.05, "%.2f")
 	_add_check(grid, tr("options.invert_y"), "controls", "invert_y")
 	_add_check(grid, tr("options.head_bob"), "controls", "head_bob")
+	_add_check(grid, tr("options.aim_toggle"), "controls", "aim_toggle")
 
 	var header := Label.new()
 	header.text = tr("options.keybinds")

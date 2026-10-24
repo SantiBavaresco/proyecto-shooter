@@ -7,6 +7,10 @@ const REPORT_DIR := "user://bug_reports/"
 const LOG_TAIL_LINES := 80
 
 var overlay_visible: bool = false
+## Laboratorio: dibujar trayectorias de los proyectiles (F3).
+var show_trajectories: bool = false
+## Laboratorio: munición infinita (F4).
+var infinite_ammo: bool = false
 
 var _panel: PanelContainer
 var _label: Label
@@ -21,6 +25,7 @@ func _ready() -> void:
 	_build_ui()
 	overlay_visible = Settings.get_value("video", "show_fps")
 	_panel.visible = overlay_visible
+	_ready_toast_hook()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -30,6 +35,18 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("bug_report"):
 		save_bug_report()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("debug_trajectories"):
+		show_trajectories = not show_trajectories
+		_show_toast(tr("lab.trajectories") % _on_off(show_trajectories))
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("debug_infinite_ammo"):
+		infinite_ammo = not infinite_ammo
+		_show_toast(tr("lab.infinite_ammo") % _on_off(infinite_ammo))
+		get_viewport().set_input_as_handled()
+
+
+func _on_off(v: bool) -> String:
+	return tr("lab.on") if v else tr("lab.off")
 
 
 func _process(delta: float) -> void:
@@ -60,6 +77,8 @@ func build_overlay_text() -> String:
 		Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 		Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0])
 	lines.append("Estado %s" % GameState.state_name())
+	lines.append(tr("lab.trajectories") % _on_off(show_trajectories))
+	lines.append(tr("lab.infinite_ammo") % _on_off(infinite_ammo))
 	var player := get_tree().get_first_node_in_group("player")
 	if player != null and player.has_method("get_debug_info"):
 		var info: Dictionary = player.get_debug_info()
@@ -118,6 +137,10 @@ func _log_tail() -> String:
 	var all_lines := FileAccess.get_file_as_string(log_path).split("\n")
 	var start := maxi(0, all_lines.size() - LOG_TAIL_LINES)
 	return "\n".join(all_lines.slice(start))
+
+
+func _ready_toast_hook() -> void:
+	EventBus.toast.connect(_show_toast)
 
 
 func _show_toast(text: String) -> void:

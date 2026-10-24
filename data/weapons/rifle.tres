@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+id = "rifle"
+name_key = "weapon.rifle"
+slot = 1
+model = "rifle"
+sight = "red_dot"
+fire_modes = PackedStringArray("semi", "auto")
+rpm = 650.0
+damage = 48.0
+pellets = 1
+muzzle_velocity = 830.0
+drag = 0.00072
+max_ricochets = 2
+tracer_every = 3
+mag_size = 20
+start_reserve = 100
+spread_hip = 2.2
+spread_ads = 0.12
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 1.1
+recoil_yaw = 0.45
+recoil_recovery = 0.55
+kick_back = 0.045
+kick_rot = 3.5
+recoil_ads_mult = 0.7
+reload_time = 2.4
+reload_time_empty = 3.1
+ads_time = 0.25
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.78
+eye_relief = 0.24
+sfx_tail = 0.45
+sfx_body_hz = 70.0
+sfx_volume_db = 0.0

@@ -20,6 +20,20 @@ signal player_landed(fall_speed: float)
 ## Cambió la postura del jugador (valores de Player.Stance).
 signal player_stance_changed(stance: int)
 
+## --- Combate ---
+## Un disparo propio salió (para HUD, sonido, IA que escucha en fases siguientes).
+signal weapon_fired(weapon_id: String)
+## Un proyectil del jugador impactó algo que recibe daño.
+signal hit_confirmed(info: HitInfo, killed: bool)
+## Estado del arma actual para el HUD.
+signal weapon_state_changed(state: Dictionary)
+## Entró o salió del apuntado.
+signal aim_changed(aiming: bool)
+## Texto de interacción bajo la mira ("" = nada).
+signal interact_hint_changed(text: String)
+## Mensaje breve en pantalla.
+signal toast(text: String)
+
 ## Se guardó un reporte de bug (F12).
 signal bug_report_saved(path: String)
 
