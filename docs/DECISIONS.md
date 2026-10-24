@@ -26,3 +26,9 @@ Unas 120 líneas, sin addons ni dependencias de versión. Si crece la necesidad,
 
 ## 2026-10-23 — Joystick: saltar = A, agacharse = B
 El prompt dejaba A para interactuar. Como `interact` y `reload` comparten X (tocar/mantener se resuelve en F1–F2), en F0 A es saltar. Se revisa cuando haya interacción.
+
+## 2026-10-24 — Gravedad de juego, no real
+Con 9,8 m/s² el salto se sentía "como un papel" (prueba en tu PC). Ahora la subida usa 2× la gravedad y la caída 2,6×, con velocidad de salto 6,6 m/s: misma altura (~1,1 m) pero ~0,6 s en el aire en vez de ~0,95 s. Parámetros `gravity_up_mult`, `gravity_down_mult` y `max_fall_speed` en el `.tres`.
+
+## 2026-10-24 — Entregas como .exe
+Cada fase se entrega también como `Medoreador.exe` (preset "Windows" en `export_presets.cfg`, todo embebido en un solo archivo) para probar sin instalar Godot.

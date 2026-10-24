@@ -11,8 +11,15 @@ extends Resource
 @export var ground_accel: float = 16.0
 @export var ground_decel: float = 20.0
 
-@export_group("Salto")
-@export var jump_velocity: float = 4.6
+@export_group("Salto y gravedad")
+## Velocidad inicial del salto. Con gravity_up_mult 2.0 da ~1,1 m de altura.
+@export var jump_velocity: float = 6.6
+## Multiplicadores sobre la gravedad del proyecto (9,8). La gravedad real
+## se siente flotante en un juego; subir rápido y caer más rápido da peso.
+@export var gravity_up_mult: float = 2.0
+@export var gravity_down_mult: float = 2.6
+## Velocidad máxima de caída (m/s).
+@export var max_fall_speed: float = 50.0
 @export var coyote_time: float = 0.12
 @export var jump_buffer: float = 0.12
 

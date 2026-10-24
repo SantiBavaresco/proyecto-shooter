@@ -21,3 +21,7 @@
 
 ### Bugs conocidos
 - Ninguno detectado en los tests. El rendimiento real se mide en tu PC (en mi entorno el render es por software).
+
+## F0.1 — Ajuste de salto (2026-10-24)
+- Feedback: salto y caída muy lentos. Gravedad aumentada y caída más rápida que la subida; misma altura.
+- Tests nuevos: tiempo en el aire y cruce de hueco de 2 m. 43 tests OK.

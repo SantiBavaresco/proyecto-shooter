@@ -195,7 +195,8 @@ func _physics_process(delta: float) -> void:
 	# Vertical: gravedad y salto
 	var vy := velocity.y
 	if not on_floor:
-		vy -= _gravity() * delta
+		var mult := config.gravity_up_mult if vy > 0.0 else config.gravity_down_mult
+		vy = maxf(vy - _gravity() * mult * delta, -config.max_fall_speed)
 	if _jump_buffer > 0.0 and _coyote > 0.0 and _try_jump():
 		vy = config.jump_velocity
 		_jump_buffer = 0.0

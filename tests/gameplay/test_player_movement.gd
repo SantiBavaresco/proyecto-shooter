@@ -194,5 +194,36 @@ func test_stairs_climbable() -> void:
 	# Escalera en x = 34: arranca en z = −18 y sube hacia −Z
 	await _spawn(Vector3(34, 0.05, -15.5))
 	bot.move = Vector2(0, 1)
-	await physics_frames(180)
-	assert_gt(player.global_position.y, 1.8, "sube la escalera")
+	var max_y := 0.0
+	for i in 120:
+		await physics_frames(1)
+		max_y = maxf(max_y, player.global_position.y)
+	assert_gt(max_y, 1.9, "sube la escalera hasta arriba (2 m)")
+
+
+func test_jump_air_time_is_snappy() -> void:
+	await _spawn(Vector3(0, 0.05, 0))
+	bot.press_jump()
+	await physics_frames(2)
+	var frames := 0
+	while not player.is_on_floor() and frames < 120:
+		await physics_frames(1)
+		frames += 1
+	assert_lt(frames / 60.0, 0.75, "tiempo en el aire")
+	assert_gt(frames / 60.0, 0.45)
+
+
+func test_gap_jumps() -> void:
+	# Plataformas en x = −24 a lo largo de −Z; huecos de 2, 3 y 4 m.
+	# Caminando se cruza el de 2 m.
+	await _spawn(Vector3(-24, 0.55, -13))
+	bot.move = Vector2(0, 1)
+	# Saltar justo antes del borde (z = −15,5)
+	var guard := 0
+	while player.global_position.z > -15.2 and guard < 180:
+		await physics_frames(1)
+		guard += 1
+	bot.press_jump()
+	await physics_frames(60)
+	assert_gt(player.global_position.y, 0.4, "cruza el hueco de 2 m caminando")
+	assert_lt(player.global_position.z, -17.5, "aterriza en la plataforma siguiente")
