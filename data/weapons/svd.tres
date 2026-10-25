@@ -18,6 +18,7 @@ model_params = {
 }
 sight = "scope"
 scope_mag = 4.0
+scope_mag_max = 0.0
 reticle = "chevron"
 caliber = "7.62×54R"
 reload_type = "magazine"

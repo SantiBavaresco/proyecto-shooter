@@ -65,6 +65,16 @@ Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arm
 | 6 | Escopetas recortada y superpuesta | Recortada: muy abierta; superpuesta: perdigones más agrupados |
 | 7 | B en armas con automático | MK5, PP-B, K416, SC-L, AR-74, AR-M, FMR, G-3A, M-14E |
 
+## F1.6 — Modelos y visor variable
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Recorrer la armería | Cada arma se parece a la real: AR-74/AR-M con cargador curvo, DR-1 con culata esqueletizada, MK5 con tubo y capucha, escopetas con caños redondos |
+| 2 | R-700 apuntando, rueda del mouse | Rueda arriba acerca hasta 25×, abajo aleja hasta 5×; abajo a la derecha se ve el aumento |
+| 3 | R-700 apuntando, disparar y mantener el clic | El cerrojo se acciona sin salir del visor; recién al soltar y volver a apretar dispara de nuevo |
+| 4 | R-700 apuntando, disparar y soltar enseguida | El arma baja para accionar el cerrojo y vuelve a apuntar sola |
+| 5 | Opciones → Controles | Aparecen "Más aumento (visor)" y "Menos aumento (visor)" |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

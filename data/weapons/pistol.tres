@@ -11,6 +11,7 @@ model_params = {
 }
 sight = "iron"
 scope_mag = 0.0
+scope_mag_max = 0.0
 reticle = "duplex"
 caliber = "9×19"
 reload_type = "magazine"

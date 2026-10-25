@@ -17,7 +17,8 @@ model_params = {
 "muzzle_dev": "none"
 }
 sight = "scope"
-scope_mag = 6.0
+scope_mag = 5.0
+scope_mag_max = 25.0
 reticle = "duplex"
 caliber = ".308"
 reload_type = "rounds"

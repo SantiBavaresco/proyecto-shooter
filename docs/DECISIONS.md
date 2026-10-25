@@ -65,3 +65,12 @@ Mesas con F para equipar armas mientras no exista el inventario (F2). Se elimina
 
 ## 2026-10-25 — "sks y te" interpretado como SKS + G3
 Si era otra arma, se cambia en el generador de datos.
+
+## 2026-10-25 — Modelos de armas por perfiles (F1.6)
+Mientras no haya modelos .glb, cada arma se arma por código con perfiles laterales y secciones extruidas con bordes redondeados, piezas torneadas y rieles con dientes, copiando medidas y silueta del arma real. Se funden por material para no cargar la placa de video. Un modelo real futuro solo tiene que respetar los marcadores (`Sight`, `Muzzle`, `Ejection`) y las piezas animables.
+
+## 2026-10-25 — Cerrojo sin dejar el visor
+Si el gatillo sigue apretado después del tiro, el cerrojo se acciona sin bajar el arma (el tirador no despega la cara). Si se suelta, baja como antes y vuelve a apuntar al terminar. Mantener el gatillo nunca dispara el siguiente: hay que soltar y volver a apretar.
+
+## 2026-10-25 — Visor variable con la rueda
+Los visores con `scope_mag_max` regulan el aumento con la rueda del mouse mientras se apunta (cada muesca ×1,26). El R-700 va de 5× a 25×. La sensibilidad del mouse baja con la raíz del aumento. La rueda queda libre fuera del visor (más adelante puede cambiar de arma).

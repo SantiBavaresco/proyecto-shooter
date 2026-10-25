@@ -67,3 +67,16 @@
 - Armería en el polígono: 25 mesas con el arma, nombre y calibre. F la equipa: pistolas al slot 3; largas al slot largo en la mano (o al 1).
 - HUD: nombre del arma + calibre.
 - 75 tests (8 nuevos: catálogo, modelos, apuntado de las 25 armas, cerrojo, recargas, visor, armería).
+
+## F1.6 — Modelos de armas y visor variable (2026-10-25)
+
+### Funciona
+- **Modelos nuevos para las 25 armas**, cada uno con la silueta y medidas del arma real: receptores estampados o fresados, guardamanos (redondo, cuádruple riel, M-LOK, madera), empuñaduras inclinadas con resaltos, culatas (retráctil, fija, esqueletizada, plegable, de caza con Monte Carlo), cargadores curvos de verdad, bocachas, rieles Picatinny con dientes, miras con orejas, capuchas y alzas de anillo, visores con campanas, torretas y anillas, y madera con veta.
+- Generador nuevo `MeshKit` (perfiles extruidos con bordes redondeados, secciones y tornos). Las mallas se funden por material: menos carga para la placa.
+- Las mesas de la armería apoyan y centran cada arma según su tamaño real.
+- **Cerrojo sin sacar el ojo del visor**: con el gatillo apretado después del tiro, se acciona el cerrojo sin bajar el arma. Soltando, baja como antes.
+- **Visor variable**: el R-700 va de 5× a 25× con la rueda del mouse mientras se apunta. El HUD muestra el aumento. Las teclas se pueden cambiar en Opciones.
+- 78 tests (3 nuevos: cerrojo con gatillo apretado, cerrojo con gatillo suelto, visor variable).
+
+### Falta / próximo
+- F2: inventario.

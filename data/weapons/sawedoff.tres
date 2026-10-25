@@ -12,6 +12,7 @@ model_params = {
 }
 sight = "bead"
 scope_mag = 0.0
+scope_mag_max = 0.0
 reticle = "duplex"
 caliber = "12/70"
 reload_type = "break"

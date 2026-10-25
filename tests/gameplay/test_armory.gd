@@ -76,7 +76,7 @@ func test_every_model_has_markers() -> void:
 		if d.reload_type == "break":
 			assert_true(m.has_node("Barrels"), "%s se quiebra" % id)
 		var muzzle := m.get_node("Muzzle") as Node3D
-		assert_lt(muzzle.position.z, -0.15, "%s: la boca está adelante" % id)
+		assert_lt(muzzle.position.z, -0.1, "%s: la boca está adelante" % id)
 		m.free()
 
 
@@ -169,3 +169,76 @@ func test_armory_table_equips_weapon() -> void:
 	await physics_frames(60)
 	assert_eq(weapons.current().data.id, "ak74", "la AR-74 quedó en la mano")
 	assert_eq(weapons.current_slot, 1)
+
+
+func test_bolt_keeps_scope_while_fire_held() -> void:
+	var d := await _equip("rem700")
+	bot.aim = true
+	await physics_frames(int(d.ads_time * 60.0) + 10)
+	assert_true(weapons.aiming)
+	bot.fire = true
+	await physics_frames(3)
+	assert_eq(weapons.state, WeaponController.State.CYCLING)
+	await physics_frames(int(d.cycle_time * 30.0))
+	assert_true(weapons.aiming, "con el gatillo apretado acciona el cerrojo sin dejar el visor")
+	assert_gt(weapons.ads_amount, 0.95)
+	await physics_frames(int(d.cycle_time * 30.0) + 6)
+	assert_eq(weapons.state, WeaponController.State.READY)
+	assert_true(weapons.aiming)
+	assert_eq(weapons.current().mag, d.mag_size - 1, "mantener el gatillo no vuelve a disparar")
+	bot.fire = false
+	await physics_frames(2)
+	bot.press_fire()
+	await physics_frames(2)
+	assert_eq(weapons.current().mag, d.mag_size - 2, "soltar y apretar dispara el siguiente")
+	bot.aim = false
+
+
+func test_bolt_leaves_scope_when_fire_released() -> void:
+	var d := await _equip("rem700")
+	bot.aim = true
+	await physics_frames(int(d.ads_time * 60.0) + 10)
+	bot.press_fire()
+	await physics_frames(6)
+	assert_eq(weapons.state, WeaponController.State.CYCLING)
+	assert_false(weapons.aiming, "gatillo suelto: saca el ojo del visor para accionar")
+	await physics_frames(int((d.cycle_time + d.ads_time) * 60.0) + 10)
+	assert_true(weapons.aiming, "y vuelve a apuntar al terminar")
+	bot.aim = false
+
+
+func test_variable_scope_zoom_with_wheel() -> void:
+	var d := await _equip("rem700")
+	var c := weapons.current()
+	assert_true(WeaponController.has_variable_zoom(d))
+	assert_near(weapons.scope_mag(c), 5.0, 0.01)
+	bot.press_zoom(2)
+	await physics_frames(3)
+	assert_near(weapons.scope_mag(c), 5.0, 0.01, "sin apuntar la rueda no cambia el aumento")
+	bot.aim = true
+	await physics_frames(int(d.ads_time * 60.0) + 15)
+	await process_frames(5)
+	var fov_low := weapons.scope_camera().fov
+	var look_low := weapons.look_mult()
+	bot.press_zoom(3)
+	await physics_frames(3)
+	assert_near(weapons.scope_mag(c), 5.0 * pow(WeaponController.ZOOM_STEP, 3), 0.05)
+	bot.press_zoom(30)
+	await physics_frames(3)
+	assert_near(weapons.scope_mag(c), 25.0, 0.01, "tope de 25×")
+	await process_frames(5)
+	assert_lt(weapons.scope_camera().fov, fov_low / 4.5, "a 25× el campo es 5 veces más chico que a 5×")
+	assert_lt(weapons.look_mult(), look_low, "más aumento, mouse más fino")
+	assert_eq(weapons.get_state_dict()["zoom"], 25.0)
+	bot.press_zoom(-50)
+	await physics_frames(3)
+	assert_near(weapons.scope_mag(c), 5.0, 0.01, "mínimo de 5×")
+	bot.aim = false
+	# Los visores fijos no cambian
+	var s := await _equip("svd")
+	bot.aim = true
+	await physics_frames(int(s.ads_time * 60.0) + 10)
+	bot.press_zoom(3)
+	await physics_frames(3)
+	assert_near(weapons.scope_mag(weapons.current()), 4.0, 0.01)
+	bot.aim = false

@@ -17,6 +17,7 @@ model_params = {
 }
 sight = "iron"
 scope_mag = 0.0
+scope_mag_max = 0.0
 reticle = "duplex"
 caliber = ".22 LR"
 reload_type = "magazine"

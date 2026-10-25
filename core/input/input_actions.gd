@@ -37,6 +37,9 @@ const DEFAULTS: Dictionary = {
 	"aim": [{"mouse": MOUSE_BUTTON_RIGHT}, {"joy_axis": JOY_AXIS_TRIGGER_LEFT, "dir": 1.0}],
 	"reload": [{"key": KEY_R}, {"joy_button": JOY_BUTTON_X}],
 	"fire_mode": [{"key": KEY_B}],
+	# Aumento del visor variable (rueda del mouse mientras se apunta)
+	"zoom_in": [{"mouse": MOUSE_BUTTON_WHEEL_UP}],
+	"zoom_out": [{"mouse": MOUSE_BUTTON_WHEEL_DOWN}],
 	"interact": [{"key": KEY_F}, {"joy_button": JOY_BUTTON_X}],
 	"weapon_1": [{"key": KEY_1}],
 	"weapon_2": [{"key": KEY_2}],
@@ -67,7 +70,7 @@ const DEFAULTS: Dictionary = {
 const REBINDABLE: Array[String] = [
 	"move_forward", "move_back", "move_left", "move_right",
 	"jump", "sprint", "crouch", "lean_left", "lean_right",
-	"fire", "aim", "reload", "fire_mode", "interact",
+	"fire", "aim", "reload", "fire_mode", "zoom_in", "zoom_out", "interact",
 	"weapon_1", "weapon_2", "weapon_3", "weapon_4",
 	"grenade", "melee", "quick_1", "quick_2", "quick_3", "quick_4",
 	"inventory", "pda", "flashlight", "detector",
@@ -169,6 +172,10 @@ static func event_label(event: InputEvent) -> String:
 				return _t("input.mouse_x1")
 			MOUSE_BUTTON_XBUTTON2:
 				return _t("input.mouse_x2")
+			MOUSE_BUTTON_WHEEL_UP:
+				return _t("input.wheel_up")
+			MOUSE_BUTTON_WHEEL_DOWN:
+				return _t("input.wheel_down")
 			var other:
 				return _t("input.mouse_n") % other
 	return event.as_text()

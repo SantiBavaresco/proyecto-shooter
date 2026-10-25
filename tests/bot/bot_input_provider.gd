@@ -17,6 +17,7 @@ var _reload_pending: bool = false
 var _mode_pending: bool = false
 var _interact_pending: bool = false
 var _slot_pending: int = -1
+var _zoom_pending: int = 0
 var _prev_fire: bool = false
 
 
@@ -46,6 +47,11 @@ func select_slot(slot: int) -> void:
 	_slot_pending = slot
 
 
+## Muescas de la rueda (+ acercar, − alejar).
+func press_zoom(notches: int) -> void:
+	_zoom_pending += notches
+
+
 func release_all() -> void:
 	move = Vector2.ZERO
 	sprint = false
@@ -72,6 +78,8 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.fire_mode = _mode_pending
 	cmd.interact = _interact_pending
 	cmd.weapon_slot = _slot_pending
+	cmd.zoom = _zoom_pending
+	_zoom_pending = 0
 	_jump_pending = false
 	_fire_pending = false
 	_reload_pending = false

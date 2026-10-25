@@ -17,6 +17,7 @@ var _reload_queued: bool = false
 var _mode_queued: bool = false
 var _interact_queued: bool = false
 var _slot_queued: int = -1
+var _zoom_queued: int = 0
 var _aim_state: bool = false
 
 
@@ -40,6 +41,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	for i in SLOT_ACTIONS.size():
 		if event.is_action_pressed(SLOT_ACTIONS[i]):
 			_slot_queued = i + 1
+	if event.is_action_pressed("zoom_in"):
+		_zoom_queued += 1
+	if event.is_action_pressed("zoom_out"):
+		_zoom_queued -= 1
 	if event.is_action("aim"):
 		var toggle: bool = Settings.get_value("controls", "aim_toggle")
 		if toggle:
@@ -63,6 +68,8 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.fire_mode = _mode_queued
 	cmd.interact = _interact_queued
 	cmd.weapon_slot = _slot_queued
+	cmd.zoom = _zoom_queued
+	_zoom_queued = 0
 	_jump_queued = false
 	_fire_queued = false
 	_reload_queued = false

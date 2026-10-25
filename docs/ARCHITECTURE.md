@@ -66,6 +66,19 @@ Player
    └─ ViewmodelLayer (CanvasLayer 1) → SubViewport (mundo propio)
       ├─ Camera3D (FOV 62 → 52 apuntando), luces, ambiente
       └─ Rig → modelos de armas (WeaponModelBuilder)
+```
+
+### Modelos de armas por código
+- `MeshKit` (`entities/weapons/mesh_kit.gd`) arma mallas con tres formas: perfil lateral extruido
+  (`prism`), sección extruida a lo largo (`section`) y torno (`lathe`), con esquinas y bordes redondeados.
+- `WeaponModelBuilder` reparte por arma (`model_params.shape` o el id) a `ModelsRifles`, `ModelsBolt`,
+  `ModelsPistols` y `ModelsShotguns`, y tiene las piezas comunes: rieles, miras, punto rojo, visor,
+  cargador curvo, materiales (madera con veta por ruido triplanar).
+- Al final funde todas las mallas fijas por material (y por separado dentro de cada pieza animable):
+  cada arma queda en unas 10 llamadas de dibujo.
+- Visor del modelo: `tests/screenshots/model_viewer.tscn` saca de costado, tres cuartos y por la mira.
+
+```
 
 CombatWorld (uno por nivel, grupo "combat_world")
 ├─ proyectiles (Projectile): integración + raycast por tramo + rebotes

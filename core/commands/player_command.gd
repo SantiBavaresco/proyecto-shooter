@@ -30,6 +30,8 @@ var fire_mode: bool = false
 var interact: bool = false
 ## Slot de arma pedido este tick (1–4) o −1.
 var weapon_slot: int = -1
+## Muescas de aumento del visor este tick (+ acercar, − alejar).
+var zoom: int = 0
 
 
 func _to_string() -> String:

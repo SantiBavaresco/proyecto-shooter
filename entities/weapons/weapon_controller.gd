@@ -35,6 +35,8 @@ const SPRINT_RECOVERY := 0.18
 const INTERACT_RANGE := 2.6
 ## Mínimo entre los dos caños de la escopeta.
 const DOUBLE_BARREL_GAP := 0.15
+## Cada muesca de la rueda multiplica el aumento por esto (visor variable).
+const ZOOM_STEP := 1.26
 
 
 ## Estado de un arma del jugador.
@@ -45,6 +47,8 @@ class WeaponSlot:
 	var mode_index: int = 0
 	var model: Node3D
 	var shots: int = 0
+	## Aumento actual del visor (los variables lo cambian con la rueda).
+	var zoom: float = 1.0
 
 	func mode() -> String:
 		return data.fire_modes[mode_index] if data.fire_modes.size() > 0 else "semi"
@@ -107,6 +111,7 @@ func _make_slot(data: WeaponData) -> WeaponSlot:
 	ws.data = data
 	ws.mag = data.mag_size
 	ws.reserve = data.start_reserve
+	ws.zoom = data.scope_mag
 	ws.model = WeaponModelBuilder.build(data)
 	ws.model.visible = false
 	_rig.add_child(ws.model)
@@ -168,10 +173,19 @@ func fov_mult() -> float:
 
 ## Multiplicador de sensibilidad del mouse (más fino mirando por un visor).
 func look_mult() -> float:
-	var d := current_data()
-	if d == null or d.scope_mag <= 1.0:
+	var c := current()
+	if c == null or c.data.scope_mag <= 1.0:
 		return 1.0
-	return lerpf(1.0, 1.0 / sqrt(d.scope_mag), _smooth(ads_amount))
+	return lerpf(1.0, 1.0 / sqrt(scope_mag(c)), _smooth(ads_amount))
+
+
+## Aumento del visor en uso (variable o fijo).
+func scope_mag(c: WeaponSlot) -> float:
+	return clampf(c.zoom, c.data.scope_mag, c.data.scope_mag_max) if has_variable_zoom(c.data) else c.data.scope_mag
+
+
+static func has_variable_zoom(d: WeaponData) -> bool:
+	return d.scope_mag > 1.0 and d.scope_mag_max > d.scope_mag
 
 
 func scope_camera() -> Camera3D:
@@ -214,6 +228,8 @@ func get_state_dict() -> Dictionary:
 		"has_modes": c.data.fire_modes.size() > 1,
 		"reloading": state == State.RELOADING,
 		"infinite": DebugTools.infinite_ammo,
+		"zoom": scope_mag(c),
+		"zoom_variable": has_variable_zoom(c.data),
 	}
 
 
@@ -246,11 +262,21 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 		player.input_provider.cancel_aim()
 		cmd.aim = false
 
-	var want_aim := cmd.aim and (state == State.READY or state == State.DRAW) and not player.is_sprinting
+	# Cerrojo: si se mantiene el gatillo, se acciona sin sacar el ojo del visor
+	var keep_aim := state == State.CYCLING and aiming and cmd.fire
+	var want_aim := cmd.aim and (state == State.READY or state == State.DRAW or keep_aim) and not player.is_sprinting
 	if want_aim != aiming:
 		aiming = want_aim
 		EventBus.aim_changed.emit(aiming)
 	ads_amount = move_toward(ads_amount, 1.0 if aiming else 0.0, delta / maxf(c.data.ads_time, 0.01))
+
+	# Visor variable: la rueda regula el aumento mientras se apunta
+	if cmd.zoom != 0 and aiming and has_variable_zoom(c.data):
+		var z := clampf(scope_mag(c) * pow(ZOOM_STEP, cmd.zoom), c.data.scope_mag, c.data.scope_mag_max)
+		if not is_equal_approx(z, c.zoom):
+			c.zoom = z
+			_play_mech(SynthSfx.click("zoom", 1.8, 0.025), -14.0)
+			_emit_state()
 
 	if state == State.READY and _cooldown <= 0.0 and _sprint_block <= 0.0:
 		var wants := cmd.fire_pressed if c.mode() == "semi" else cmd.fire
@@ -554,8 +580,9 @@ func _process(delta: float) -> void:
 			# Accionar el cerrojo: el arma baja apenas y gira hacia la mano
 			var t := clampf(state_time / state_duration, 0.0, 1.0)
 			var b := sin(t * PI)
-			rot.z += deg_to_rad(8) * b
-			pos.y -= 0.01 * b * (1.0 - a * 0.5)
+			# Casi nada si se acciona sin dejar de mirar por el visor
+			rot.z += deg_to_rad(lerpf(8.0, 1.2, a)) * b
+			pos.y -= 0.01 * b * (1.0 - a * 0.85)
 
 	_rig.position = pos
 	_rig.rotation = rot
@@ -703,7 +730,7 @@ func _update_scope(c: WeaponSlot, a: float) -> void:
 	var a_vm := 2.0 * atan((d * 0.5) / dist)
 	var frac := tan(a_vm * 0.5) / tan(deg_to_rad(_vm_camera.fov) * 0.5)
 	var a_main := 2.0 * atan(frac * tan(deg_to_rad(main.fov) * 0.5))
-	_scope_cam.fov = clampf(rad_to_deg(a_main) / c.data.scope_mag, 0.5, 60.0)
+	_scope_cam.fov = clampf(rad_to_deg(a_main) / scope_mag(c), 0.3, 60.0)
 	# Mira por el eje del arma (incluye retroceso y balanceo)
 	_scope_cam.global_transform = Transform3D(main.global_basis * _rig.basis, main.global_position)
 

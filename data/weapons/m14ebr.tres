@@ -20,6 +20,7 @@ model_params = {
 }
 sight = "scope"
 scope_mag = 3.0
+scope_mag_max = 0.0
 reticle = "cross"
 caliber = "7.62×51"
 reload_type = "magazine"

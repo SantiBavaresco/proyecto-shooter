@@ -18,6 +18,7 @@ model_params = {
 }
 sight = "red_dot"
 scope_mag = 0.0
+scope_mag_max = 0.0
 reticle = "duplex"
 caliber = "5.56×45"
 reload_type = "magazine"

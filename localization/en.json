@@ -128,5 +128,9 @@
 	"weapon.ou_hunt": "Over-under hunting shotgun",
 	"interact.take_weapon": "[%s] Take %s",
 	"interact.weapon_taken": "%s equipped in slot %d",
-	"greybox.armory": "ARMORY"
+	"greybox.armory": "ARMORY",
+	"action.zoom_in": "Zoom in (scope)",
+	"action.zoom_out": "Zoom out (scope)",
+	"input.wheel_up": "Wheel up",
+	"input.wheel_down": "Wheel down"
 }

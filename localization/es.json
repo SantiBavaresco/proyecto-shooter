@@ -128,5 +128,9 @@
 	"weapon.ou_hunt": "Escopeta superpuesta de caza",
 	"interact.take_weapon": "[%s] Tomar %s",
 	"interact.weapon_taken": "%s equipada en el slot %d",
-	"greybox.armory": "ARMERÍA"
+	"greybox.armory": "ARMERÍA",
+	"action.zoom_in": "Más aumento (visor)",
+	"action.zoom_out": "Menos aumento (visor)",
+	"input.wheel_up": "Rueda arriba",
+	"input.wheel_down": "Rueda abajo"
 }

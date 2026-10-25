@@ -53,12 +53,12 @@ func _build() -> void:
 		var h := _model.get_node_or_null(n)
 		if h != null:
 			h.queue_free()
-	# Acostada sobre su lado izquierdo: caño (−Z local) → +X, lado derecho (+X local) → arriba
+	# Acostada sobre su lado izquierdo: caño (−Z local) → +X, lado derecho (+X local) → arriba.
+	# Se centra sobre la mesa y se apoya según su tamaño real.
 	_model.basis = Basis(Vector3(0, 1, 0), Vector3(0, 0, -1), Vector3(-1, 0, 0))
-	var muzzle := _model.get_node_or_null("Muzzle") as Node3D
-	var front := absf(muzzle.position.z) if muzzle != null else 0.6
-	var back := 0.36 if data.model != "pistol" else 0.06
-	_model.position = Vector3(-(front - back) * 0.5, TABLE_HEIGHT + 0.055, 0)
+	var box := _local_aabb(_model)
+	_model.position = Vector3(box.get_center().z, TABLE_HEIGHT + TABLE_SIZE.y * 0.5 - box.position.x + 0.001,
+		box.get_center().y)
 	add_child(_model)
 	_disable_lens()
 	# Cartel con nombre y calibre
@@ -71,6 +71,23 @@ func _build() -> void:
 	l.outline_size = 10
 	l.modulate = Color(0.95, 0.92, 0.82)
 	add_child(l)
+
+
+## Caja que envuelve todas las mallas del modelo, en sus coordenadas locales.
+static func _local_aabb(model: Node3D) -> AABB:
+	var box := AABB()
+	var first := true
+	for c in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := c as MeshInstance3D
+		var xf := Transform3D.IDENTITY
+		var n: Node = mi
+		while n != model:
+			xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		var b := xf * mi.get_aabb()
+		box = b if first else box.merge(b)
+		first = false
+	return box
 
 
 ## En la mesa el visor muestra vidrio oscuro (no hay cámara de visor).

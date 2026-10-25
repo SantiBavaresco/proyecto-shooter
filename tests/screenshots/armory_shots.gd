@@ -54,6 +54,30 @@ func _ready() -> void:
 		_aim_at(player, dummy.global_position + Vector3(0, 1.2, 0))
 		await _frames(15)
 		await _shot("W_%s_apuntando" % id)
+	# Visor variable del R-700: 5× y 25× sobre la diana de 200 m
+	if "rem700" in ids:
+		var d := load("res://data/weapons/rem700.tres") as WeaponData
+		bot.aim = false
+		player.weapons.equip_weapon(d, 1)
+		bot.select_slot(1)
+		await _frames(50)
+		var target := level.get_node("Geometry/Target200m") as Node3D
+		bot.aim = true
+		await _frames(40)
+		_aim_at(player, target.global_position + Vector3(0, 1.0, 0))
+		await _frames(15)
+		await _shot("Z_rem700_5x")
+		bot.press_zoom(30)
+		await _frames(10)
+		_aim_at(player, target.global_position + Vector3(0, 1.0, 0))
+		await _frames(10)
+		await _shot("Z_rem700_25x")
+		# Disparo con el gatillo apretado: el cerrojo se acciona sin salir del visor
+		bot.fire = true
+		await _frames(int(d.cycle_time * 30.0))
+		await _shot("Z_rem700_cerrojo_en_visor")
+		bot.fire = false
+		bot.aim = false
 	print("CAPTURAS_OK -> ", ProjectSettings.globalize_path(out_dir))
 	get_tree().quit()
 

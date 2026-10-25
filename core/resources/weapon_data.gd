@@ -16,6 +16,9 @@ extends Resource
 @export var sight: String = "iron"
 ## Aumento del visor (solo sight = "scope").
 @export var scope_mag: float = 0.0
+## Visor variable: aumento máximo (la rueda del mouse lo regula entre scope_mag
+## y este valor). 0 = aumento fijo.
+@export var scope_mag_max: float = 0.0
 ## Retícula del visor: "cross", "chevron", "duplex".
 @export var reticle: String = "duplex"
 ## Calibre (texto para mostrar).

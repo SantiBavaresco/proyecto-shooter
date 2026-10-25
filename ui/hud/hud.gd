@@ -71,6 +71,8 @@ func _on_weapon_state(s: Dictionary) -> void:
 	_weapon_label.text = "%s · %s" % [tr(s["name_key"]), s.get("caliber", "")] if s.get("caliber", "") != "" else tr(s["name_key"])
 	if s["reloading"]:
 		_mode_label.text = tr("weapon.reloading")
+	elif s.get("zoom_variable", false):
+		_mode_label.text = "%s×" % String.num(s["zoom"], 1).trim_suffix(".0")
 	elif s["has_modes"]:
 		_mode_label.text = tr("weapon.mode_auto") if s["mode"] == "auto" else tr("weapon.mode_semi")
 	else:
