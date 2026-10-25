@@ -96,3 +96,15 @@
 - Los caños se quiebran a fondo (62°) y el arma se sube y se acerca para ver las recámaras.
 - La mano izquierda suelta el guardamanos, los caños caen, salen las vainas, la mano trae dos cartuchos, los mete al ras de la recámara, se va, el arma se cierra y la mano vuelve al guardamanos. Vale para las tres escopetas.
 - 79 tests.
+
+## F1.9 — Recargas con manos y movimiento fluido (2026-10-25)
+
+### Funciona
+- Recorridos suaves (Catmull-Rom) para manos y piezas en todas las recargas, y golpes del arma: al sacar y calzar el cargador, al abrir y cerrar los caños, al tirar de la manija.
+- **Cargador (fusiles y subfusiles)**: el arma se sube y se inclina; la mano derecha baja al cargador, se lo lleva, trae otro, lo calza y, vacía, tira de la manija. La mano izquierda se acomoda en el guardamanos y gira sobre él para que el brazo cuelgue.
+- **Pistolas**: la mano izquierda saca y pone el cargador.
+- **Cartucho a cartucho** (cerrojos, SK-45): la mano derecha va a la ventana y empuja cada cartucho.
+- **Cerrojo**: la mano derecha va a la bola y la acompaña.
+- **Escopetas**: la muñeca de la mano que carga ahora sale de la palma; recorridos en arco.
+- Báscula y culatas de las escopetas redondeadas (secciones ovaladas que cambian a lo largo).
+- 79 tests.

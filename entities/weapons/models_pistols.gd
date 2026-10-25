@@ -28,6 +28,7 @@ static func _sights(slide: Node3D, z_front: float, z_rear: float, top: float, h:
 static func _mag(root: Node3D, top_back: float, angle_deg: float, base_z: float, base_y: float, m: Material, base_mat: Material) -> void:
 	# Cargador dentro de la empuñadura, inclinado como ella, y su base visible
 	var mg := WeaponModelBuilder.group(root, "Mag", Vector3.ZERO)
+	mg.set_meta("grab", Vector3(0, base_y + 0.004, base_z))
 	var t := tan(deg_to_rad(angle_deg))
 	var h := 0.105
 	WeaponModelBuilder.prism(mg, "MagBody", [top_back - 0.032, 0.0, 0.0, top_back, 0.0, 0.0, top_back + h * t, -h, 0.0, top_back - 0.032 + h * t, -h, 0.0],

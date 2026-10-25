@@ -138,7 +138,7 @@ static func _right_hand(root: Node3D, p: Dictionary, pistol: bool) -> void:
 	var dir := Vector3(0.15, -0.25, 0.95) if pistol else Vector3(0.38, -0.55, 0.74)
 	var up := Vector3(0.0, 0.5, 0.85) if pistol else Vector3(-0.2, 0.9, 0.37)
 	_forearm(glove, sleeve, wrist, wrist + dir.normalized() * FOREARM, up)
-	_finish(root, "HandR", glove, sleeve)
+	_finish(root, "HandR", glove, sleeve).set_meta("palm", top + a * 0.04)
 
 
 # --- Mano izquierda: guardamanos --------------------------------------------
@@ -156,11 +156,11 @@ static func _shell_loader(barrels: Node3D) -> void:
 	# La mano agarra los culotes desde abajo; los cartuchos son los ShellL/ShellR
 	# Se ve con los caños abiertos: el antebrazo se orienta para ese ángulo
 	var comp := Basis(Vector3.RIGHT, deg_to_rad(WeaponController.BREAK_OPEN_DEG))
-	_left_forend(loader, Vector3(0, -0.004, 0.024), 0.027, "HandLoad", comp, Vector3(-0.85, -0.5, -0.05), Vector3(-0.2, 0.35, 0.9))
+	_left_forend(loader, Vector3(0, -0.004, 0.024), 0.027, "HandLoad", comp, Vector3(-0.85, -0.5, -0.05), Vector3(-0.2, 0.35, 0.9), true)
 
 
 static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "HandL", comp := Basis.IDENTITY,
-		arm_dir := Vector3(-0.58, -0.57, 0.57), upper_dir := Vector3(-0.17, 0.5, 0.85)) -> void:
+		arm_dir := Vector3(-0.58, -0.57, 0.57), upper_dir := Vector3(-0.17, 0.5, 0.85), wrist_at_palm := false) -> void:
 	var a := Vector3.BACK  # +Z: hacia atrás (los dedos se escalonan a lo largo del caño)
 	var u := Vector3.RIGHT
 	var v := Vector3.UP
@@ -184,9 +184,12 @@ static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "Han
 	glove.capsule(t1, t2, THUMB_R[0], THUMB_R[1])
 	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
 	var wrist: Vector3 = at.call(0.07, deg_to_rad(-138.0), r + 0.02)
+	if wrist_at_palm:
+		# Mano que se ve en otro ángulo: la muñeca sale de la palma hacia donde va el brazo
+		wrist = at.call(0.01, deg_to_rad(-128.0), r + 0.014) + (comp * arm_dir).normalized() * 0.035
 	# El codo queda abajo y afuera, fuera de la vista; el brazo sube hacia el hombro
 	_forearm(glove, sleeve, wrist, wrist + (comp * arm_dir).normalized() * FOREARM, comp * upper_dir)
-	_finish(parent, node_name, glove, sleeve)
+	_finish(parent, node_name, glove, sleeve).set_meta("palm", c)
 
 
 # --- Mano izquierda de apoyo en la pistola ----------------------------------
@@ -217,7 +220,7 @@ static func _left_pistol(root: Node3D, p: Dictionary) -> void:
 	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
 	var wrist: Vector3 = at.call(0.07, deg_to_rad(200.0), r + 0.008)
 	_forearm(glove, sleeve, wrist, wrist + Vector3(-0.35, -0.25, 0.9).normalized() * FOREARM, Vector3(0.0, 0.5, 0.85))
-	_finish(root, "HandL", glove, sleeve)
+	_finish(root, "HandL", glove, sleeve).set_meta("palm", at.call(0.056, deg_to_rad(185.0), r - 0.012))
 
 
 # --- Piezas ------------------------------------------------------------------
@@ -260,9 +263,10 @@ static func _forearm(glove: MeshKit, sleeve: MeshKit, wrist: Vector3, elbow: Vec
 	sleeve.capsule(elbow, elbow + upper_dir.normalized() * 0.28, 0.05, 0.058, 14)
 
 
-static func _finish(parent: Node3D, n: String, glove: MeshKit, sleeve: MeshKit) -> void:
+static func _finish(parent: Node3D, n: String, glove: MeshKit, sleeve: MeshKit) -> Node3D:
 	var g := Node3D.new()
 	g.name = n
 	parent.add_child(g)
 	WeaponModelBuilder.put(g, "Glove", glove, WeaponModelBuilder.mat("glove"))
 	WeaponModelBuilder.put(g, "Sleeve", sleeve, WeaponModelBuilder.mat("sleeve"))
+	return g

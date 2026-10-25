@@ -15,6 +15,7 @@ static func _bolt_group(root: Node3D, z: float, handle_len: float, drop: float, 
 	var arm := WeaponModelBuilder.rbox(b, "BoltArm", Vector3(dir.length(), 0.0075, 0.0085), mid, m, 0.0025)
 	arm.rotation = Vector3(0, -atan2(dir.z, dir.x), atan2(dir.y, Vector2(dir.x, dir.z).length()))
 	WeaponModelBuilder.sphere(b, "BoltKnob", knob_r, end + Vector3(0.003, -0.002, 0), m, 12)
+	b.set_meta("knob", end + Vector3(0.003, -0.002, 0))
 	if shroud:
 		WeaponModelBuilder.lathe(b, "Shroud", [0.0, 0.0, 0.0, 0.0118, 0.026, 0.0108, 0.034, 0.0068, 0.036, 0.0], m, Vector3(0, 0, 0.012), 16)
 

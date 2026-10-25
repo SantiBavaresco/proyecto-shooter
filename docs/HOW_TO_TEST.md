@@ -91,6 +91,16 @@ Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arm
 |---|---|---|
 | 1 | Vaciar una escopeta y R | Los caños se abren a fondo; la mano izquierda trae dos cartuchos y los mete; se cierra y la mano vuelve al guardamanos |
 
+## F1.9 — Recargas con manos
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Vaciar un fusil (AR-M, K416…) y R | El arma se sube e inclina; la mano derecha saca el cargador, trae otro, lo calza y tira de la manija |
+| 2 | Recargar sin vaciar | Igual, pero sin la manija |
+| 3 | Pistola vacía y R | La mano izquierda cambia el cargador; la corredera vuelve al final |
+| 4 | R-700 / Argentino 1909 | La mano derecha empuja cada cartucho; al disparar, va a la bola del cerrojo |
+| 5 | Escopetas | Báscula y culata redondeadas; la mano que carga los cartuchos no tiene la muñeca separada |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

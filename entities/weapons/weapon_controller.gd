@@ -93,6 +93,8 @@ var _audio_shot: AudioStreamPlayer
 var _audio_mech: AudioStreamPlayer
 var _part_base: Dictionary = {}
 var _cycle_fx_done: bool = false
+## Giro del arma por la pose de recarga (rad): la mano del guardamanos lo compensa.
+var _reload_roll: float = 0.0
 # Visor: cámara en el mundo del juego que renderiza a una textura
 var _scope_vp: SubViewport
 var _scope_cam: Camera3D
@@ -556,6 +558,7 @@ func _process(delta: float) -> void:
 	rot += _kick_rot
 
 	# Animaciones de estado
+	_reload_roll = 0.0
 	match state:
 		State.HOLSTER:
 			var t := _smooth(clampf(state_time / state_duration, 0.0, 1.0))
@@ -569,11 +572,28 @@ func _process(delta: float) -> void:
 			var t := clampf(state_time / state_duration, 0.0, 1.0)
 			var edge := minf(0.15, 0.35 / maxf(state_duration, 0.1))
 			var inn := _smooth(clampf(t / edge, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - (1.0 - edge)) / edge, 0.0, 1.0)))
-			var brk := w.reload_type == "break"
-			rot.z += deg_to_rad(14.0 if brk else 30.0) * inn
-			rot.x += deg_to_rad(12.0 if brk else 10.0) * inn
-			# Escopeta: se sube y se acerca para ver las recámaras abiertas
-			pos += (Vector3(-0.03, 0.06, 0.03) if brk else Vector3(-0.035, -0.035, 0.05)) * inn
+			# Pose de recarga: el arma se sube, se acerca y se gira para que se vea
+			# lo que hacen las manos (brocal, ventana o recámaras)
+			var rp := Vector3(-0.07, 0.07, 0.04)
+			var rr := Vector3(18.0, -10.0, -38.0)
+			match w.reload_type:
+				"break":
+					rp = Vector3(-0.03, 0.06, 0.03)
+					rr = Vector3(12.0, 0.0, 14.0)
+				"rounds":
+					rp = Vector3(-0.04, 0.05, 0.03)
+					rr = Vector3(12.0, 0.0, 22.0)
+				_:
+					if w.model == "pistol":
+						rp = Vector3(-0.1, 0.12, 0.1)
+						rr = Vector3(24.0, -8.0, -30.0)
+			pos += rp * inn
+			rot += rr * (PI / 180.0) * inn
+			_reload_roll = deg_to_rad(rr.z) * inn
+			# Golpes: sacar y calzar el cargador, abrir y cerrar los caños, la manija
+			var bump := _reload_bumps(w, t)
+			pos += bump[0]
+			rot += bump[1] * (PI / 180.0)
 			if w.reload_type == "rounds":
 				# Empuja cada cartucho: pequeño golpe por ronda
 				var per := w.round_time / maxf(state_duration, 0.01)
@@ -597,31 +617,141 @@ func _process(delta: float) -> void:
 	_sync_light()
 
 
+## Recorrido suave por claves [[t, Vector3], ...] (Catmull-Rom): las manos y las
+## piezas pasan por las posiciones clave sin frenar de golpe en cada una.
+static func _path(t: float, keys: Array) -> Vector3:
+	var n := keys.size()
+	if t <= float(keys[0][0]):
+		return keys[0][1]
+	if t >= float(keys[n - 1][0]):
+		return keys[n - 1][1]
+	var i := 0
+	while i < n - 2 and t > float(keys[i + 1][0]):
+		i += 1
+	var t0: float = keys[i][0]
+	var t1: float = keys[i + 1][0]
+	var u := clampf((t - t0) / maxf(t1 - t0, 1e-5), 0.0, 1.0)
+	var p0: Vector3 = keys[maxi(i - 1, 0)][1]
+	var p1: Vector3 = keys[i][1]
+	var p2: Vector3 = keys[i + 1][1]
+	var p3: Vector3 = keys[mini(i + 2, n - 1)][1]
+	return 0.5 * ((2.0 * p1) + (p2 - p0) * u + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * u * u
+		+ (3.0 * p1 - p0 - 3.0 * p2 + p3) * u * u * u)
+
+
+## Golpes del arma durante la recarga: [desplazamiento, giro en grados].
+func _reload_bumps(w: WeaponData, t: float) -> Array:
+	var z := Vector3.ZERO
+	match w.reload_type:
+		"break":
+			return [_path(t, [[0.0, z], [0.1, z], [0.16, Vector3(0, -0.012, 0.004)], [0.24, Vector3(0, 0.004, 0)], [0.3, z],
+				[0.56, z], [0.6, Vector3(0, 0.002, -0.006)], [0.66, z], [0.8, z], [0.86, Vector3(0, 0.012, 0)],
+				[0.92, Vector3(0, -0.004, 0)], [1.0, z]]),
+				_path(t, [[0.0, z], [0.1, z], [0.16, Vector3(-5, 0, 1)], [0.24, Vector3(1, 0, 0)], [0.3, z], [0.56, z],
+				[0.6, Vector3(-2, 0, 0)], [0.66, z], [0.8, z], [0.86, Vector3(7, 0, -1)], [0.92, Vector3(-2, 0, 0)], [1.0, z]])]
+		"magazine":
+			var pk := [[0.0, z], [0.13, z], [0.2, Vector3(0, -0.013, 0.004)], [0.3, Vector3(0, 0.004, 0)], [0.4, z], [0.58, z],
+				[0.6, Vector3(0, -0.005, 0)], [0.64, Vector3(0, 0.015, -0.004)], [0.7, z]]
+			var rk := [[0.0, z], [0.13, z], [0.2, Vector3(-3, 0, 2)], [0.3, Vector3(1, 0, 0)], [0.4, z], [0.6, z],
+				[0.64, Vector3(5, 0, -2)], [0.7, z]]
+			if _reload_empty:
+				pk.append_array([[0.76, Vector3(0, 0, 0.012)], [0.8, Vector3(0, 0, -0.004)], [0.86, z], [1.0, z]])
+				rk.append_array([[0.76, Vector3(2, 0, 0)], [0.82, z], [1.0, z]])
+			else:
+				pk.append([1.0, z])
+				rk.append([1.0, z])
+			return [_path(t, pk), _path(t, rk)]
+	return [z, z]
+
+
+## Manos durante la recarga y el cerrojo. Mano derecha (izquierda en pistolas):
+## baja al cargador, se lo lleva, trae otro, lo calza y, vacía, tira de la manija.
+## Cartucho a cartucho: la mano va a la ventana y empuja cada uno.
+## Cerrojo: la mano derecha va a la bola del cerrojo y la acompaña.
+func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
+	var m := c.model
+	var w := c.data
+	var hr := m.get_node_or_null("HandR") as Node3D
+	var hl := m.get_node_or_null("HandL") as Node3D
+	var z := Vector3.ZERO
+	var off_r := z
+	var off_l := z
+	var mag_follow := z
+	var pistol := w.model == "pistol"
+	if t >= 0.0 and w.reload_type == "magazine" and m.has_node("Mag"):
+		var mag := m.get_node("Mag") as Node3D
+		var hand := hl if pistol else hr
+		if hand != null:
+			var palm: Vector3 = hand.get_meta("palm", z)
+			var grab: Vector3 = _part_base[mag] + (mag.get_meta("grab", Vector3(0, -0.05, 0.0)) as Vector3) - palm
+			var out := grab + (Vector3(-0.05, -0.3, 0.1) if pistol else Vector3(0.08, -0.3, 0.12))
+			var keys := [[0.0, z], [0.06, grab * 0.5 + Vector3(0.02, -0.02, 0.03)], [0.12, grab], [0.2, grab + Vector3(0, -0.06, 0.01)],
+				[0.34, out], [0.46, out], [0.56, grab + Vector3(0, -0.07, 0.01)], [0.63, grab], [0.67, grab]]
+			if _reload_empty and m.has_node("Charging") and not pistol:
+				var ch := m.get_node("Charging") as Node3D
+				var ct: Vector3 = _part_base[ch] + Vector3(0.022 if ch.position.x >= 0.0 else -0.022, -0.012, 0.0) - palm
+				keys.append_array([[0.73, ct], [0.8, ct + Vector3(0, 0, 0.07)], [0.86, ct + Vector3(0.01, -0.01, 0.03)], [0.95, z], [1.0, z]])
+			else:
+				keys.append_array([[0.76, grab * 0.4 + Vector3(0.02, -0.01, 0.03)], [0.86, z], [1.0, z]])
+			var o := _path(t, keys)
+			if t >= 0.12 and t <= 0.63:
+				mag_follow = o - grab
+			if pistol:
+				off_l = o
+			else:
+				off_r = o
+				# La mano del guardamanos acompaña: se acomoda y aprieta
+				off_l = _path(t, [[0.0, z], [0.12, Vector3(0.003, 0.004, 0.012)], [0.4, Vector3(0.004, 0.006, 0.02)],
+					[0.63, Vector3(0, -0.004, 0.004)], [0.7, Vector3(0.002, 0.004, 0.014)], [1.0, z]])
+	elif t >= 0.0 and w.reload_type == "rounds" and hr != null and m.has_node("Ejection"):
+		var palm: Vector3 = hr.get_meta("palm", z)
+		var port: Vector3 = (m.get_node("Ejection") as Node3D).position + Vector3(0.055, -0.01, 0.035) - palm
+		var o := _path(t, [[0.0, z], [0.1, port + Vector3(0.03, -0.04, 0.03)], [0.16, port], [0.86, port],
+			[0.94, port * 0.4 + Vector3(0.02, -0.02, 0.02)], [1.0, z]])
+		if t > 0.16 and t < 0.86:
+			# Empuja cada cartucho hacia abajo
+			var per := w.round_time / maxf(state_duration, 0.01)
+			var k := fmod(t - 0.16, maxf(per, 0.01)) / maxf(per, 0.01)
+			o += Vector3(0, -0.012 * sin(k * PI), 0.004 * sin(k * TAU))
+		off_r = o
+	elif state == State.CYCLING and hr != null and m.has_node("Bolt"):
+		var bolt := m.get_node("Bolt") as Node3D
+		if bolt.has_meta("knob"):
+			var ct := clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0)
+			var knob: Vector3 = bolt.position + bolt.basis * (bolt.get_meta("knob") as Vector3)
+			var tgt := knob + Vector3(0.02, -0.012, 0.006) - (hr.get_meta("palm", z) as Vector3)
+			var blend := _smooth(clampf(ct / 0.16, 0.0, 1.0)) * (1.0 - _smooth(clampf((ct - 0.84) / 0.16, 0.0, 1.0)))
+			off_r = tgt * blend
+	if hr != null and _part_base.has(hr):
+		hr.position = _part_base[hr] + off_r
+	if hl != null and _part_base.has(hl):
+		if pistol:
+			hl.position = _part_base[hl] + off_l
+		else:
+			# Gira sobre el eje del guardamanos al revés que el arma: los dedos siguen
+			# agarrando y el brazo cuelga hacia abajo en vez de cruzar la pantalla
+			var c0: Vector3 = hl.get_meta("palm", z)
+			var b := Basis(Vector3.BACK, -_reload_roll * 0.85)
+			hl.transform = Transform3D(b, _part_base[hl] + c0 - b * c0 + off_l)
+	return mag_follow
+
+
 func _animate_parts(c: WeaponSlot, delta: float) -> void:
 	var w := c.data
 	var t := clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0) if state == State.RELOADING else -1.0
 	var m := c.model
+	var mag_follow := _animate_hands(c, t)
 	if m.has_node("Mag"):
 		var mag := m.get_node("Mag") as Node3D
-		var off := 0.0
-		if t >= 0.0:
-			if t < 0.15:
-				off = 0.0
-			elif t < 0.35:
-				off = _smooth((t - 0.15) / 0.2) * 0.32
-			elif t < 0.5:
-				off = 0.32
-			elif t < 0.64:
-				off = (1.0 - _smooth((t - 0.5) / 0.14)) * 0.32
-		mag.position = _part_base[mag] + Vector3(0, -off, off * 0.15)
-		mag.visible = off < 0.3
+		mag.position = _part_base[mag] + mag_follow
+		mag.visible = true
 	if m.has_node("Charging"):
 		var ch := m.get_node("Charging") as Node3D
 		var back := 0.0
 		if t >= 0.0 and w.reload_type == "rounds":
 			back = 0.07 * _smooth(clampf(t / 0.08, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.92) / 0.08, 0.0, 1.0)))
-		elif t >= 0.0 and _reload_empty and t > 0.68 and t < 0.84:
-			back = sin((t - 0.68) / 0.16 * PI) * 0.07
+		elif t >= 0.0 and _reload_empty and t > 0.75 and t < 0.86:
+			back = sin((t - 0.75) / 0.11 * PI) * 0.07
 		ch.position = _part_base[ch] + Vector3(0, 0, back)
 	if m.has_node("Slide"):
 		var sl := m.get_node("Slide") as Node3D
@@ -668,29 +798,29 @@ func _animate_break(br: Node3D, t: float) -> void:
 	if r:
 		open = _smooth(clampf((t - 0.1) / 0.16, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.8) / 0.12, 0.0, 1.0)))
 	br.rotation = Vector3(deg_to_rad(-BREAK_OPEN_DEG) * open, 0, 0)
-	# Fuera de la vista: abajo y a la izquierda (en el espacio del arma, pasado a los caños)
-	var away := br.basis.inverse() * Vector3(-0.07, -0.26, 0.04)
+	var inv := br.basis.inverse()
+	var z := Vector3.ZERO
+	# Recorridos en el espacio del arma (se pasan al de los caños, que están girados)
+	var away := Vector3(-0.07, -0.26, 0.04)
 	var hand := br.get_node_or_null("HandL") as Node3D
 	if hand != null:
-		var off := 0.0
+		var o := z
 		if r:
-			off = _smooth(clampf((t - 0.02) / 0.1, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.88) / 0.1, 0.0, 1.0)))
-		hand.position = _part_base[hand] + away * off
-		hand.visible = off < 0.98
+			o = _path(t, [[0.0, z], [0.03, Vector3(-0.004, -0.01, 0.01)], [0.07, Vector3(-0.03, -0.09, 0.03)], [0.13, away],
+				[0.85, away], [0.9, Vector3(-0.035, -0.1, 0.03)], [0.95, Vector3(-0.004, -0.012, 0.01)], [1.0, z]])
+		hand.position = _part_base[hand] + inv * o
+		hand.visible = not (r and t > 0.13 and t < 0.85)
 	var loader := br.get_node_or_null("Loader") as Node3D
-	var load_off := away
+	var load_off := z
 	if loader != null:
-		var behind := Vector3(0, 0.004, 0.045)  # alineados detrás de las recámaras
-		var seated := Vector3(0, 0, -0.024)  # culote al ras de la recámara
-		if r and t >= 0.34 and t < 0.48:
-			load_off = away.lerp(behind, _smooth((t - 0.34) / 0.14))
-		elif r and t >= 0.48 and t < 0.62:
-			load_off = behind.lerp(seated, _smooth(clampf((t - 0.48) / 0.12, 0.0, 1.0)))
-		elif r and t >= 0.6 and t < 0.62:
-			load_off = seated
-		elif r and t >= 0.62 and t < 0.74:
-			load_off = seated.lerp(away, _smooth((t - 0.62) / 0.12))
-		loader.visible = r and t >= 0.34 and t < 0.74
+		var behind := br.basis * Vector3(0, 0.004, 0.045)  # alineados detrás de las recámaras
+		var seated := br.basis * Vector3(0, 0, -0.024)  # culote al ras de la recámara
+		var o := away
+		if r and t >= 0.34 and t < 0.78:
+			o = _path(t, [[0.34, away], [0.41, Vector3(-0.07, -0.12, 0.05)], [0.47, behind + Vector3(-0.01, 0.004, 0.01)],
+				[0.5, behind], [0.6, seated], [0.63, seated], [0.69, Vector3(-0.05, -0.1, 0.06)], [0.78, away]])
+		load_off = inv * o
+		loader.visible = r and t >= 0.34 and t < 0.78
 		loader.position = _part_base[loader] + load_off
 	for n: String in ["ShellL", "ShellR"]:
 		var sh := br.get_node(n) as Node3D
@@ -740,7 +870,8 @@ static func _smooth(x: float) -> float:
 
 
 func _remember_parts(model: Node3D) -> void:
-	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Barrels/ShellL", "Barrels/ShellR", "Barrels/HandL", "Barrels/Loader"]:
+	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Barrels/ShellL", "Barrels/ShellR", "Barrels/HandL", "Barrels/Loader",
+			"HandR", "HandL"]:
 		if model.has_node(path):
 			var n := model.get_node(path) as Node3D
 			_part_base[n] = n.position

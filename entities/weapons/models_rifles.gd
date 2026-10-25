@@ -512,6 +512,7 @@ static func bizon(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.lathe(root, "MuzzleNut", [bz - 0.012, 0.0, bz - 0.012, 0.0102, bz, 0.0102, bz, 0.0], m, Vector3.ZERO, 14)
 	# Cargador helicoidal con estrías
 	var mag := WeaponModelBuilder.group(root, "Mag", Vector3(0, -0.034, -0.085))
+	mag.set_meta("grab", Vector3(0, -0.02, -0.13))
 	var pts := [-0.28, 0.0, -0.28, 0.022, -0.276, 0.0285, -0.268, 0.031]
 	var z := -0.25
 	while z < -0.02:

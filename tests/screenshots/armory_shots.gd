@@ -6,12 +6,15 @@ const Level := preload("res://world/test_greybox/test_greybox.tscn")
 
 var out_dir := "user://screenshots_armory"
 var ids: PackedStringArray = []
+var with_reload := false
 
 
 func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out_dir = arg.trim_prefix("--out=")
+		if arg == "--recarga":
+			with_reload = true
 		if arg.begins_with("--ids="):
 			ids = arg.trim_prefix("--ids=").split(",")
 	DirAccess.make_dir_recursive_absolute(out_dir)
@@ -54,18 +57,25 @@ func _ready() -> void:
 		_aim_at(player, dummy.global_position + Vector3(0, 1.2, 0))
 		await _frames(15)
 		await _shot("W_%s_apuntando" % id)
-		# Escopetas: a mitad de la recarga (caños abiertos)
-		if d.reload_type == "break":
+		# Secuencia de recarga (escopetas siempre; el resto con --recarga)
+		if d.reload_type == "break" or with_reload:
 			bot.aim = false
 			await _frames(30)
 			player.weapons.current().mag = 0
 			bot.press_reload()
 			var prev := 0.0
-			for f: float in [0.08, 0.3, 0.42, 0.53, 0.66, 0.9]:
-				await _frames(maxi(1, int(d.reload_time_empty * 60.0 * (f - prev))))
+			var dur := player.weapons.reload_duration(player.weapons.current())
+			for f: float in [0.08, 0.2, 0.34, 0.5, 0.62, 0.78, 0.9]:
+				await _frames(maxi(1, int(dur * 60.0 * (f - prev))))
 				prev = f
 				await _shot("W_%s_recarga_%02d" % [id, int(f * 100)])
-			await _frames(int(d.reload_time_empty * 60.0 * 0.3))
+			await _frames(int(dur * 60.0 * 0.2) + 10)
+		# Cerrojo: la mano va a la bola
+		if d.bolt_action and with_reload:
+			bot.press_fire()
+			await _frames(int(d.cycle_time * 60.0 * 0.45))
+			await _shot("W_%s_cerrojo" % id)
+			await _frames(int(d.cycle_time * 60.0))
 	# Visor variable del R-700: 5× y 25× sobre la diana de 200 m
 	if "rem700" in ids:
 		var d := load("res://data/weapons/rem700.tres") as WeaponData
