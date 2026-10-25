@@ -5,6 +5,7 @@ extends Node3D
 
 var out_dir := "user://model_viewer"
 var ids: PackedStringArray = []
+var with_arms := false
 var _cam: Camera3D
 var _holder: Node3D
 
@@ -13,6 +14,8 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out_dir = arg.trim_prefix("--out=")
+		if arg == "--arms":
+			with_arms = true
 		if arg.begins_with("--ids="):
 			ids = arg.trim_prefix("--ids=").split(",", false)
 	DirAccess.make_dir_recursive_absolute(out_dir)
@@ -43,10 +46,11 @@ func _ready() -> void:
 	for id in ids:
 		var d := load("res://data/weapons/%s.tres" % id) as WeaponData
 		var m := WeaponModelBuilder.build(d)
-		for n in ["HandR", "HandL"]:
-			var h := m.get_node_or_null(n)
-			if h != null:
-				h.free()
+		if not with_arms:
+			for n in ["HandR", "HandL"]:
+				var h := m.find_child(n, true, false)
+				if h != null:
+					h.free()
 		_holder.add_child(m)
 		var aabb := _aabb(m)
 		var center := aabb.get_center()
@@ -64,6 +68,25 @@ func _ready() -> void:
 		_cam.global_transform = Transform3D(Basis.looking_at(-dir), center + dir * dist)
 		await _frames(3)
 		await _shot("%s_34" % id)
+		# Primeros planos de las manos
+		if with_arms:
+			for hn in ["HandR", "HandL"]:
+				var hand := m.find_child(hn, true, false) as Node3D
+				if hand == null:
+					continue
+				var glove := hand.get_node("Glove") as MeshInstance3D
+				var hb := glove.global_transform * glove.get_aabb()
+				# La mano es la parte delantera del guante (el antebrazo va atrás)
+				var hc := hb.get_center()
+				hc.z = hb.position.z + 0.06
+				hc.y = hb.end.y - 0.05
+				for k in 2:
+					var vd := Vector3(0.8, 0.35, -0.5).normalized() if k == 0 else Vector3(-0.8, 0.3, -0.5).normalized()
+					_cam.projection = Camera3D.PROJECTION_PERSPECTIVE
+					_cam.fov = 40
+					_cam.global_transform = Transform3D(Basis.looking_at(-vd), hc + vd * 0.32)
+					await _frames(3)
+					await _shot("%s_%s_%s" % [id, hn, "der" if k == 0 else "izq"])
 		# Desde atrás a la altura de la mira (lo que ve el tirador)
 		var sight := m.get_node("Sight") as Node3D
 		_cam.fov = 40

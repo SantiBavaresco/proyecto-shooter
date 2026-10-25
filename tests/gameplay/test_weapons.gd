@@ -95,7 +95,7 @@ func test_headshot_kills() -> void:
 	await _look_at(d.global_position + Vector3(0, 1.68, 0))
 	await _shoot_once()
 	await physics_frames(5)
-	assert_true(d.hits_received.size() > 0 and d.hits_received[0].zone == "head", "tiro a la cabeza")
+	assert_true(d.hits_received.size() > 0 and d.hits_received[0].zone == "head_core", "tiro al centro de la cabeza")
 	assert_true(d.down, "un tiro de fusil en la cabeza derriba")
 
 
@@ -255,3 +255,39 @@ func test_paper_target_reports_drop_at_100m() -> void:
 	if t.last_hit != null:
 		assert_near(t.last_hit.distance, 100.0, 3.0)
 		assert_gt(t.last_hit.drop, 0.04)
+
+
+func test_head_core_is_lethal_and_cheek_is_not() -> void:
+	var d := _dummy("Dummy10m")
+	d.reset()
+	var head := d.global_position + Vector3(0, 0.06 + Mannequin.HEAD_CENTER.y, 0)
+	# Centro de la cara, de frente: núcleo. Pómulo y mandíbula: periferia. De perfil por la sien: núcleo.
+	assert_eq(d.refine_zone("head", head + Vector3(0, 0.02, -0.12), Vector3(0, 0, 1)), "head_core", "centro de la cara")
+	assert_eq(d.refine_zone("head", head + Vector3(0.09, 0.0, -0.12), Vector3(0, 0, 1)), "head", "pómulo")
+	assert_eq(d.refine_zone("head", head + Vector3(0, -0.1, -0.12), Vector3(0, 0, 1)), "head", "mandíbula")
+	assert_eq(d.refine_zone("head", head + Vector3(-0.11, 0.02, 0.0), Vector3(1, 0, 0)), "head_core", "sien, de perfil")
+	assert_eq(d.refine_zone("torso", head, Vector3(0, 0, 1)), "torso")
+	# Con la pistola .22: al centro de la cabeza mata de un tiro, al pómulo no
+	weapons.equip_weapon(load("res://data/weapons/p22.tres"), 3)
+	bot.select_slot(3)
+	await _ready_at(Vector3(CX - 5.0, 0.05, LINE_Z + 2.0))
+	bot.aim = true
+	await physics_frames(30)
+	await _look_at(head + Vector3(0.088, -0.01, 0))
+	await _shoot_once()
+	await physics_frames(5)
+	assert_eq(d.hits_received.size(), 1)
+	if d.hits_received.size() == 1:
+		assert_eq(d.hits_received[0].zone, "head", "tiro al pómulo")
+		assert_near(d.hits_received[0].damage, 14.0 * 3.0, 4.0, "periferia: ×3")
+	assert_false(d.down, "un .22 en el pómulo no mata")
+	d.reset()
+	await physics_frames(20)
+	await _look_at(head + Vector3(0, 0.02, 0))
+	await _shoot_once()
+	await physics_frames(5)
+	assert_eq(d.hits_received.size(), 1)
+	if d.hits_received.size() == 1:
+		assert_eq(d.hits_received[0].zone, "head_core")
+	assert_true(d.down, "un .22 al centro de la cabeza mata de un tiro")
+	bot.aim = false

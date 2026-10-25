@@ -81,7 +81,7 @@ func _on_weapon_state(s: Dictionary) -> void:
 
 func _on_hit(info: HitInfo, killed: bool) -> void:
 	_hit_time = 0.18 if not killed else 0.35
-	var c := Color(1, 0.3, 0.25) if (killed or info.zone == "head") else Color(1, 1, 1)
+	var c := Color(1, 0.3, 0.25) if (killed or DamageModel.is_head(info.zone)) else Color(1, 1, 1)
 	for line in _hitmarker.get_children():
 		(line as ColorRect).color = c
 	_hitmarker.visible = true

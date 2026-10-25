@@ -80,3 +80,12 @@
 
 ### Falta / próximo
 - F2: inventario.
+
+## F1.7 — Brazos, guardamanos y tiros a la cabeza (2026-10-25)
+
+### Funciona
+- **Brazos nuevos** (`ArmsBuilder`): guante con palma, cuatro dedos de tres falanges que se cierran alrededor de la empuñadura o del guardamanos, índice en la cola del disparador, pulgar, muñeca con puño, antebrazo con manga, codo y arranque del brazo. Pose propia por arma (empuñadura, garganta de culata, guardamanos); pistolas con las dos manos.
+- **Escopetas**: la mano izquierda va con los caños, así al quebrarla ya no la atraviesan.
+- **Guardamanos con forma** (nueva herramienta de loft): estrías del A2, ensanche para la palma del AK, tope para la mano del MK5, FMR y G-3A redondeados con ventilaciones, DR-1 con ventanas, forends de escopeta redondeados, cubiertas de riel en el K416.
+- **Cabeza en dos zonas**: el núcleo (cerebro y centro de la cara, también la sien de perfil) mata de un tiro con cualquier arma y muestra "LETAL"; la periferia (pómulo, mandíbula, oreja, roce del cráneo) hace ×3.
+- 79 tests (1 nuevo: núcleo letal y periferia).

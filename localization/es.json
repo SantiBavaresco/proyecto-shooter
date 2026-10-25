@@ -132,5 +132,6 @@
 	"action.zoom_in": "Más aumento (visor)",
 	"action.zoom_out": "Menos aumento (visor)",
 	"input.wheel_up": "Rueda arriba",
-	"input.wheel_down": "Rueda abajo"
+	"input.wheel_down": "Rueda abajo",
+	"hit.lethal": "LETAL"
 }

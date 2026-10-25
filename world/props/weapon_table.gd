@@ -50,9 +50,10 @@ func _build() -> void:
 	# Arma acostada sobre la mesa, de costado, con el caño hacia +X
 	_model = WeaponModelBuilder.build(data)
 	for n in ["HandR", "HandL"]:
-		var h := _model.get_node_or_null(n)
+		var h := _model.find_child(n, true, false)
 		if h != null:
-			h.queue_free()
+			h.get_parent().remove_child(h)
+			h.free()
 	# Acostada sobre su lado izquierdo: caño (−Z local) → +X, lado derecho (+X local) → arriba.
 	# Se centra sobre la mesa y se apoya según su tamaño real.
 	_model.basis = Basis(Vector3(0, 1, 0), Vector3(0, 0, -1), Vector3(-1, 0, 0))

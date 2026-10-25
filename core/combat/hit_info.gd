@@ -3,7 +3,7 @@ extends RefCounted
 ## Datos de un impacto de proyectil, para quien lo recibe.
 
 var damage: float = 0.0
-## Zona golpeada: "head", "torso", "limb", "weak_point" o "" (objeto sin zonas).
+## Zona golpeada: "head_core", "head", "torso", "limb", "weak_point" o "" (objeto sin zonas).
 var zone: String = ""
 var position: Vector3 = Vector3.ZERO
 var normal: Vector3 = Vector3.UP

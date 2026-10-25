@@ -68,8 +68,6 @@ static func striker(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0445, front + 0.009), -(front + 0.009) + 0.40)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, BORE_Y, front - 0.004))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.016, 0.03, -0.03))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.065, 0.03), Vector3(0.052, 0.085, 0.065))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(-0.022, -0.075, 0.016), Vector3(0.04, 0.075, 0.06))
 	return root
 
 
@@ -105,8 +103,6 @@ static func bersa(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0445, front + 0.009), -(front + 0.009) + 0.40)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, BORE_Y, front - 0.004))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.016, 0.03, -0.03))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.065, 0.03), Vector3(0.052, 0.085, 0.065))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(-0.022, -0.075, 0.016), Vector3(0.04, 0.075, 0.06))
 	return root
 
 
@@ -152,8 +148,6 @@ static func m1911(data: WeaponData, ballester: bool) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0435, front + 0.012), -(front + 0.012) + 0.40)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, BORE_Y, front - 0.003))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.016, 0.03, -0.03))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.065, 0.03), Vector3(0.052, 0.085, 0.065))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(-0.022, -0.075, 0.016), Vector3(0.04, 0.075, 0.06))
 	return root
 
 
@@ -184,6 +178,4 @@ static func target22(_data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0425, -0.225), 0.225 + 0.40)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, BORE_Y, -0.237))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.016, 0.03, -0.02))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.06, 0.035), Vector3(0.052, 0.085, 0.065))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(-0.022, -0.07, 0.02), Vector3(0.04, 0.075, 0.06))
 	return root

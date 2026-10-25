@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_dm")
-head = 2.5
+head = 3.0
 torso = 1.0
 limb = 0.6
 weak_point = 2.0

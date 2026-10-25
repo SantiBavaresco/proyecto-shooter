@@ -74,3 +74,9 @@ Si el gatillo sigue apretado después del tiro, el cerrojo se acciona sin bajar 
 
 ## 2026-10-25 — Visor variable con la rueda
 Los visores con `scope_mag_max` regulan el aumento con la rueda del mouse mientras se apunta (cada muesca ×1,26). El R-700 va de 5× a 25×. La sensibilidad del mouse baja con la raíz del aumento. La rueda queda libre fuera del visor (más adelante puede cambiar de arma).
+
+## 2026-10-25 — Núcleo letal de la cabeza
+La caja de la cabeza tiene adentro un núcleo (12 × 13 × 15 cm). Si el recorrido de la bala lo atraviesa, el impacto es "head_core" y mata siempre (`DamageModel.lethal_damage`). Si solo toca la cabeza, es "head" (×3): mucho daño pero no siempre mortal. Los objetos que dan zonas pueden afinarla con `refine_zone()` (metadata `zone_owner`).
+
+## 2026-10-25 — Brazos por código con pose por arma
+Hasta tener un modelo de brazos con huesos, los brazos se generan por arma con dedos que se cierran sobre la empuñadura y el guardamanos (`ArmsBuilder.POSES`). La mano izquierda de las escopetas cuelga de los caños.

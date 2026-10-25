@@ -231,10 +231,12 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 	info.distance = p.traveled
 	info.ricochets = p.ricochets
 	info.source = p.source
-	info.zone = _zone_of(collider)
+	info.zone = _zone_of(collider, pos, dir)
 	info.drop = _drop_from_aim(p, pos)
 	var vel_factor := clampf(p.vel.length() / maxf(p.v0, 1.0), 0.0, 1.0)
 	info.damage = p.damage * vel_factor * DAMAGE_MODEL.multiplier(info.zone)
+	if DAMAGE_MODEL.is_lethal(info.zone):
+		info.damage = maxf(info.damage, DAMAGE_MODEL.lethal_damage)
 
 	var target := _find_hittable(collider)
 	var killed := false
@@ -243,7 +245,7 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 		killed = result is bool and result
 		if p.source != null:
 			EventBus.hit_confirmed.emit(info, killed)
-			if hitstop_enabled and (killed or info.zone == "head"):
+			if hitstop_enabled and (killed or DamageModel.is_head(info.zone)):
 				_hitstop()
 
 	# ¿Rebota?
@@ -265,11 +267,17 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 	return false
 
 
-func _zone_of(collider: Object) -> String:
+## Zona golpeada. Si el cuerpo tiene un "zone_owner" con refine_zone(), este puede
+## afinarla (ej.: el núcleo de la cabeza, que está adentro de la caja de la cabeza).
+func _zone_of(collider: Object, pos: Vector3, dir: Vector3) -> String:
 	var n := collider as Node
-	if n != null and n.has_meta("hit_zone"):
-		return n.get_meta("hit_zone")
-	return ""
+	if n == null or not n.has_meta("hit_zone"):
+		return ""
+	var zone: String = n.get_meta("hit_zone")
+	var owner_node: Object = n.get_meta("zone_owner", null)
+	if owner_node != null and is_instance_valid(owner_node) and owner_node.has_method("refine_zone"):
+		zone = owner_node.call("refine_zone", zone, pos, dir)
+	return zone
 
 
 func _find_hittable(collider: Object) -> Node:

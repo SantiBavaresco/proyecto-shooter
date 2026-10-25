@@ -95,6 +95,91 @@ func lathe(points: Array, segments := 16, xf := Transform3D.IDENTITY, phase := 0
 	return self
 
 
+## Sección redondeada (superelipse) de semiancho hw entre y_bot e y_top.
+## exp = 2 es una elipse; más alto, más cuadrada.
+static func ring(hw: float, y_bot: float, y_top: float, e: float, count := 28, cx := 0.0) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var cy := (y_bot + y_top) * 0.5
+	var hh := (y_top - y_bot) * 0.5
+	for i in count:
+		var th := TAU * i / count
+		var c := cos(th)
+		var s := sin(th)
+		out.append(Vector2(cx + hw * signf(c) * pow(absf(c), 2.0 / e), cy + hh * signf(s) * pow(absf(s), 2.0 / e)))
+	return out
+
+
+## Loft: une secciones [z, PackedVector2Array(x, y)] (todas con la misma cantidad de
+## puntos) con normales suaves, y tapa los extremos.
+func loft(stations: Array, xf := Transform3D.IDENTITY) -> MeshKit:
+	var ns := stations.size()
+	if ns < 2:
+		return self
+	var n := (stations[0][1] as PackedVector2Array).size()
+	var pts: Array[PackedVector3Array] = []
+	var cen: Array[Vector3] = []
+	for st: Array in stations:
+		var ring_pts := PackedVector3Array()
+		var c := Vector3.ZERO
+		for p: Vector2 in st[1]:
+			ring_pts.append(Vector3(p.x, p.y, st[0]))
+			c += Vector3(p.x, p.y, st[0])
+		pts.append(ring_pts)
+		cen.append(c / n)
+	var nor: Array[PackedVector3Array] = []
+	for i in ns:
+		var row := PackedVector3Array()
+		for j in n:
+			var t := pts[i][(j + 1) % n] - pts[i][(j - 1 + n) % n]
+			var l := pts[mini(i + 1, ns - 1)][j] - pts[maxi(i - 1, 0)][j]
+			var nn := t.cross(l).normalized()
+			var out := pts[i][j] - cen[i]
+			out.z = 0.0
+			if nn.dot(out) < 0.0:
+				nn = -nn
+			row.append(nn)
+		nor.append(row)
+	for i in ns - 1:
+		for j in n:
+			var j2 := (j + 1) % n
+			_tri(xf, pts[i][j], pts[i + 1][j], pts[i + 1][j2], nor[i][j], nor[i + 1][j], nor[i + 1][j2])
+			_tri(xf, pts[i][j], pts[i + 1][j2], pts[i][j2], nor[i][j], nor[i + 1][j2], nor[i][j2])
+	for e: int in [0, ns - 1]:
+		var other := 1 if e == 0 else ns - 2
+		var cn := Vector3(0, 0, signf(cen[e].z - cen[other].z))
+		for j in n:
+			_tri(xf, cen[e], pts[e][j], pts[e][(j + 1) % n], cn, cn, cn)
+	return self
+
+
+## Cápsula (con puntas redondas) de a hasta b, con radios ra y rb (puede ser cónica).
+func capsule(a: Vector3, b: Vector3, ra: float, rb: float, seg := 10) -> MeshKit:
+	var l := a.distance_to(b)
+	if l < 1e-5:
+		return self
+	var pts := []
+	for i in 4:
+		var ang := PI * 0.5 * i / 3.0
+		pts.append_array([-ra * cos(ang), ra * sin(ang)])
+	for i in range(0, 4):
+		var ang := PI * 0.5 * i / 3.0
+		pts.append_array([l + rb * sin(ang), rb * cos(ang)])
+	var z := (b - a) / l
+	var up := Vector3.UP if absf(z.dot(Vector3.UP)) < 0.95 else Vector3.RIGHT
+	var x := up.cross(z).normalized()
+	var y := z.cross(x)
+	return lathe(pts, seg, Transform3D(Basis(x, y, z), a))
+
+
+## Esfera (achatable con "scale").
+func ball(center: Vector3, r: float, scale := Vector3.ONE, seg := 10) -> MeshKit:
+	var pts := []
+	for i in 7:
+		var ang := PI * i / 6.0
+		pts.append_array([-r * cos(ang), r * sin(ang)])
+	return lathe(pts, seg, Transform3D(Basis.from_scale(scale), center))
+
+
 # --- Interno -------------------------------------------------------------------
 
 func _lathe_vertex_normal(seg_n: Array[Vector2], i: int, start: bool) -> Vector2:

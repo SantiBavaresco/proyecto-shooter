@@ -75,6 +75,16 @@ Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arm
 | 4 | R-700 apuntando, disparar y soltar enseguida | El arma baja para accionar el cerrojo y vuelve a apuntar sola |
 | 5 | Opciones → Controles | Aparecen "Más aumento (visor)" y "Menos aumento (visor)" |
 
+## F1.7 — Brazos, guardamanos y cabeza
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Mirar las manos con cada arma | Dedos cerrados sobre la empuñadura y el guardamanos, índice en la cola del disparador; con pistola, las dos manos |
+| 2 | Recargar escopetas (vacías) | La mano izquierda baja con los caños; no la atraviesan |
+| 3 | Guardamanos de AR-C, AR-74/AR-M, MK5, FMR, G-3A, DR-1 | Redondeados, con estrías, ensanches, ventilaciones |
+| 4 | Tiro al centro de la cara o a la sien de un maniquí | Cae de un tiro con cualquier arma (aparece LETAL) |
+| 5 | Tiro al pómulo, mandíbula u oreja | Mucho daño (×3) pero no siempre lo tira |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

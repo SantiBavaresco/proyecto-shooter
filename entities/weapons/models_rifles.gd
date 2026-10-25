@@ -179,13 +179,19 @@ static func ar(data: WeaponData) -> Node3D:
 	match id:
 		"ar15":
 			WeaponModelBuilder.lathe(root, "DeltaRing", [hz - 0.012, 0.0, hz - 0.012, 0.03, hz, 0.031, hz, 0.0], al, Vector3.ZERO, 24)
-			WeaponModelBuilder.lathe(root, "Handguard", [hf, 0.0, hf, 0.024, hf + 0.008, 0.0262, hz - 0.016, 0.0268, hz - 0.012, 0.0262,
-				hz - 0.012, 0.0], poly, Vector3.ZERO, 22)
-			WeaponModelBuilder.lathe(root, "HgCap", [hf - 0.008, 0.0, hf - 0.008, 0.0215, hf, 0.024, hf, 0.0], al, Vector3.ZERO, 20)
+			# Guardamanos redondo con estrías (dos mitades, con la junta a los costados)
+			var fl: Array = []
+			var nr := 26
+			for i in nr * 2:
+				var ang := PI * i / nr
+				var rr := 0.0272 if i % 2 == 0 else 0.0258
+				fl.append_array([cos(ang) * rr, sin(ang) * rr, 0.0006])
+			WeaponModelBuilder.section(root, "Handguard", fl, hf, hz - 0.012, poly, 0.002)
 			for s: float in [-1.0, 1.0]:
-				for i in 6:
-					WeaponModelBuilder.rbox(root, "Vent", Vector3(0.0016, 0.0055, 0.014), Vector3(s * 0.0262, 0.004 * (1 if i % 2 == 0 else -1),
-						hf + 0.035 + i * (hg - 0.07) / 5.0), WeaponModelBuilder.mat("dark"), 0.0008)
+				WeaponModelBuilder.rbox(root, "HgSeam", Vector3(0.0022, 0.003, hg - 0.016), Vector3(s * 0.0271, 0.0, (hf + hz - 0.012) * 0.5),
+					WeaponModelBuilder.mat("dark"), 0.0008)
+			WeaponModelBuilder.lathe(root, "HgCap", [hf - 0.008, 0.0, hf - 0.008, 0.0215, hf - 0.002, 0.0232, hf, 0.0262, hf + 0.002, 0.0262,
+				hf + 0.002, 0.0], al, Vector3.ZERO, 22)
 		"hk416":
 			WeaponModelBuilder.section(root, "Handguard", [-0.0235, -0.0245, 0.006, 0.0235, -0.0245, 0.006, 0.0235, 0.0215, 0.003,
 				-0.0235, 0.0215, 0.003], hf, hz, al, 0.002)
@@ -194,6 +200,18 @@ static func ar(data: WeaponData) -> Node3D:
 				var t := Transform3D(Basis(Vector3(0, 0, 1), -s * PI * 0.5), Vector3(s * 0.0235, -0.0015, 0))
 				WeaponModelBuilder.rail(root, "HgRailSide", hf + 0.006, hz - 0.004, 0.0, al, t)
 			WeaponModelBuilder.rail(root, "HgRailBottom", hf + 0.006, hz - 0.004, 0.0, al, Transform3D(Basis(Vector3(0, 0, 1), PI), Vector3(0, -0.0245, 0)))
+			# Cubiertas de riel estriadas (izquierda y abajo, mitad delantera)
+			var cz := hf + 0.012
+			var cl := hg * 0.5
+			var cover := MeshKit.new()
+			cover.box(Vector3(-0.0285, -0.0015, cz + cl * 0.5), Vector3(0.006, 0.02, cl), 0.002)
+			cover.box(Vector3(0, -0.0295, cz + cl * 0.5), Vector3(0.02, 0.006, cl), 0.002)
+			var zz := cz + 0.006
+			while zz < cz + cl - 0.006:
+				cover.box(Vector3(-0.0315, -0.0015, zz), Vector3(0.0018, 0.018, 0.004), 0.0006)
+				cover.box(Vector3(0, -0.0325, zz), Vector3(0.018, 0.0018, 0.004), 0.0006)
+				zz += 0.01
+			WeaponModelBuilder.put(root, "RailCovers", cover, poly)
 		_:
 			# Tubo libre tipo M-LOK
 			WeaponModelBuilder.section(root, "Handguard", [-0.025, -0.016, 0.009, -0.016, -0.025, 0.004, 0.016, -0.025, 0.004, 0.025, -0.016, 0.009,
@@ -254,8 +272,6 @@ static func ar(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", sight, eye)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0135, 0.005, -0.07))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.09, 0.045), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.045, hz - hg * 0.55), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -302,8 +318,6 @@ static func scar(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", sight, 0.24)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0185, 0.005, -0.06))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.09, 0.045), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.045, rf + 0.06), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -383,12 +397,19 @@ static func ak(data: WeaponData) -> Node3D:
 	var hf := rf - hg
 	var z_gb := hf - 0.004
 	WeaponModelBuilder.lathe(root, "GasTube", [z_gb - 0.01, 0.0, z_gb - 0.01, 0.0102, rf, 0.0102, rf, 0.0], m, Vector3(0, 0.027, 0), 14)
-	WeaponModelBuilder.section(root, "UpperHandguard", [-0.0165, 0.016, 0.0, 0.0165, 0.016, 0.0, 0.0165, 0.028, 0.006, 0.0095, 0.039, 0.008,
-		-0.0095, 0.039, 0.008, -0.0165, 0.028, 0.006], rf - 0.165, rf - 0.008, furn, 0.004)
-	WeaponModelBuilder.prism(root, "Handguard", [rf, 0.012, 0.0, hf, 0.012, 0.0, hf, -0.016, 0.008, hf + 0.03, -0.029, 0.012, rf - 0.035, -0.033, 0.012,
-		rf, -0.039, 0.003], 0.05, furn, 0.009)
-	WeaponModelBuilder.rbox(root, "HgRetainer", Vector3(0.052, 0.05, 0.01), Vector3(0, -0.012, rf - 0.003), m, 0.004)
-	WeaponModelBuilder.rbox(root, "HgFrontCap", Vector3(0.05, 0.046, 0.008), Vector3(0, -0.01, hf - 0.002), m, 0.004)
+	# Guardamanos superior (sobre el tubo de gases) e inferior con ensanche para la palma
+	WeaponModelBuilder.loft(root, "UpperHandguard", furn, rf - 0.008, rf - 0.165, [[0.0, 0.0162, 0.013, 0.039, 2.3], [0.8, 0.0162, 0.013, 0.0385, 2.3],
+		[1.0, 0.0142, 0.015, 0.034, 2.6]])
+	WeaponModelBuilder.loft(root, "Handguard", furn, rf - 0.004, hf, [[0.0, 0.0235, -0.039, 0.012, 3.2], [0.12, 0.0245, -0.035, 0.012, 2.6],
+		[0.45, 0.0268, -0.0335, 0.012, 2.4], [0.85, 0.0245, -0.029, 0.012, 2.6], [1.0, 0.0215, -0.021, 0.011, 3.2]])
+	if is74:
+		# Nervios longitudinales del guardamanos de polímero
+		for s: float in [-1.0, 1.0]:
+			for k in 2:
+				WeaponModelBuilder.rbox(root, "HgRib", Vector3(0.002, 0.0035, hg * 0.6), Vector3(s * (0.0235 - k * 0.006), -0.026 - k * 0.0045, rf - hg * 0.5),
+					furn, 0.001)
+	WeaponModelBuilder.loft(root, "HgRetainer", m, rf + 0.004, rf - 0.006, [[0.0, 0.025, -0.041, 0.016, 3.0], [1.0, 0.025, -0.041, 0.016, 3.0]], 2)
+	WeaponModelBuilder.loft(root, "HgFrontCap", m, hf + 0.004, hf - 0.004, [[0.0, 0.0225, -0.024, 0.013, 3.2], [1.0, 0.0215, -0.022, 0.013, 3.2]], 2)
 	# Bloque de gases a 45°, varilla de limpieza
 	WeaponModelBuilder.prism(root, "GasBlock", [z_gb + 0.004, 0.038, 0.002, z_gb - 0.018, 0.038, 0.003, z_gb - 0.042, -0.012, 0.003,
 		z_gb + 0.004, -0.012, 0.002], 0.026, m, 0.002)
@@ -407,8 +428,6 @@ static func ak(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), _eye_irons(data.id, z_fs))
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0156, 0.006, -0.07))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.085, 0.05), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.045, rf - hg * 0.5), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -437,13 +456,14 @@ static func svd(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.barrel(root, "Barrel", rf, bz, 0.012, 0.0095, m, 0.0045, Vector3.ZERO, 0.06)
 	var hf := rf - 0.27
 	WeaponModelBuilder.lathe(root, "GasTube", [hf - 0.03, 0.0, hf - 0.03, 0.0105, rf, 0.0105, rf, 0.0], m, Vector3(0, 0.027, 0), 14)
-	WeaponModelBuilder.section(root, "UpperHandguard", [-0.0168, 0.015, 0.0, 0.0168, 0.015, 0.0, 0.0168, 0.028, 0.006, 0.0095, 0.039, 0.008,
-		-0.0095, 0.039, 0.008, -0.0168, 0.028, 0.006], hf + 0.004, rf - 0.006, wood, 0.004)
-	WeaponModelBuilder.prism(root, "Handguard", [rf, 0.013, 0.0, hf, 0.013, 0.0, hf, -0.02, 0.008, rf, -0.03, 0.008], 0.05, wood, 0.008)
+	WeaponModelBuilder.loft(root, "UpperHandguard", wood, rf - 0.006, hf + 0.004, [[0.0, 0.0168, 0.014, 0.039, 2.3], [0.9, 0.0165, 0.014, 0.038, 2.3],
+		[1.0, 0.015, 0.015, 0.035, 2.6]])
+	WeaponModelBuilder.loft(root, "Handguard", wood, rf, hf, [[0.0, 0.0245, -0.031, 0.013, 3.0], [0.5, 0.0255, -0.031, 0.013, 2.7],
+		[1.0, 0.0235, -0.024, 0.013, 3.0]])
 	for s: float in [-1.0, 1.0]:
 		for i in 3:
-			WeaponModelBuilder.rbox(root, "Vent", Vector3(0.0015, 0.008, 0.026), Vector3(s * 0.0251, -0.006, rf - 0.06 - i * 0.075), WeaponModelBuilder.mat("dark"), 0.003)
-			WeaponModelBuilder.rbox(root, "VentTop", Vector3(0.0015, 0.006, 0.02), Vector3(s * 0.0165, 0.026, rf - 0.04 - i * 0.05), WeaponModelBuilder.mat("dark"), 0.002)
+			WeaponModelBuilder.rbox(root, "Vent", Vector3(0.0016, 0.009, 0.03), Vector3(s * 0.0252, -0.008, rf - 0.06 - i * 0.075), WeaponModelBuilder.mat("dark"), 0.0042)
+			WeaponModelBuilder.rbox(root, "VentTop", Vector3(0.0016, 0.006, 0.022), Vector3(s * 0.0164, 0.027, rf - 0.04 - i * 0.06), WeaponModelBuilder.mat("dark"), 0.0028)
 	WeaponModelBuilder.rbox(root, "HgRing", Vector3(0.053, 0.072, 0.012), Vector3(0, 0.002, hf - 0.004), m, 0.008)
 	WeaponModelBuilder.prism(root, "GasBlock", [hf - 0.012, 0.039, 0.003, hf - 0.06, 0.039, 0.003, hf - 0.07, -0.012, 0.003, hf - 0.012, -0.012, 0.003],
 		0.026, m, 0.002)
@@ -460,8 +480,6 @@ static func svd(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", sight, 0.075)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0156, 0.006, -0.08))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.085, 0.05), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.045, rf - 0.15), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -505,8 +523,6 @@ static func bizon(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), _eye_irons(data.id, z_fs))
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, bz - 0.012))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0156, 0.006, -0.05))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.085, 0.05), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.06, -0.24), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -540,8 +556,11 @@ static func mp5(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.rbox(root, "RearDrumBase", Vector3(0.02, ih - 0.03, 0.02), Vector3(0, (ih - 0.03) * 0.5 + 0.022, 0.04), m, 0.002)
 	WeaponModelBuilder.rear_aperture(root, 0.04, ih, m)
 	# Guardamanos delgado
-	WeaponModelBuilder.prism(root, "Handguard", [rf, 0.006, 0.0, -0.325, 0.004, 0.006, -0.33, -0.012, 0.008, -0.318, -0.03, 0.01, -0.19, -0.034, 0.01,
-		rf, -0.036, 0.002], 0.046, poly, 0.008)
+	# Guardamanos delgado: se afina hacia adelante y termina en un tope para la mano
+	WeaponModelBuilder.loft(root, "Handguard", poly, rf, -0.33, [[0.0, 0.0232, -0.036, 0.0065, 2.7], [0.2, 0.0228, -0.034, 0.0065, 2.4],
+		[0.78, 0.0202, -0.028, 0.0055, 2.4], [0.88, 0.0222, -0.036, 0.0055, 2.6], [1.0, 0.0185, -0.016, 0.004, 3.0]])
+	for s: float in [-1.0, 1.0]:
+		WeaponModelBuilder.rbox(root, "HgGroove", Vector3(0.0016, 0.004, 0.08), Vector3(s * 0.0214, -0.014, -0.235), WeaponModelBuilder.mat("dark"), 0.0015)
 	# Caño con los tres tetones
 	var bz := rf - 0.2
 	WeaponModelBuilder.barrel(root, "Barrel", rf, bz, 0.0098, 0.0092, m, 0.0045)
@@ -569,8 +588,6 @@ static func mp5(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), _eye_irons(data.id, z_fs))
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, bz - 0.004))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0165, 0.006, -0.06))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.08, 0.04), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.05, -0.26), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -608,11 +625,13 @@ static func fal(data: WeaponData) -> Node3D:
 	# Guardamanos con ventilaciones, bloque de gases con regulador
 	var hg: float = p.get("hg", 0.25)
 	var hf := rf - hg
-	WeaponModelBuilder.prism(root, "Handguard", [rf, 0.018, 0.0, hf + 0.005, 0.018, 0.006, hf, 0.0, 0.006, hf + 0.008, -0.03, 0.008, rf - 0.025, -0.034, 0.008,
-		rf, -0.034, 0.003], 0.054, poly, 0.009)
+	WeaponModelBuilder.loft(root, "Handguard", poly, rf, hf, [[0.0, 0.026, -0.035, 0.018, 3.4], [0.12, 0.0272, -0.034, 0.018, 2.8],
+		[0.82, 0.0265, -0.03, 0.018, 2.8], [1.0, 0.022, -0.019, 0.016, 3.2]])
 	for s: float in [-1.0, 1.0]:
 		for i in 5:
-			WeaponModelBuilder.rbox(root, "Vent", Vector3(0.0015, 0.007, 0.012), Vector3(s * 0.0271, 0.002, rf - 0.04 - i * (hg - 0.07) / 4.0), WeaponModelBuilder.mat("dark"), 0.003)
+			for row in 2:
+				WeaponModelBuilder.rbox(root, "Vent", Vector3(0.0016, 0.0065, 0.016), Vector3(s * 0.0268, 0.005 - row * 0.016, rf - 0.045 - i * (hg - 0.08) / 4.0),
+					WeaponModelBuilder.mat("dark"), 0.0031)
 	var z_gb := hf - 0.005
 	WeaponModelBuilder.prism(root, "GasBlock", [z_gb, 0.034, 0.003, z_gb - 0.04, 0.034, 0.003, z_gb - 0.044, -0.012, 0.003, z_gb, -0.012, 0.003], 0.026, m, 0.002)
 	WeaponModelBuilder.cyl(root, "Regulator", 0.0078, 0.016, Vector3(0, 0.022, z_gb - 0.05), m, 14, Vector3.ZERO, 0.002)
@@ -627,8 +646,6 @@ static func fal(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", sight, 0.24)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0152, 0.006, -0.07))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.09, 0.045), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.045, rf - hg * 0.55), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -666,11 +683,13 @@ static func g3(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.rear_aperture(root, 0.004, ih, m)
 	# Guardamanos delgado, grupo del disparador y empuñadura
 	var hf := -0.445
-	WeaponModelBuilder.prism(root, "Handguard", [rf, 0.014, 0.0, hf + 0.004, 0.014, 0.006, hf, -0.005, 0.006, hf + 0.01, -0.032, 0.01, rf - 0.015, -0.036, 0.01,
-		rf, -0.038, 0.003], 0.05, poly, 0.008)
+	WeaponModelBuilder.loft(root, "Handguard", poly, rf, hf, [[0.0, 0.0245, -0.038, 0.014, 3.2], [0.1, 0.025, -0.035, 0.014, 2.7],
+		[0.88, 0.0238, -0.031, 0.014, 2.7], [1.0, 0.02, -0.014, 0.012, 3.2]])
 	for s: float in [-1.0, 1.0]:
 		for i in 4:
-			WeaponModelBuilder.rbox(root, "Vent", Vector3(0.0015, 0.006, 0.014), Vector3(s * 0.0251, -0.004, rf - 0.04 - i * 0.05), WeaponModelBuilder.mat("dark"), 0.003)
+			for row in 2:
+				WeaponModelBuilder.cyl(root, "Vent", 0.0034, 0.003, Vector3(s * 0.0245, 0.002 - row * 0.015, rf - 0.035 - i * 0.05 - row * 0.025),
+					WeaponModelBuilder.mat("dark"), 12, Vector3(0, PI * 0.5, 0))
 	WeaponModelBuilder.prism(root, "TriggerHousing", [0.065, -0.024, 0.0, -0.098, -0.024, 0.0, -0.098, -0.036, 0.003, 0.065, -0.036, 0.003], 0.032, poly, 0.002)
 	_guard_u(root, -0.098, 0.006, -0.036, 0.032, poly, 0.014)
 	_trigger(root, -0.05, -0.036, m)
@@ -687,8 +706,6 @@ static func g3(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), _eye_irons(data.id, z_fs))
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0178, 0.005, -0.06))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.09, 0.045), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.045, -0.33), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -722,8 +739,8 @@ static func sks(data: WeaponData) -> Node3D:
 	# Tubo de gases con guardamanos superior, bloque de gases, abrazadera
 	var z_gb := -0.43
 	WeaponModelBuilder.lathe(root, "GasTube", [z_gb, 0.0, z_gb, 0.0095, rf, 0.0095, rf, 0.0], m, Vector3(0, 0.023, 0), 14)
-	WeaponModelBuilder.section(root, "UpperHandguard", [-0.0155, 0.012, 0.0, 0.0155, 0.012, 0.0, 0.0155, 0.026, 0.005, 0.009, 0.037, 0.007,
-		-0.009, 0.037, 0.007, -0.0155, 0.026, 0.005], -0.39, rf - 0.008, wood, 0.004)
+	WeaponModelBuilder.loft(root, "UpperHandguard", wood, rf - 0.008, -0.39, [[0.0, 0.0155, 0.012, 0.037, 2.3], [0.88, 0.0152, 0.012, 0.036, 2.3],
+		[1.0, 0.0135, 0.013, 0.032, 2.6]])
 	WeaponModelBuilder.prism(root, "GasBlock", [z_gb + 0.005, 0.033, 0.003, z_gb - 0.03, 0.033, 0.003, z_gb - 0.032, -0.012, 0.003, z_gb + 0.005, -0.012, 0.003],
 		0.024, m, 0.002)
 	WeaponModelBuilder.rbox(root, "Band", Vector3(0.046, 0.04, 0.012), Vector3(0, -0.012, -0.405), m, 0.006)
@@ -746,8 +763,6 @@ static func sks(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), _eye_irons(data.id, z_fs))
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, bz - 0.002))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.015, 0.012, -0.04))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.075, 0.075), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.035, -0.3), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -792,6 +807,4 @@ static func ebr(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", sight, 0.075)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.015, 0.02, -0.06))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.078, 0.045), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.05, -0.36), Vector3(0.066, 0.05, 0.11))
 	return root

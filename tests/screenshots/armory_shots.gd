@@ -54,6 +54,15 @@ func _ready() -> void:
 		_aim_at(player, dummy.global_position + Vector3(0, 1.2, 0))
 		await _frames(15)
 		await _shot("W_%s_apuntando" % id)
+		# Escopetas: a mitad de la recarga (caños abiertos)
+		if d.reload_type == "break":
+			bot.aim = false
+			await _frames(30)
+			player.weapons.current().mag = 0
+			bot.press_reload()
+			await _frames(int(d.reload_time_empty * 60.0 * 0.45))
+			await _shot("W_%s_recarga" % id)
+			await _frames(int(d.reload_time_empty * 60.0 * 0.6))
 	# Visor variable del R-700: 5× y 25× sobre la diana de 200 m
 	if "rem700" in ids:
 		var d := load("res://data/weapons/rem700.tres") as WeaponData

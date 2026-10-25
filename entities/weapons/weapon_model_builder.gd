@@ -12,6 +12,7 @@ extends RefCounted
 ##  - Piezas animables (Node3D): Mag, Slide, Charging, Bolt, Barrels (con ShellL/ShellR).
 ##  - Visor: MeshInstance3D "ScopeLens" (ocular) con material de visor; metadata "lens_d".
 ##  - Punto rojo: MeshInstance3D "Lens".
+##  - Brazos: nodos "HandR" / "HandL" (ArmsBuilder); HandL puede ir dentro de "Barrels".
 ##
 ## Cada familia está en su archivo: models_rifles.gd, models_bolt.gd,
 ## models_pistols.gd y models_shotguns.gd. Al final todas las mallas fijas de
@@ -74,6 +75,7 @@ static func build(data: WeaponData) -> Node3D:
 		_:
 			root = _fallback(data)
 	root.name = data.id
+	ArmsBuilder.add_arms(root, data)
 	merge(root)
 	return root
 
@@ -128,6 +130,27 @@ static func section(parent: Node3D, n: String, pts: Array, z0: float, z1: float,
 static func lathe(parent: Node3D, n: String, pts: Array, mat: Material, pos := Vector3.ZERO,
 		seg := 16, rot := Vector3.ZERO) -> MeshInstance3D:
 	return put(parent, n, MeshKit.new().lathe(pts, seg), mat, pos, rot)
+
+
+## Pieza con forma variable a lo largo (guardamanos, cajas): claves [t, semiancho,
+## y_abajo, y_arriba, exponente], con t = 0 atrás (z_rear) y t = 1 adelante (z_front).
+static func loft(parent: Node3D, n: String, mat: Material, z_rear: float, z_front: float, keys: Array,
+		stations := 26, ring_n := 30, x := 0.0) -> MeshInstance3D:
+	var st: Array = []
+	for i in stations + 1:
+		var t := float(i) / stations
+		var a: Array = keys[0]
+		var b: Array = keys[keys.size() - 1]
+		for j in keys.size() - 1:
+			if t >= float(keys[j][0]) and t <= float(keys[j + 1][0]):
+				a = keys[j]
+				b = keys[j + 1]
+				break
+		var f := 0.0 if is_equal_approx(b[0], a[0]) else clampf((t - float(a[0])) / (float(b[0]) - float(a[0])), 0.0, 1.0)
+		f = f * f * (3.0 - 2.0 * f)
+		var ring := MeshKit.ring(lerpf(a[1], b[1], f), lerpf(a[2], b[2], f), lerpf(a[3], b[3], f), lerpf(a[4], b[4], f), ring_n, x)
+		st.append([lerpf(z_rear, z_front, t), ring])
+	return put(parent, n, MeshKit.new().loft(st), mat)
 
 
 ## Caja con aristas redondeadas.
@@ -397,13 +420,6 @@ static func curved_mag(parent: Node3D, top_y: float, length: float, depth_top: f
 	var fm := floor_mat if floor_mat != null else m
 	rbox(parent, "MagFloor", Vector3(width + 0.004, 0.009, depth_bot + 0.006),
 		Vector3(0, bot.y - 0.0025 * cos(ang), bot.x - 0.0025 * sin(ang)), fm, 0.002, Vector3(ang, 0, 0))
-
-
-## Mano de guante simple (marcador de posición de los brazos). TODO-ASSET: fps_arms
-static func hand(parent: Node3D, n: String, pos: Vector3, size: Vector3) -> void:
-	var h := rbox(parent, n, size, pos, mat("glove"), 0.012)
-	rbox(h, "Forearm", Vector3(size.x * 0.85, size.y * 0.8, 0.3), Vector3(0, -0.04, 0.18), mat("sleeve"), 0.018,
-		Vector3(deg_to_rad(-18), 0, 0))
 
 
 # --- Fusión de mallas -------------------------------------------------------------

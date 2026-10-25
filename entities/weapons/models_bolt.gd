@@ -49,8 +49,6 @@ static func rem700(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", sight, 0.075)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, bz))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.016, 0.008, -0.01))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.085, 0.085), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.06, -0.28), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -88,8 +86,7 @@ static func mauser(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.prism(root, "Stock", [-0.66, 0.002, 0.004, -0.66, -0.024, 0.008, -0.3, -0.032, 0.02, -0.105, -0.034, 0.0, -0.1, -0.052, 0.005,
 		0.0, -0.052, 0.01, 0.05, -0.05, 0.02, 0.14, -0.07, 0.04, 0.38, -0.14, 0.008, 0.39, -0.14, 0.0, 0.39, -0.02, 0.006,
 		0.25, -0.01, 0.03, 0.12, -0.012, 0.03, 0.074, -0.004, 0.008, 0.074, 0.0, 0.0], 0.04, wood, 0.009)
-	WeaponModelBuilder.section(root, "UpperHandguard", [-0.0138, 0.0, 0.0, 0.0138, 0.0, 0.0, 0.0138, 0.006, 0.006, 0.008, 0.0158, 0.006,
-		-0.008, 0.0158, 0.006, -0.0138, 0.006, 0.006], -0.6, -0.17, wood, 0.003)
+	WeaponModelBuilder.loft(root, "UpperHandguard", wood, -0.17, -0.6, [[0.0, 0.0138, -0.002, 0.0158, 2.2], [1.0, 0.0126, -0.002, 0.015, 2.2]])
 	WeaponModelBuilder.prism(root, "ButtPlate", [0.388, -0.019, 0.003, 0.398, -0.019, 0.003, 0.398, -0.141, 0.003, 0.388, -0.141, 0.003], 0.042, bl, 0.002)
 	# Abrazadera intermedia y punta de caja con tetón de bayoneta
 	WeaponModelBuilder.rbox(root, "Band", Vector3(0.044, 0.05, 0.014), Vector3(0, -0.009, -0.4), bl, 0.007)
@@ -104,8 +101,6 @@ static func mauser(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), 0.30 - z_fs)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, bz))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.016, 0.008, 0.0))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.075, 0.08), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.05, -0.3), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -148,8 +143,6 @@ static func rimfire(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, ih, z_fs), 0.30 - z_fs)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, bz))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0124, 0.006, -0.005))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.075, 0.08), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.05, -0.24), Vector3(0.066, 0.05, 0.11))
 	return root
 
 

@@ -57,15 +57,14 @@ static func sxs(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.section(barrels, "RibLow", [-0.0045, -0.0085, 0.0, -0.0038, -0.0125, 0.0, 0.0038, -0.0125, 0.0, 0.0045, -0.0085, 0.0], -blen + 0.004, -0.06, bl, 0.0006)
 	WeaponModelBuilder.rbox(barrels, "Lumps", Vector3(0.014, 0.016, 0.055), Vector3(0, -0.014, -0.03), bl, 0.003)
 	var fl := minf(0.2, blen * 0.55)
-	WeaponModelBuilder.prism(barrels, "Forend", [-0.015, -0.006, 0.0, -fl, -0.006, 0.004, -fl - 0.005, -0.016, 0.006, -fl + 0.01, -0.03, 0.008, -0.02, -0.034, 0.008,
-		-0.01, -0.024, 0.004], 0.044, wood, 0.008)
+	# Forend de astilla, redondeado y afinado hacia la punta
+	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.012, -fl, [[0.0, 0.0215, -0.033, -0.004, 2.8], [0.15, 0.022, -0.034, -0.004, 2.5],
+		[0.85, 0.021, -0.031, -0.004, 2.5], [1.0, 0.017, -0.022, -0.005, 3.0]])
 	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.04, 0.014, 0.03), Vector3(0, -0.024, -0.03), steel, 0.004)
 	WeaponModelBuilder.sphere(barrels, "Bead", 0.003, Vector3(0, 0.0155, -blen + 0.012), WeaponModelBuilder.mat("brass"), 8)
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0185, -0.12 - blen + 0.012), blen + 0.12 - 0.012 + 0.155)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0.0, -0.12 - blen - 0.01))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0, 0.0, -0.11))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.05, 0.05), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.055, -0.12 - fl * 0.6), Vector3(0.066, 0.05, 0.11))
 	return root
 
 
@@ -107,14 +106,13 @@ static func over_under(data: WeaponData) -> Node3D:
 		WeaponModelBuilder.rbox(barrels, "RibPost", Vector3(0.004, 0.004, 0.005), Vector3(0, 0.0128, z), bl, 0.0005)
 		z -= 0.05
 	WeaponModelBuilder.rbox(barrels, "Monoblock", Vector3(0.03, 0.05, 0.03), Vector3(0, -0.012, -0.015), bl, 0.004)
-	WeaponModelBuilder.prism(barrels, "Forend", [-0.02, -0.02, 0.0, -0.24, -0.02, 0.004, -0.25, -0.03, 0.006, -0.235, -0.046, 0.008, -0.03, -0.05, 0.008,
-		-0.015, -0.038, 0.004], 0.044, wood, 0.008)
+	# Forend con punta "schnabel" que abraza el caño inferior
+	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.016, -0.25, [[0.0, 0.0215, -0.05, -0.018, 2.8], [0.15, 0.0225, -0.051, -0.018, 2.5],
+		[0.82, 0.0222, -0.047, -0.018, 2.5], [0.92, 0.024, -0.043, -0.017, 2.8], [1.0, 0.019, -0.032, -0.018, 3.0]])
 	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.036, 0.012, 0.025), Vector3(0, -0.038, -0.03), silver, 0.004)
 	WeaponModelBuilder.sphere(barrels, "Bead", 0.0028, Vector3(0, 0.0198, -blen + 0.012), WeaponModelBuilder.mat("brass"), 8)
 	WeaponModelBuilder.sphere(barrels, "MidBead", 0.0016, Vector3(0, 0.0182, -blen * 0.5), silver, 6)
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0222, -0.12 - blen + 0.012), blen + 0.12 - 0.012 + 0.155)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, -0.012, -0.12 - blen - 0.01))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0, -0.01, -0.11))
-	WeaponModelBuilder.hand(root, "HandR", Vector3(0.0, -0.06, 0.05), Vector3(0.05, 0.07, 0.1))
-	WeaponModelBuilder.hand(root, "HandL", Vector3(0.0, -0.07, -0.33), Vector3(0.066, 0.05, 0.11))
 	return root
