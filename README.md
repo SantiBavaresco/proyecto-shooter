@@ -2,7 +2,7 @@
 
 Shooter táctico de supervivencia en mundo abierto, ambientado en la zona de exclusión de Atucha y el Delta del Paraná. Hecho en **Godot 4.7.2** con GDScript.
 
-> Estado: **F1 — armas, balística y polígono de tiro.** Ver `docs/DEVLOG.md`.
+> Estado: **F1.5 — armería de 25 armas.** Ver `docs/DEVLOG.md`.
 
 ![Pista de pruebas](docs/screenshots/02_pista_general.jpg)
 

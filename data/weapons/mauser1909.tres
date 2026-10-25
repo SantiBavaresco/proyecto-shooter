@@ -1,0 +1,62 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "bolt"
+model_params = {
+"recv_len": 0.25,
+"recv_h": 0.045,
+"barrel": 0.74,
+"barrel_r": 0.0105,
+"hg": 0.62,
+"mag": "internal",
+"furniture": "wood",
+"muzzle_dev": "none",
+"iron_h": 0.032
+}
+sight = "iron"
+scope_mag = 0.0
+reticle = "duplex"
+caliber = "7.65×53"
+reload_type = "rounds"
+round_time = 0.45
+clip_reload = true
+bolt_action = true
+cycle_time = 0.95
+fire_modes = PackedStringArray("semi")
+rpm = 200.0
+damage = 70.0
+pellets = 1
+muzzle_velocity = 820.0
+drag = 0.00065
+max_ricochets = 2
+tracer_every = 0
+mag_size = 5
+start_reserve = 40
+spread_hip = 2.6
+spread_ads = 0.04
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 2.3
+recoil_yaw = 0.35
+recoil_recovery = 0.7
+kick_back = 0.065
+kick_rot = 5.5
+recoil_ads_mult = 0.7
+reload_time = 0.7
+reload_time_empty = 2.4
+ads_time = 0.3
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.55
+sfx_body_hz = 62.0
+sfx_volume_db = 2.0
+id = "mauser1909"
+name_key = "weapon.mauser1909"

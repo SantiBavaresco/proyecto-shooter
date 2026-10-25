@@ -4,11 +4,21 @@
 
 [resource]
 script = ExtResource("1_wd")
-id = "shotgun"
-name_key = "weapon.shotgun"
 slot = 2
-model = "shotgun"
+model = "shotgun_sxs"
+model_params = {
+"barrel": 0.62,
+"stock": "full"
+}
 sight = "bead"
+scope_mag = 0.0
+reticle = "duplex"
+caliber = "12/70"
+reload_type = "break"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
 fire_modes = PackedStringArray("semi")
 rpm = 400.0
 damage = 11.0
@@ -41,3 +51,5 @@ eye_relief = 0.88
 sfx_tail = 0.6
 sfx_body_hz = 55.0
 sfx_volume_db = 1.0
+id = "shotgun"
+name_key = "weapon.shotgun"

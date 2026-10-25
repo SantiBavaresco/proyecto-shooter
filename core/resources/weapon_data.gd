@@ -7,10 +7,30 @@ extends Resource
 @export var name_key: String = ""
 ## Slot por defecto: 1 y 2 armas largas, 3 pistola, 4 cuchillo.
 @export var slot: int = 1
-## Modelo procedural de prueba: "rifle", "shotgun", "pistol".
-@export var model: String = "rifle"
-## Mira: "red_dot", "iron", "bead".
+## Familia del modelo procedural: "pistol", "smg", "rifle_ar", "rifle_ak",
+## "rifle_battle", "bolt", "shotgun_sxs", "shotgun_ou".
+@export var model: String = "rifle_battle"
+## Parámetros del modelo (largo de caño, culata, cargador...). Ver WeaponModelBuilder.
+@export var model_params: Dictionary = {}
+## Mira: "iron", "red_dot", "scope", "bead".
 @export var sight: String = "iron"
+## Aumento del visor (solo sight = "scope").
+@export var scope_mag: float = 0.0
+## Retícula del visor: "cross", "chevron", "duplex".
+@export var reticle: String = "duplex"
+## Calibre (texto para mostrar).
+@export var caliber: String = ""
+
+@export_group("Mecanismo")
+## "magazine" (cargador), "break" (escopeta que se quiebra), "rounds" (cartucho a cartucho).
+@export var reload_type: String = "magazine"
+## Recarga "rounds": tiempo por cartucho.
+@export var round_time: float = 0.4
+## Recarga "rounds" con el arma vacía: carga un peine completo en reload_time_empty.
+@export var clip_reload: bool = false
+## Cerrojo manual: hay que accionarlo después de cada disparo.
+@export var bolt_action: bool = false
+@export var cycle_time: float = 0.8
 
 @export_group("Disparo")
 ## Modos disponibles: "semi", "auto".
@@ -64,8 +84,8 @@ extends Resource
 @export_group("Cámara al apuntar")
 ## FOV de la cámara del mundo al apuntar = FOV × este valor.
 @export var ads_fov_mult: float = 0.85
-## Distancia ojo–mira al apuntar (m).
-@export var eye_relief: float = 0.11
+## Distancia ojo–mira al apuntar (m). 0 = automática según el modelo.
+@export var eye_relief: float = 0.0
 
 @export_group("Sonido sintético")
 ## Parámetros del sonido de disparo generado por código (hasta tener audio real).

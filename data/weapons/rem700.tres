@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "bolt"
+model_params = {
+"recv_len": 0.24,
+"recv_h": 0.045,
+"barrel": 0.6,
+"barrel_r": 0.011,
+"hg": 0.42,
+"mag": "internal",
+"furniture": "poly",
+"muzzle_dev": "none"
+}
+sight = "scope"
+scope_mag = 6.0
+reticle = "duplex"
+caliber = ".308"
+reload_type = "rounds"
+round_time = 0.5
+clip_reload = false
+bolt_action = true
+cycle_time = 0.9
+fire_modes = PackedStringArray("semi")
+rpm = 200.0
+damage = 75.0
+pellets = 1
+muzzle_velocity = 860.0
+drag = 0.0006
+max_ricochets = 2
+tracer_every = 0
+mag_size = 5
+start_reserve = 30
+spread_hip = 3.0
+spread_ads = 0.04
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 2.4
+recoil_yaw = 0.3
+recoil_recovery = 0.75
+kick_back = 0.07
+kick_rot = 6.0
+recoil_ads_mult = 0.7
+reload_time = 0.8
+reload_time_empty = 2.9
+ads_time = 0.3
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 1.0
+eye_relief = 0.0
+sfx_tail = 0.55
+sfx_body_hz = 60.0
+sfx_volume_db = 2.0
+id = "rem700"
+name_key = "weapon.rem700"

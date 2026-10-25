@@ -50,3 +50,18 @@ Cada perdigón es un proyectil (9 por disparo). Dos disparos antes de recargar; 
 
 ## 2026-10-24 — Sonidos sintéticos
 `core/audio/synth_sfx.gd` genera disparos, clicks, impactos y rebotes por código para que el juego no sea mudo. Se reemplazan por audio real en F8.
+
+## 2026-10-25 — Visor "imagen en imagen"
+Elegido por el autor (opción B). Una cámara en el mundo del juego renderiza a una textura de 512×512 que se muestra en el ocular. Su FOV se calcula a partir del tamaño angular del ocular en pantalla dividido el aumento, así el aumento es real. Solo se renderiza mientras se apunta con un arma con visor. Costo: un render extra del mundo a baja resolución mientras se apunta.
+
+## 2026-10-25 — Nombres de armas ficticios
+Dentro del juego las armas tienen nombres inventados; el id interno identifica el modelo real de referencia. Se cambian en `localization/*.json`.
+
+## 2026-10-25 — Distancia ojo–mira automática
+Cada modelo guarda en su marcador `Sight` una distancia sugerida (miras metálicas: alza a ~12 cm del ojo; red dot 24 cm; visor 7,5 cm; pistolas con el brazo extendido). `eye_relief` en los datos la puede forzar.
+
+## 2026-10-25 — Armería provisoria
+Mesas con F para equipar armas mientras no exista el inventario (F2). Se elimina o se convierte en un armero/comerciante cuando llegue el inventario.
+
+## 2026-10-25 — "sks y te" interpretado como SKS + G3
+Si era otra arma, se cambia en el generador de datos.

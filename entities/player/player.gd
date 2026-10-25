@@ -116,6 +116,8 @@ func teleport(pos: Vector3, facing_yaw: float = NAN) -> void:
 
 func _process(delta: float) -> void:
 	var look := input_provider.consume_look(delta)
+	if weapons != null:
+		look *= weapons.look_mult()
 	last_look = look
 	yaw = wrapf(yaw - look.x, -PI, PI)
 	pitch_angle = clampf(pitch_angle - look.y, -PITCH_LIMIT, PITCH_LIMIT)

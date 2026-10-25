@@ -1,0 +1,171 @@
+extends TestCase
+## Las 25 armas del catálogo: datos, modelos, apuntado alineado, cerrojo,
+## recarga cartucho a cartucho, visor y armería.
+
+const LEVEL := preload("res://world/test_greybox/test_greybox.tscn")
+
+var level: Node3D
+var player: Player
+var bot: BotInputProvider
+var weapons: WeaponController
+
+
+func before_each() -> void:
+	DebugTools.infinite_ammo = false
+	level = LEVEL.instantiate()
+	add_child(level)
+	player = level.get_node("Player")
+	bot = BotInputProvider.new()
+	player.set_input_provider(bot)
+	weapons = player.weapons
+	await physics_frames(5)
+	CombatWorld.get_for(player).hitstop_enabled = false
+	player.teleport(Vector3(30, 0.05, 30), PI)
+	await physics_frames(40)
+
+
+func after_each() -> void:
+	DebugTools.infinite_ammo = false
+	level.queue_free()
+	await process_frames(1)
+
+
+func _catalog() -> Array:
+	return JSON.parse_string(FileAccess.get_file_as_string("res://data/weapons/catalog.json"))
+
+
+func _load(id: String) -> WeaponData:
+	return load("res://data/weapons/%s.tres" % id) as WeaponData
+
+
+func _equip(id: String) -> WeaponData:
+	var d := _load(id)
+	weapons.equip_weapon(d, 3 if d.slot == 3 else 1)
+	bot.select_slot(3 if d.slot == 3 else 1)
+	await physics_frames(60)
+	return d
+
+
+func test_catalog_has_25_valid_weapons() -> void:
+	var cat := _catalog()
+	assert_eq(cat.size(), 25)
+	for id: String in cat:
+		var d := _load(id)
+		assert_true(d != null, "%s carga" % id)
+		if d == null:
+			continue
+		assert_eq(d.id, id)
+		assert_true(tr(d.name_key) != d.name_key, "%s tiene nombre" % id)
+		assert_true(d.caliber != "", "%s tiene calibre" % id)
+		assert_lt(d.spread_ads, d.spread_hip, "%s: apuntar es más preciso" % id)
+		assert_true(d.reload_type in ["magazine", "break", "rounds"], "%s: tipo de recarga válido" % id)
+		if d.sight == "scope":
+			assert_gt(d.scope_mag, 1.0, "%s: visor con aumento" % id)
+
+
+func test_every_model_has_markers() -> void:
+	for id: String in _catalog():
+		var d := _load(id)
+		var m := WeaponModelBuilder.build(d)
+		for marker in ["Sight", "Muzzle", "Ejection"]:
+			assert_true(m.has_node(marker), "%s tiene %s" % [id, marker])
+		if d.sight == "scope":
+			assert_true(m.has_node("ScopeLens"), "%s tiene ocular" % id)
+		if d.bolt_action:
+			assert_true(m.has_node("Bolt"), "%s tiene cerrojo" % id)
+		if d.reload_type == "break":
+			assert_true(m.has_node("Barrels"), "%s se quiebra" % id)
+		var muzzle := m.get_node("Muzzle") as Node3D
+		assert_lt(muzzle.position.z, -0.15, "%s: la boca está adelante" % id)
+		m.free()
+
+
+func test_every_weapon_aims_through_its_sight() -> void:
+	for id: String in _catalog():
+		bot.aim = false
+		await physics_frames(20)
+		await _equip(id)
+		bot.aim = true
+		await physics_frames(int(weapons.current_data().ads_time * 60.0) + 15)
+		await process_frames(25)
+		var s := weapons.sight_node().global_position
+		assert_near(s.x, 0.0, 0.004, "%s: mira centrada en X" % id)
+		assert_near(s.y, 0.0, 0.004, "%s: mira centrada en Y" % id)
+		assert_lt(s.z, -0.03, "%s: la mira está delante del ojo" % id)
+	bot.aim = false
+
+
+func test_bolt_action_needs_cycling() -> void:
+	var d := await _equip("rem700")
+	bot.press_fire()
+	await physics_frames(2)
+	assert_eq(weapons.current().mag, d.mag_size - 1)
+	assert_eq(weapons.state, WeaponController.State.CYCLING, "después del tiro se acciona el cerrojo")
+	bot.press_fire()
+	await physics_frames(2)
+	assert_eq(weapons.current().mag, d.mag_size - 1, "no dispara con el cerrojo abierto")
+	await physics_frames(int(d.cycle_time * 60.0) + 3)
+	assert_eq(weapons.state, WeaponController.State.READY)
+	bot.press_fire()
+	await physics_frames(2)
+	assert_eq(weapons.current().mag, d.mag_size - 2)
+
+
+func test_round_by_round_and_clip_reload() -> void:
+	var d := await _equip("mauser1909")
+	# Dos tiros y recarga parcial: cartucho a cartucho
+	for i in 2:
+		bot.press_fire()
+		await physics_frames(int(d.cycle_time * 60.0) + 5)
+	var c := weapons.current()
+	assert_eq(c.mag, 3)
+	assert_near(weapons.reload_duration(c), d.reload_time + 2.0 * d.round_time, 0.001)
+	# Vacía: peine completo
+	c.mag = 0
+	assert_near(weapons.reload_duration(c), d.reload_time_empty, 0.001)
+	bot.press_reload()
+	await physics_frames(int(d.reload_time_empty * 60.0) + 5)
+	assert_eq(c.mag, 5)
+
+
+func test_scope_magnifies() -> void:
+	var d := await _equip("svd")
+	bot.aim = true
+	await physics_frames(40)
+	await process_frames(10)
+	var main_fov := player.camera.fov
+	var scope_fov := weapons.scope_camera().fov
+	assert_lt(scope_fov, 20.0, "el visor muestra un campo chico")
+	assert_eq(weapons.viewmodel_viewport() != null, true)
+	assert_lt(weapons.look_mult(), 0.7, "la sensibilidad baja con el visor")
+	assert_near(player.camera.fov, Settings.get_value("video", "fov"), 1.0, "visor: la vista de afuera no hace zoom")
+	assert_gt(main_fov, scope_fov * 3.0)
+	bot.aim = false
+	assert_true(d != null)
+
+
+func test_sawed_off_break_reload() -> void:
+	var d := await _equip("sawedoff")
+	for i in 2:
+		bot.press_fire()
+		await physics_frames(14)
+	assert_eq(weapons.current().mag, 0)
+	bot.press_reload()
+	await physics_frames(int(d.reload_time_empty * 60.0) + 5)
+	assert_eq(weapons.current().mag, 2)
+
+
+func test_armory_table_equips_weapon() -> void:
+	var table := level.get_node("Geometry/Table_ak74") as Node3D
+	player.teleport(table.global_position + Vector3(0, 0.05, 1.3), 0.0)
+	await physics_frames(5)
+	var eye := player.camera.global_position
+	var target := table.global_position + Vector3(0, 0.9, 0)
+	var dv := target - eye
+	player.yaw = atan2(-dv.x, -dv.z)
+	player.pitch_angle = atan2(dv.y, Vector2(dv.x, dv.z).length())
+	await physics_frames(3)
+	bot.press_interact()
+	await physics_frames(60)
+	assert_eq(weapons.current().data.id, "ak74", "la AR-74 quedó en la mano")
+	assert_eq(weapons.current_slot, 1)

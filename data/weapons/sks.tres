@@ -1,0 +1,66 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "rifle_battle"
+model_params = {
+"recv_len": 0.28,
+"recv_h": 0.055,
+"barrel": 0.48,
+"hg": 0.28,
+"hg_style": "full_wood",
+"stock": "wood",
+"grip": "stock",
+"mag": "internal",
+"gas": true,
+"furniture": "wood",
+"muzzle_dev": "none",
+"iron_h": 0.045,
+"rear_z": -0.12
+}
+sight = "iron"
+scope_mag = 0.0
+reticle = "duplex"
+caliber = "7.62×39"
+reload_type = "rounds"
+round_time = 0.35
+clip_reload = true
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi")
+rpm = 360.0
+damage = 42.0
+pellets = 1
+muzzle_velocity = 735.0
+drag = 0.0011
+max_ricochets = 2
+tracer_every = 0
+mag_size = 10
+start_reserve = 60
+spread_hip = 2.4
+spread_ads = 0.14
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 1.0
+recoil_yaw = 0.35
+recoil_recovery = 0.65
+kick_back = 0.04
+kick_rot = 3.0
+recoil_ads_mult = 0.7
+reload_time = 0.7
+reload_time_empty = 2.4
+ads_time = 0.26
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.42
+sfx_body_hz = 74.0
+sfx_volume_db = 0.0
+id = "sks"
+name_key = "weapon.sks"

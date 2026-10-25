@@ -49,3 +49,21 @@
 
 ### Bugs conocidos
 - Ninguno en los tests. Al cerrar los tests Godot avisa de 4 objetos sin liberar (caché de sonidos sintéticos): inofensivo.
+
+## F1.5 — Armería: 25 armas (2026-10-25)
+
+### Funciona
+- 25 armas con nombres ficticios inspirados en reales (catálogo en `data/weapons/catalog.json`):
+  - Pistolas: P9 (9 mm, polímero), Pampa .22 (de inicio), Tala T9 (9 mm), Ballestero .45, Liberty .45.
+  - Subfusiles: MK5 (9 mm), PP-B (9×18, cargador helicoidal).
+  - Fusiles: AR-C (5.56, solo tiro a tiro), K416 y SC-L (5.56, red dot), AR-74 (5.45), AR-M (7.62×39), FMR (7.62×51), G-3A (7.62×51), carabina SK-45 (7.62×39, se carga por peine).
+  - Tiradores: DR-1 (visor 4×, retícula chevrón), KR-25 (visor 5×), M-14E (visor 3×, automático), carabina R-22S (.22).
+  - Cerrojo: rifle .22 (de inicio), R-700 (.308, visor 6×), Fusil Argentino 1909 (7.65×53, peine).
+  - Escopetas: doble caño, recortada, superpuesta de caza.
+- Generador de modelos por familia y parámetros (largo de caño, receptor, culata, guardamanos, cargador recto/curvo/helicoidal/interno, boca, madera/polímero/arena).
+- **Visor con aumento real** (imagen en imagen): una segunda cámara renderiza al ocular con el FOV justo para que el aumento sea el indicado; la vista de afuera no hace zoom. Retículas cruz, duplex y chevrón. La sensibilidad del mouse baja con el aumento.
+- **Cerrojo manual**: después de cada tiro se acciona (animación, sale la vaina); no se puede disparar mientras tanto.
+- **Recarga cartucho a cartucho** (cerrojos, SK-45) y **por peine** con el arma vacía (Argentino 1909, SK-45).
+- Armería en el polígono: 25 mesas con el arma, nombre y calibre. F la equipa: pistolas al slot 3; largas al slot largo en la mano (o al 1).
+- HUD: nombre del arma + calibre.
+- 75 tests (8 nuevos: catálogo, modelos, apuntado de las 25 armas, cerrojo, recargas, visor, armería).

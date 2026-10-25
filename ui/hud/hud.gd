@@ -68,7 +68,7 @@ func _on_weapon_state(s: Dictionary) -> void:
 	_reserve_label.text = "∞" if s["infinite"] else "/ %d" % s["reserve"]
 	var low: bool = s["mag"] <= maxi(1, int(s["mag_size"] * 0.2))
 	_ammo_label.add_theme_color_override("font_color", UiTheme.ALERT if low else UiTheme.TEXT)
-	_weapon_label.text = tr(s["name_key"])
+	_weapon_label.text = "%s · %s" % [tr(s["name_key"]), s.get("caliber", "")] if s.get("caliber", "") != "" else tr(s["name_key"])
 	if s["reloading"]:
 		_mode_label.text = tr("weapon.reloading")
 	elif s["has_modes"]:

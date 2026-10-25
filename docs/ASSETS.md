@@ -14,7 +14,7 @@ Antes de sumar uno, verificar la licencia (ver prompt maestro, sección 4).
 | `title_background` | `ui/title/title_background.gd` |
 | `loading_background` | `ui/loading/loading_screen.gd` |
 | `player_body` | `entities/player/player.gd` |
-| `weapon_rifle`, `weapon_shotgun`, `weapon_pistol` | `entities/weapons/weapon_model_builder.gd` |
+| Un modelo real por arma (25, ver `data/weapons/catalog.json`) | `entities/weapons/weapon_model_builder.gd` |
 | `fps_arms` | `entities/weapons/weapon_model_builder.gd` (manos de bloque) |
 | `vfx_muzzle_flash` | `entities/weapons/weapon_controller.gd` |
 | `decal_bullet_holes` | `systems/combat/combat_world.gd` |

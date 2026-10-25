@@ -8,19 +8,26 @@ extends Node
 ## Apuntado real: al apuntar, el arma se coloca de forma que su marcador "Sight"
 ## quede exactamente en el eje de la cámara (centro de la pantalla).
 
-enum State { READY, RELOADING, HOLSTER, DRAW }
+enum State { READY, RELOADING, HOLSTER, DRAW, CYCLING }
 
 const WEAPON_FILES: Dictionary = {
 	1: "res://data/weapons/rifle.tres",
 	2: "res://data/weapons/shotgun.tres",
 	3: "res://data/weapons/pistol.tres",
 }
-## Posición de cadera de cada modelo (espacio de la cámara del arma).
+## Posición de cadera por familia (espacio de la cámara del arma).
 const HIP_POSE: Dictionary = {
-	"rifle": Vector3(0.135, -0.15, -0.27),
-	"shotgun": Vector3(0.13, -0.145, -0.24),
 	"pistol": Vector3(0.125, -0.13, -0.34),
+	"smg": Vector3(0.13, -0.14, -0.26),
+	"rifle_ar": Vector3(0.135, -0.15, -0.27),
+	"rifle_ak": Vector3(0.135, -0.15, -0.27),
+	"rifle_battle": Vector3(0.135, -0.15, -0.27),
+	"bolt": Vector3(0.135, -0.15, -0.25),
+	"shotgun_sxs": Vector3(0.13, -0.145, -0.24),
+	"shotgun_ou": Vector3(0.13, -0.15, -0.24),
 }
+## Resolución de la imagen del visor (cuadrada).
+const SCOPE_RES := 512
 const VM_FOV_HIP := 62.0
 const VM_FOV_ADS := 52.0
 ## Tiempo después de dejar de correr hasta poder disparar.
@@ -79,23 +86,58 @@ var _slide_kick: float = 0.0
 var _audio_shot: AudioStreamPlayer
 var _audio_mech: AudioStreamPlayer
 var _part_base: Dictionary = {}
+var _cycle_fx_done: bool = false
+# Visor: cámara en el mundo del juego que renderiza a una textura
+var _scope_vp: SubViewport
+var _scope_cam: Camera3D
 
 
 func setup(p: Player) -> void:
 	player = p
 	_rng.randomize()
 	_build_viewmodel()
+	_build_scope_view()
 	for slot: int in WEAPON_FILES:
-		var ws := WeaponSlot.new()
-		ws.data = load(WEAPON_FILES[slot]) as WeaponData
-		ws.mag = ws.data.mag_size
-		ws.reserve = ws.data.start_reserve
-		ws.model = WeaponModelBuilder.build(ws.data.model)
-		ws.model.visible = false
-		_rig.add_child(ws.model)
-		_remember_parts(ws.model)
-		slots[slot] = ws
+		slots[slot] = _make_slot(load(WEAPON_FILES[slot]) as WeaponData)
 	_equip(1)
+
+
+func _make_slot(data: WeaponData) -> WeaponSlot:
+	var ws := WeaponSlot.new()
+	ws.data = data
+	ws.mag = data.mag_size
+	ws.reserve = data.start_reserve
+	ws.model = WeaponModelBuilder.build(data)
+	ws.model.visible = false
+	_rig.add_child(ws.model)
+	_remember_parts(ws.model)
+	if ws.model.has_node("ScopeLens"):
+		var lens := ws.model.get_node("ScopeLens") as MeshInstance3D
+		(lens.material_override as ShaderMaterial).set_shader_parameter("scope_tex", _scope_vp.get_texture())
+	return ws
+
+
+## Pone un arma en un slot (reemplaza la que había) y la saca.
+func equip_weapon(data: WeaponData, slot: int) -> void:
+	if slots.has(slot):
+		var old := slots[slot] as WeaponSlot
+		for n: Node in _part_base.keys():
+			if not is_instance_valid(n) or old.model.is_ancestor_of(n):
+				_part_base.erase(n)
+		old.model.queue_free()
+	slots[slot] = _make_slot(data)
+	if slot == current_slot:
+		_equip(slot)
+	else:
+		_start_holster(slot)
+
+
+## Toma un arma (armería, saqueo): pistolas al slot 3; las largas al slot
+## largo que tengas en la mano, o al 1.
+func take_weapon(data: WeaponData) -> int:
+	var slot := 3 if data.slot == 3 else (current_slot if current_slot in [1, 2] else 1)
+	equip_weapon(data, slot)
+	return slot
 
 
 # --- Consultas (las usan el jugador, el HUD y los tests) -------------------------
@@ -124,6 +166,25 @@ func fov_mult() -> float:
 	return lerpf(1.0, d.ads_fov_mult, _smooth(ads_amount))
 
 
+## Multiplicador de sensibilidad del mouse (más fino mirando por un visor).
+func look_mult() -> float:
+	var d := current_data()
+	if d == null or d.scope_mag <= 1.0:
+		return 1.0
+	return lerpf(1.0, 1.0 / sqrt(d.scope_mag), _smooth(ads_amount))
+
+
+func scope_camera() -> Camera3D:
+	return _scope_cam
+
+
+func eye_relief_for(c: WeaponSlot) -> float:
+	if c.data.eye_relief > 0.0:
+		return c.data.eye_relief
+	var s := c.model.get_node("Sight")
+	return s.get_meta("eye_relief", 0.2) if s.has_meta("eye_relief") else 0.2
+
+
 func viewmodel_camera() -> Camera3D:
 	return _vm_camera
 
@@ -144,6 +205,8 @@ func get_state_dict() -> Dictionary:
 	return {
 		"slot": current_slot,
 		"name_key": c.data.name_key,
+		"caliber": c.data.caliber,
+		"cycling": state == State.CYCLING,
 		"mag": c.mag,
 		"mag_size": c.data.mag_size,
 		"reserve": c.reserve,
@@ -210,7 +273,7 @@ func _advance_state(delta: float) -> void:
 	var c := current()
 	if state == State.RELOADING:
 		# Escopeta: expulsa las vainas al quebrarse
-		if c.data.model == "shotgun" and not _reload_fx_done and state_time >= state_duration * 0.3:
+		if c.data.reload_type == "break" and not _reload_fx_done and state_time >= state_duration * 0.3:
 			_reload_fx_done = true
 			var spent := c.data.mag_size - c.mag
 			for i in spent:
@@ -221,6 +284,16 @@ func _advance_state(delta: float) -> void:
 		_equip(_pending_slot)
 	elif state == State.DRAW and state_time >= state_duration:
 		_set_state(State.READY, 0.0)
+	elif state == State.CYCLING:
+		# Cerrojo: la vaina sale cuando el cerrojo va hacia atrás
+		if not _cycle_fx_done and state_time >= state_duration * 0.45:
+			_cycle_fx_done = true
+			_eject_shell(c, false, 0)
+			_play_mech(SynthSfx.click("bolt_back", 0.75, 0.07), -7.0)
+		if state_time >= state_duration:
+			_play_mech(SynthSfx.click("bolt_fwd", 1.0, 0.05), -8.0)
+			_set_state(State.READY, 0.0)
+			_emit_state()
 
 
 func _set_state(s: State, duration: float) -> void:
@@ -255,9 +328,22 @@ func _start_reload() -> void:
 	var c := current()
 	_reload_empty = c.mag == 0
 	_reload_fx_done = false
-	_set_state(State.RELOADING, c.data.reload_time_empty if _reload_empty else c.data.reload_time)
+	_set_state(State.RELOADING, reload_duration(c))
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
 	_emit_state()
+
+
+## Duración de la recarga según el tipo de arma y cuántos cartuchos faltan.
+func reload_duration(c: WeaponSlot) -> float:
+	var w := c.data
+	if w.reload_type == "rounds":
+		if c.mag == 0 and w.clip_reload:
+			return w.reload_time_empty
+		var needed := w.mag_size - c.mag
+		if not DebugTools.infinite_ammo:
+			needed = mini(needed, c.reserve)
+		return w.reload_time + w.round_time * needed
+	return w.reload_time_empty if c.mag == 0 else w.reload_time
 
 
 func _finish_reload(c: WeaponSlot) -> void:
@@ -276,7 +362,7 @@ func _fire(c: WeaponSlot) -> void:
 	if not DebugTools.infinite_ammo:
 		c.mag -= 1
 	c.shots += 1
-	_cooldown = maxf(w.seconds_per_shot(), DOUBLE_BARREL_GAP if w.model == "shotgun" else 0.0)
+	_cooldown = maxf(w.seconds_per_shot(), DOUBLE_BARREL_GAP if w.reload_type == "break" else 0.0)
 
 	var cam := player.camera
 	var origin := cam.global_position
@@ -308,7 +394,10 @@ func _fire(c: WeaponSlot) -> void:
 	_audio_shot.volume_db = w.sfx_volume_db
 	_audio_shot.pitch_scale = _rng.randf_range(0.96, 1.04)
 	_audio_shot.play()
-	if w.model != "shotgun":
+	if w.bolt_action:
+		_cycle_fx_done = false
+		_set_state(State.CYCLING, w.cycle_time)
+	elif w.reload_type != "break":
 		_eject_shell(c, false, 0)
 	EventBus.weapon_fired.emit(w.id)
 	_emit_state()
@@ -404,7 +493,7 @@ func _process(delta: float) -> void:
 	# Pose base: cadera ↔ mira alineada con el centro de la pantalla
 	var sight := (c.model.get_node("Sight") as Node3D).position
 	var hip: Vector3 = HIP_POSE.get(w.model, Vector3(0.13, -0.14, -0.26))
-	var ads := Vector3(-sight.x, -sight.y, -w.eye_relief - sight.z)
+	var ads := Vector3(-sight.x, -sight.y, -eye_relief_for(c) - sight.z)
 	var pos := hip.lerp(ads, a)
 	var rot := Vector3.ZERO
 
@@ -450,17 +539,30 @@ func _process(delta: float) -> void:
 			rot.x -= deg_to_rad(40) * t
 		State.RELOADING:
 			var t := clampf(state_time / state_duration, 0.0, 1.0)
-			var inn := _smooth(clampf(t / 0.15, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.85) / 0.15, 0.0, 1.0)))
-			var tilt := 30.0 if w.model != "shotgun" else 18.0
-			rot.z += deg_to_rad(tilt) * inn
-			rot.x += deg_to_rad(10 if w.model != "shotgun" else 22) * inn
+			var edge := minf(0.15, 0.35 / maxf(state_duration, 0.1))
+			var inn := _smooth(clampf(t / edge, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - (1.0 - edge)) / edge, 0.0, 1.0)))
+			var brk := w.reload_type == "break"
+			rot.z += deg_to_rad(18.0 if brk else 30.0) * inn
+			rot.x += deg_to_rad(22.0 if brk else 10.0) * inn
 			pos += Vector3(-0.035, -0.035, 0.05) * inn
+			if w.reload_type == "rounds":
+				# Empuja cada cartucho: pequeño golpe por ronda
+				var per := w.round_time / maxf(state_duration, 0.01)
+				var k := fmod(t, maxf(per, 0.01)) / maxf(per, 0.01)
+				pos.y -= sin(k * PI) * 0.006 * inn
+		State.CYCLING:
+			# Accionar el cerrojo: el arma baja apenas y gira hacia la mano
+			var t := clampf(state_time / state_duration, 0.0, 1.0)
+			var b := sin(t * PI)
+			rot.z += deg_to_rad(8) * b
+			pos.y -= 0.01 * b * (1.0 - a * 0.5)
 
 	_rig.position = pos
 	_rig.rotation = rot
 	_animate_parts(c, delta)
 
 	_vm_camera.fov = lerpf(VM_FOV_HIP, VM_FOV_ADS, a)
+	_update_scope(c, a)
 	_update_flash(c, delta)
 	_sync_light()
 
@@ -486,7 +588,9 @@ func _animate_parts(c: WeaponSlot, delta: float) -> void:
 	if m.has_node("Charging"):
 		var ch := m.get_node("Charging") as Node3D
 		var back := 0.0
-		if t >= 0.0 and _reload_empty and t > 0.68 and t < 0.84:
+		if t >= 0.0 and w.reload_type == "rounds":
+			back = 0.07 * _smooth(clampf(t / 0.08, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.92) / 0.08, 0.0, 1.0)))
+		elif t >= 0.0 and _reload_empty and t > 0.68 and t < 0.84:
 			back = sin((t - 0.68) / 0.16 * PI) * 0.07
 		ch.position = _part_base[ch] + Vector3(0, 0, back)
 	if m.has_node("Slide"):
@@ -497,6 +601,26 @@ func _animate_parts(c: WeaponSlot, delta: float) -> void:
 		if locked and (state == State.READY or state == State.RELOADING) and _slide_kick <= 0.5:
 			back = 0.032
 		sl.position = _part_base[sl] + Vector3(0, 0, back)
+	if m.has_node("Bolt"):
+		var bolt := m.get_node("Bolt") as Node3D
+		var lift := 0.0
+		var back := 0.0
+		var ct := -1.0
+		if state == State.CYCLING:
+			ct = clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0)
+		elif t >= 0.0:
+			# Recargando: cerrojo abierto mientras entran los cartuchos
+			if t <= 0.08:
+				ct = t / 0.08 * 0.35
+			elif t < 0.92:
+				ct = 0.35
+			else:
+				ct = 0.35 + (t - 0.92) / 0.08 * 0.65
+		if ct >= 0.0:
+			lift = _smooth(clampf(ct / 0.2, 0.0, 1.0)) * (1.0 - _smooth(clampf((ct - 0.8) / 0.2, 0.0, 1.0)))
+			back = _smooth(clampf((ct - 0.2) / 0.25, 0.0, 1.0)) * (1.0 - _smooth(clampf((ct - 0.5) / 0.25, 0.0, 1.0)))
+		bolt.position = _part_base[bolt] + Vector3(0, 0, back * 0.075)
+		bolt.rotation = Vector3(0, 0, deg_to_rad(65) * lift)
 	if m.has_node("Barrels"):
 		var br := m.get_node("Barrels") as Node3D
 		var open := 0.0
@@ -522,7 +646,7 @@ func _update_flash(c: WeaponSlot, delta: float) -> void:
 		_flash.visible = true
 		_flash.global_position = muzzle.global_position
 		_flash.rotation = Vector3(0, 0, _rng.randf() * TAU)
-		var sc := _rng.randf_range(0.8, 1.25) * (1.6 if c.data.model == "shotgun" else 1.0)
+		var sc := _rng.randf_range(0.8, 1.25) * (1.6 if c.data.reload_type == "break" else 1.0)
 		_flash.scale = Vector3(sc, sc, sc)
 	else:
 		_flash.visible = false
@@ -555,10 +679,49 @@ static func _smooth(x: float) -> float:
 
 
 func _remember_parts(model: Node3D) -> void:
-	for path: String in ["Mag", "Charging", "Slide", "Barrels/ShellL", "Barrels/ShellR"]:
+	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Barrels/ShellL", "Barrels/ShellR"]:
 		if model.has_node(path):
 			var n := model.get_node(path) as Node3D
 			_part_base[n] = n.position
+
+
+## Visor con aumento: la cámara del visor mira por el eje del arma y su FOV
+## se calcula para que el aumento sea real respecto de la vista sin visor.
+func _update_scope(c: WeaponSlot, a: float) -> void:
+	var lens := c.model.get_node_or_null("ScopeLens") as MeshInstance3D
+	var on := lens != null and a > 0.02 and c.data.scope_mag > 1.0
+	_scope_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	if lens == null:
+		return
+	(lens.material_override as ShaderMaterial).set_shader_parameter("active", a if on else 0.0)
+	if not on:
+		return
+	var main := player.camera
+	# Tamaño angular del ocular en pantalla, convertido a ángulo de la cámara del mundo
+	var dist := maxf(-lens.global_position.z, 0.01)
+	var d: float = lens.get_meta("lens_d", 0.034)
+	var a_vm := 2.0 * atan((d * 0.5) / dist)
+	var frac := tan(a_vm * 0.5) / tan(deg_to_rad(_vm_camera.fov) * 0.5)
+	var a_main := 2.0 * atan(frac * tan(deg_to_rad(main.fov) * 0.5))
+	_scope_cam.fov = clampf(rad_to_deg(a_main) / c.data.scope_mag, 0.5, 60.0)
+	# Mira por el eje del arma (incluye retroceso y balanceo)
+	_scope_cam.global_transform = Transform3D(main.global_basis * _rig.basis, main.global_position)
+
+
+func _build_scope_view() -> void:
+	_scope_vp = SubViewport.new()
+	_scope_vp.name = "ScopeView"
+	_scope_vp.size = Vector2i(SCOPE_RES, SCOPE_RES)
+	_scope_vp.own_world_3d = false
+	_scope_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	_scope_vp.audio_listener_enable_3d = false
+	_scope_vp.msaa_3d = Viewport.MSAA_2X
+	add_child(_scope_vp)
+	_scope_cam = Camera3D.new()
+	_scope_cam.near = 0.05
+	_scope_cam.far = 2000.0
+	_scope_cam.current = true
+	_scope_vp.add_child(_scope_cam)
 
 
 func _build_viewmodel() -> void:

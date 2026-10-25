@@ -51,6 +51,20 @@ Desde el spawn, **date vuelta** (el polígono está atrás, pasando la abertura 
 | 14 | F4 | Munición infinita (laboratorio) |
 | 15 | Opciones → Video → Mostrar interfaz; Controles → Apuntar: alternar | Oculta todo el HUD; cambia entre alternar y mantener |
 
+## F1.5 — Armería
+
+Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arma, su nombre y calibre.
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Mirar una mesa y F | "[F] Tomar …"; el arma queda en la mano. Pistolas van al slot 3; las largas al slot largo que tengas en la mano |
+| 2 | Apuntar con cada una | Siempre se apunta por su mira: alza y guion, red dot o visor |
+| 3 | Visores (DR-1, KR-25, M-14E, R-700) | Al apuntar, el ocular muestra la imagen aumentada con retícula; alrededor la vista es normal. El mouse se vuelve más fino |
+| 4 | Cerrojo (rifle .22, R-700, Argentino 1909) | Después de cada tiro se acciona el cerrojo y salta la vaina; no dispara hasta terminar |
+| 5 | R con cerrojos y SK-45 | Carga cartucho a cartucho; vacía, el Argentino 1909 y la SK-45 cargan un peine entero de una |
+| 6 | Escopetas recortada y superpuesta | Recortada: muy abierta; superpuesta: perdigones más agrupados |
+| 7 | B en armas con automático | MK5, PP-B, K416, SC-L, AR-74, AR-M, FMR, G-3A, M-14E |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

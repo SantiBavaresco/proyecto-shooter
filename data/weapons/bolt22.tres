@@ -1,0 +1,63 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "bolt"
+model_params = {
+"recv_len": 0.2,
+"recv_h": 0.04,
+"recv_w": 0.036,
+"barrel": 0.5,
+"barrel_r": 0.008,
+"hg": 0.4,
+"mag": "short",
+"furniture": "wood",
+"muzzle_dev": "none",
+"iron_h": 0.03
+}
+sight = "iron"
+scope_mag = 0.0
+reticle = "duplex"
+caliber = ".22 LR"
+reload_type = "rounds"
+round_time = 0.3
+clip_reload = false
+bolt_action = true
+cycle_time = 0.55
+fire_modes = PackedStringArray("semi")
+rpm = 200.0
+damage = 16.0
+pellets = 1
+muzzle_velocity = 380.0
+drag = 0.0015
+max_ricochets = 2
+tracer_every = 0
+mag_size = 5
+start_reserve = 50
+spread_hip = 1.6
+spread_ads = 0.04
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 0.4
+recoil_yaw = 0.1
+recoil_recovery = 0.85
+kick_back = 0.015
+kick_rot = 1.5
+recoil_ads_mult = 0.7
+reload_time = 0.5
+reload_time_empty = 2.9
+ads_time = 0.3
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.14
+sfx_body_hz = 170.0
+sfx_volume_db = -8.0
+id = "bolt22"
+name_key = "weapon.bolt22"

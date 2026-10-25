@@ -18,6 +18,7 @@ const GridShader := preload("res://world/test_greybox/grid.gdshader")
 const Mannequin := preload("res://world/props/mannequin.gd")
 const PaperTarget := preload("res://world/props/paper_target.gd")
 const AmmoCrate := preload("res://world/props/ammo_crate.gd")
+const WeaponTable := preload("res://world/props/weapon_table.gd")
 
 ## Polígono: línea de tiro y franja que ocupa (x de 18 a 42).
 const RANGE_LINE_Z := 30.0
@@ -152,6 +153,24 @@ func _build() -> void:
 	_sign(geo, cbase + Vector3(3.5, 7.0, 1.2), tr("greybox.containers"))
 
 	_build_range(geo)
+	_build_armory(geo)
+
+
+## Armería: una mesa por arma del catálogo, en filas detrás de la línea de tiro.
+func _build_armory(geo: Node3D) -> void:
+	var catalog: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/weapons/catalog.json"))
+	var cols := 5
+	var x0 := RANGE_X_MIN + 2.6
+	var dx := (RANGE_X_MAX - RANGE_X_MIN - 5.2) / float(cols - 1)
+	var z0 := RANGE_LINE_Z - 4.5
+	for i in catalog.size():
+		var t := WeaponTable.new()
+		t.name = "Table_%s" % catalog[i]
+		t.weapon_path = "res://data/weapons/%s.tres" % catalog[i]
+		t.position = Vector3(x0 + (i % cols) * dx, 0, z0 - (i / cols) * 2.8)
+		t.rotation = Vector3(0, PI, 0)
+		geo.add_child(t)
+	_sign(geo, Vector3((RANGE_X_MIN + RANGE_X_MAX) * 0.5, 3.6, z0 - 14.5), tr("greybox.armory"))
 
 
 ## Polígono de tiro, detrás del punto de aparición.

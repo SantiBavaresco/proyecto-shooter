@@ -4,11 +4,20 @@
 
 [resource]
 script = ExtResource("1_wd")
-id = "pistol"
-name_key = "weapon.pistol"
 slot = 3
 model = "pistol"
+model_params = {
+"style": "poly"
+}
 sight = "iron"
+scope_mag = 0.0
+reticle = "duplex"
+caliber = "9×19"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
 fire_modes = PackedStringArray("semi")
 rpm = 420.0
 damage = 26.0
@@ -41,3 +50,5 @@ eye_relief = 0.55
 sfx_tail = 0.25
 sfx_body_hz = 110.0
 sfx_volume_db = -3.0
+id = "pistol"
+name_key = "weapon.pistol"

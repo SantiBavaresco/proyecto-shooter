@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "rifle_ar"
+model_params = {
+"recv_len": 0.26,
+"recv_h": 0.055,
+"barrel": 0.4,
+"hg": 0.26,
+"mag": "short",
+"iron_h": 0.06,
+"muzzle_dev": "none"
+}
+sight = "iron"
+scope_mag = 0.0
+reticle = "duplex"
+caliber = ".22 LR"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi")
+rpm = 400.0
+damage = 15.0
+pellets = 1
+muzzle_velocity = 380.0
+drag = 0.0015
+max_ricochets = 2
+tracer_every = 0
+mag_size = 10
+start_reserve = 60
+spread_hip = 1.8
+spread_ads = 0.12
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 0.4
+recoil_yaw = 0.15
+recoil_recovery = 0.85
+kick_back = 0.015
+kick_rot = 1.5
+recoil_ads_mult = 0.7
+reload_time = 1.9
+reload_time_empty = 2.3
+ads_time = 0.22
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.14
+sfx_body_hz = 170.0
+sfx_volume_db = -8.0
+id = "sr22"
+name_key = "weapon.sr22"
