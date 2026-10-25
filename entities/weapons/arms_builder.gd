@@ -91,6 +91,8 @@ static func add_arms(root: Node3D, data: WeaponData) -> void:
 			parent = root.get_node(String(p["left_in"])) as Node3D
 			center -= parent.position
 		_left_forend(parent, center, float(p["lr"]))
+		if parent.name == "Barrels" and parent.has_node("ShellL") and parent.has_node("ShellR"):
+			_shell_loader(parent)
 
 
 # --- Mano derecha: empuñadura y cola del disparador --------------------------
@@ -141,7 +143,24 @@ static func _right_hand(root: Node3D, p: Dictionary, pistol: bool) -> void:
 
 # --- Mano izquierda: guardamanos --------------------------------------------
 
-static func _left_forend(parent: Node3D, c: Vector3, r: float) -> void:
+## Escopetas: segunda pose de la mano izquierda, con los dos cartuchos en la mano.
+## El controlador la muestra durante la recarga y la lleva hasta las recámaras.
+static func _shell_loader(barrels: Node3D) -> void:
+	var a := (barrels.get_node("ShellL") as Node3D).position
+	var b := (barrels.get_node("ShellR") as Node3D).position
+	var loader := Node3D.new()
+	loader.name = "Loader"
+	loader.position = (a + b) * 0.5
+	loader.visible = false
+	barrels.add_child(loader)
+	# La mano agarra los culotes desde abajo; los cartuchos son los ShellL/ShellR
+	# Se ve con los caños abiertos: el antebrazo se orienta para ese ángulo
+	var comp := Basis(Vector3.RIGHT, deg_to_rad(WeaponController.BREAK_OPEN_DEG))
+	_left_forend(loader, Vector3(0, -0.004, 0.024), 0.027, "HandLoad", comp, Vector3(-0.85, -0.5, -0.05), Vector3(-0.2, 0.35, 0.9))
+
+
+static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "HandL", comp := Basis.IDENTITY,
+		arm_dir := Vector3(-0.58, -0.57, 0.57), upper_dir := Vector3(-0.17, 0.5, 0.85)) -> void:
 	var a := Vector3.BACK  # +Z: hacia atrás (los dedos se escalonan a lo largo del caño)
 	var u := Vector3.RIGHT
 	var v := Vector3.UP
@@ -166,8 +185,8 @@ static func _left_forend(parent: Node3D, c: Vector3, r: float) -> void:
 	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
 	var wrist: Vector3 = at.call(0.07, deg_to_rad(-138.0), r + 0.02)
 	# El codo queda abajo y afuera, fuera de la vista; el brazo sube hacia el hombro
-	_forearm(glove, sleeve, wrist, wrist + Vector3(-0.58, -0.57, 0.57).normalized() * FOREARM, Vector3(-0.17, 0.5, 0.85))
-	_finish(parent, "HandL", glove, sleeve)
+	_forearm(glove, sleeve, wrist, wrist + (comp * arm_dir).normalized() * FOREARM, comp * upper_dir)
+	_finish(parent, node_name, glove, sleeve)
 
 
 # --- Mano izquierda de apoyo en la pistola ----------------------------------

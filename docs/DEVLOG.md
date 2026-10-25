@@ -89,3 +89,10 @@
 - **Guardamanos con forma** (nueva herramienta de loft): estrías del A2, ensanche para la palma del AK, tope para la mano del MK5, FMR y G-3A redondeados con ventilaciones, DR-1 con ventanas, forends de escopeta redondeados, cubiertas de riel en el K416.
 - **Cabeza en dos zonas**: el núcleo (cerebro y centro de la cara, también la sien de perfil) mata de un tiro con cualquier arma y muestra "LETAL"; la periferia (pómulo, mandíbula, oreja, roce del cráneo) hace ×3.
 - 79 tests (1 nuevo: núcleo letal y periferia).
+
+## F1.8 — Recarga de escopetas (2026-10-25)
+
+### Funciona
+- Los caños se quiebran a fondo (62°) y el arma se sube y se acerca para ver las recámaras.
+- La mano izquierda suelta el guardamanos, los caños caen, salen las vainas, la mano trae dos cartuchos, los mete al ras de la recámara, se va, el arma se cierra y la mano vuelve al guardamanos. Vale para las tres escopetas.
+- 79 tests.

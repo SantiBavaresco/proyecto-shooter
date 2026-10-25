@@ -35,6 +35,8 @@ const SPRINT_RECOVERY := 0.18
 const INTERACT_RANGE := 2.6
 ## Mínimo entre los dos caños de la escopeta.
 const DOUBLE_BARREL_GAP := 0.15
+## Apertura de los caños de las escopetas al recargar (grados).
+const BREAK_OPEN_DEG := 62.0
 ## Cada muesca de la rueda multiplica el aumento por esto (visor variable).
 const ZOOM_STEP := 1.26
 
@@ -568,9 +570,10 @@ func _process(delta: float) -> void:
 			var edge := minf(0.15, 0.35 / maxf(state_duration, 0.1))
 			var inn := _smooth(clampf(t / edge, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - (1.0 - edge)) / edge, 0.0, 1.0)))
 			var brk := w.reload_type == "break"
-			rot.z += deg_to_rad(18.0 if brk else 30.0) * inn
-			rot.x += deg_to_rad(22.0 if brk else 10.0) * inn
-			pos += Vector3(-0.035, -0.035, 0.05) * inn
+			rot.z += deg_to_rad(14.0 if brk else 30.0) * inn
+			rot.x += deg_to_rad(12.0 if brk else 10.0) * inn
+			# Escopeta: se sube y se acerca para ver las recámaras abiertas
+			pos += (Vector3(-0.03, 0.06, 0.03) if brk else Vector3(-0.035, -0.035, 0.05)) * inn
 			if w.reload_type == "rounds":
 				# Empuja cada cartucho: pequeño golpe por ronda
 				var per := w.round_time / maxf(state_duration, 0.01)
@@ -650,20 +653,51 @@ func _animate_parts(c: WeaponSlot, delta: float) -> void:
 		bolt.rotation = Vector3(0, 0, deg_to_rad(65) * lift)
 	if m.has_node("Barrels"):
 		var br := m.get_node("Barrels") as Node3D
-		var open := 0.0
-		if t >= 0.0:
-			open = _smooth(clampf((t - 0.12) / 0.16, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.78) / 0.12, 0.0, 1.0)))
-		br.rotation = Vector3(deg_to_rad(-40) * open, 0, 0)
-		for n: String in ["ShellL", "ShellR"]:
-			var sh := br.get_node(n) as Node3D
-			var base: Vector3 = _part_base[sh]
-			if t >= 0.0 and t > 0.42 and t < 0.8:
-				var ins := _smooth(clampf((t - 0.42) / 0.2, 0.0, 1.0))
-				sh.visible = true
-				sh.position = base + Vector3(0, 0, 0.09 * (1.0 - ins))
-			else:
-				sh.visible = false
-				sh.position = base
+		_animate_break(br, t)
+
+
+## Escopeta de quiebre: la mano izquierda suelta el guardamanos, los caños caen
+## a fondo, la mano trae dos cartuchos, los mete en las recámaras, se cierra y la
+## mano vuelve al guardamanos.
+##   0.02–0.12 la mano se va · 0.10–0.26 abre (salen las vainas a 0.3)
+##   0.34–0.48 trae los cartuchos · 0.48–0.60 los mete · 0.62–0.74 la mano se va
+##   0.80–0.92 cierra · 0.88–0.98 la mano vuelve al guardamanos
+func _animate_break(br: Node3D, t: float) -> void:
+	var r := t >= 0.0
+	var open := 0.0
+	if r:
+		open = _smooth(clampf((t - 0.1) / 0.16, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.8) / 0.12, 0.0, 1.0)))
+	br.rotation = Vector3(deg_to_rad(-BREAK_OPEN_DEG) * open, 0, 0)
+	# Fuera de la vista: abajo y a la izquierda (en el espacio del arma, pasado a los caños)
+	var away := br.basis.inverse() * Vector3(-0.07, -0.26, 0.04)
+	var hand := br.get_node_or_null("HandL") as Node3D
+	if hand != null:
+		var off := 0.0
+		if r:
+			off = _smooth(clampf((t - 0.02) / 0.1, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.88) / 0.1, 0.0, 1.0)))
+		hand.position = _part_base[hand] + away * off
+		hand.visible = off < 0.98
+	var loader := br.get_node_or_null("Loader") as Node3D
+	var load_off := away
+	if loader != null:
+		var behind := Vector3(0, 0.004, 0.045)  # alineados detrás de las recámaras
+		var seated := Vector3(0, 0, -0.024)  # culote al ras de la recámara
+		if r and t >= 0.34 and t < 0.48:
+			load_off = away.lerp(behind, _smooth((t - 0.34) / 0.14))
+		elif r and t >= 0.48 and t < 0.62:
+			load_off = behind.lerp(seated, _smooth(clampf((t - 0.48) / 0.12, 0.0, 1.0)))
+		elif r and t >= 0.6 and t < 0.62:
+			load_off = seated
+		elif r and t >= 0.62 and t < 0.74:
+			load_off = seated.lerp(away, _smooth((t - 0.62) / 0.12))
+		loader.visible = r and t >= 0.34 and t < 0.74
+		loader.position = _part_base[loader] + load_off
+	for n: String in ["ShellL", "ShellR"]:
+		var sh := br.get_node(n) as Node3D
+		var base: Vector3 = _part_base[sh]
+		sh.visible = r and t >= 0.34 and t < 0.92
+		# Los cartuchos viajan en la mano hasta que entran; después quedan en la recámara
+		sh.position = base + (load_off if (r and t < 0.6 and loader != null) else Vector3(0, 0, -0.024))
 
 
 func _update_flash(c: WeaponSlot, delta: float) -> void:
@@ -706,7 +740,7 @@ static func _smooth(x: float) -> float:
 
 
 func _remember_parts(model: Node3D) -> void:
-	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Barrels/ShellL", "Barrels/ShellR"]:
+	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Barrels/ShellL", "Barrels/ShellR", "Barrels/HandL", "Barrels/Loader"]:
 		if model.has_node(path):
 			var n := model.get_node(path) as Node3D
 			_part_base[n] = n.position

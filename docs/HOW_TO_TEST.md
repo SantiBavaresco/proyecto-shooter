@@ -85,6 +85,12 @@ Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arm
 | 4 | Tiro al centro de la cara o a la sien de un maniquí | Cae de un tiro con cualquier arma (aparece LETAL) |
 | 5 | Tiro al pómulo, mandíbula u oreja | Mucho daño (×3) pero no siempre lo tira |
 
+## F1.8 — Recarga de escopetas
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Vaciar una escopeta y R | Los caños se abren a fondo; la mano izquierda trae dos cartuchos y los mete; se cierra y la mano vuelve al guardamanos |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

@@ -60,9 +60,12 @@ func _ready() -> void:
 			await _frames(30)
 			player.weapons.current().mag = 0
 			bot.press_reload()
-			await _frames(int(d.reload_time_empty * 60.0 * 0.45))
-			await _shot("W_%s_recarga" % id)
-			await _frames(int(d.reload_time_empty * 60.0 * 0.6))
+			var prev := 0.0
+			for f: float in [0.08, 0.3, 0.42, 0.53, 0.66, 0.9]:
+				await _frames(maxi(1, int(d.reload_time_empty * 60.0 * (f - prev))))
+				prev = f
+				await _shot("W_%s_recarga_%02d" % [id, int(f * 100)])
+			await _frames(int(d.reload_time_empty * 60.0 * 0.3))
 	# Visor variable del R-700: 5× y 25× sobre la diana de 200 m
 	if "rem700" in ids:
 		var d := load("res://data/weapons/rem700.tres") as WeaponData
