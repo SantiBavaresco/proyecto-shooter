@@ -67,7 +67,7 @@ static func make(act: String, geo: Dictionary, level: int, empty: bool, rng: Ran
 	p.side = geo.get("side", -1.0)
 	p.travel = geo.get("travel", 0.07)
 	p.pull_part = geo.get("pull_part", "Charging")
-	p._slow = [1.0, 1.12, 1.27][clampi(level, 0, 2)]
+	p._slow = [1.0, 1.12, 1.27, 1.4][clampi(level, 0, 3)]
 	var can_rack: bool = geo.get("rack", false)
 	var pistol: bool = geo.get("pistol", false)
 	var u := 0.0
@@ -76,10 +76,12 @@ static func make(act: String, geo: Dictionary, level: int, empty: bool, rng: Ran
 		"reload":
 			if level == 1:
 				p.fumbles = 1 if rng.randf() < 0.5 else 0
-			elif level >= 2:
+			elif level == 2:
 				p.fumbles = 2
+			elif level >= 3:
+				p.fumbles = 3  # extremo: casi no le emboca
 			var rack := empty and can_rack and not pistol
-			if empty and can_rack and level > 0 and rng.randf() < [0.0, 0.15, 0.35][level]:
+			if empty and can_rack and level > 0 and rng.randf() < [0.0, 0.15, 0.35, 0.5][clampi(level, 0, 3)]:
 				rack = false
 				p.forgot_chamber = true
 			u = p._mag_out(geo, 0.0, true)

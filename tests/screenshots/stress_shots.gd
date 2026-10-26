@@ -71,7 +71,7 @@ func _ready() -> void:
 		player.weapons.current().malfunction = ""
 
 	if only.is_empty() or "fallas" in only:
-		player.teleport(Vector3(30, 0.05, 28.5), PI)
+		player.teleport(Vector3(30, 0.05, 31.5), PI)
 		await _frames(200)  # se calma
 		for spec: Array in [["g3", "stovepipe"], ["g3", "double_feed"], ["akm", "misfire"], ["pistol", "unchambered"], ["mp5", "misfire"]]:
 			await _equip(spec[0])

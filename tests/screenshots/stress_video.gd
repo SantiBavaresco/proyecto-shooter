@@ -1,5 +1,5 @@
 extends Node
-## Video del estrés (calma → medio → alto) con Movie Maker de Godot.
+## Video del estrés (calma → medio → alto → extremo) con Movie Maker de Godot.
 ## Uso: godot --path . --fixed-fps 30 --resolution 1280x720 --write-movie out.avi res://tests/screenshots/stress_video.tscn
 
 const Level := preload("res://world/test_greybox/test_greybox.tscn")
@@ -34,9 +34,10 @@ func _ready() -> void:
 	player.weapons.equip_weapon(d, 1)
 	bot.select_slot(1)
 	await _f(30)
-	await _stage("CALMA", Vector3(30, 0.05, 28.0), Color(0.9, 0.9, 0.9))
+	await _stage("CALMA", Vector3(30, 0.05, 31.0), Color(0.9, 0.9, 0.9))
 	await _stage("ESTRÉS MEDIO", _zone("stress_medium"), Color(0.95, 0.75, 0.2))
 	await _stage("ESTRÉS ALTO", _zone("stress_high"), Color(0.95, 0.35, 0.25))
+	await _stage("ESTRÉS EXTREMO", _zone("stress_extreme"), Color(0.85, 0.3, 0.75))
 	get_tree().quit()
 
 
@@ -47,6 +48,7 @@ func _stage(title: String, pos: Vector3, col: Color) -> void:
 	await _f(2)
 	# Llega al nivel de la zona de golpe (para el video)
 	player.stress.value = player.stress.target
+	player.stress.extreme = player.stress.extreme_target
 	_look(dummy)
 	await _f(45)
 	# Cadera: 5 tiros

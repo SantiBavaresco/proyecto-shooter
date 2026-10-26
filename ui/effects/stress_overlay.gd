@@ -9,6 +9,7 @@ shader_type canvas_item;
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
 uniform float amount = 0.0;
 uniform float pulse = 0.0;
+uniform float blur_extra = 0.0;
 void fragment() {
 	vec2 uv = SCREEN_UV;
 	vec2 d = (uv - 0.5) * vec2(1.6, 1.0);
@@ -22,8 +23,8 @@ void fragment() {
 	uv += warp;
 	// Desenfoque: un poco en el centro, más en los bordes; el latido lo empuja
 	float lod = amount * (0.35 + 1.9 * edge) + pulse * amount * 0.5;
-	// Estrés alto: bastante más borroso (en medio casi no suma)
-	lod += amount * amount * amount * (0.9 + 0.9 * edge);
+	// Alto: más borroso; extremo: mucho más (en medio casi no suma)
+	lod += blur_extra * (0.9 + 0.9 * edge);
 	vec3 col = textureLod(screen_tex, uv, lod).rgb;
 	// Doble imagen apenas corrida (visión que no termina de enfocar)
 	vec3 ghost = textureLod(screen_tex, uv + vec2(0.004, 0.0015) * amount, lod + 0.5).rgb;
@@ -61,3 +62,4 @@ func _process(_delta: float) -> void:
 	if _rect.visible:
 		_mat.set_shader_parameter("amount", a)
 		_mat.set_shader_parameter("pulse", player.stress.pulse())
+		_mat.set_shader_parameter("blur_extra", player.stress.blur_extra())

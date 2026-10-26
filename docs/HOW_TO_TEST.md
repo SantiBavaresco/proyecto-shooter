@@ -125,6 +125,7 @@ Las zonas están pintadas en el piso entre las mesas de la armería y la línea 
 | 4 | Vaciar el AR-M y R en estrés alto | Tarda ~70 % más; el cargador pega dos veces en el brocal antes de entrar; manos temblorosas |
 | 5 | Repetir varias veces | A veces no monta: el gatillo hace clic y aparece SIN BALA EN RECÁMARA; R monta |
 | 6 | ESTRÉS MEDIO | Lo mismo pero más leve |
+| 6b | ESTRÉS EXTREMO | Mucho más borroso, el arma se balancea en un rango grande, la mira deriva más; recarga muy torpe |
 | 7 | Salir de la zona | El estrés baja de a poco (~5 s) |
 | 8 | ARMAS GASTADAS con un fusil, tirar ráfagas | Cada tanto: NO DISPARÓ, ENCASQUILLADA o TRABADA; el gatillo no hace nada hasta apretar R |
 | 9 | R con cada falla | No disparó: golpe al cargador y monta (sale el cartucho). Encasquillada: se ve la vaina parada en la ventana; al montar sale. Trabada: saca el cargador, monta dos veces, lo mete y monta |

@@ -405,7 +405,7 @@ func _start_reload() -> void:
 		dur = _plan.duration
 	else:
 		# Escopetas y cartucho a cartucho: solo más lento con estrés
-		dur *= [1.0, 1.15, 1.45][player.stress.level()]
+		dur *= [1.0, 1.15, 1.45, 1.65][player.stress.level()]
 	_plan_ev = 0
 	_set_state(State.RELOADING, dur)
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
@@ -419,7 +419,7 @@ func _start_clear(c: WeaponSlot) -> void:
 	_reload_empty = false
 	if c.data.bolt_action:
 		_cycle_fx_done = false
-		_set_state(State.CYCLING, c.data.cycle_time * [1.0, 1.15, 1.4][player.stress.level()])
+		_set_state(State.CYCLING, c.data.cycle_time * [1.0, 1.15, 1.4, 1.6][player.stress.level()])
 		_emit_state()
 		return
 	var act := c.malfunction

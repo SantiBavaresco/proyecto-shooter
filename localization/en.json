@@ -145,5 +145,7 @@
 	"weapon.clearing": "CLEARING",
 	"weapon.racking": "CHAMBERING",
 	"stress.medium": "STRESS",
-	"stress.high": "HIGH STRESS"
+	"stress.high": "HIGH STRESS",
+	"greybox.zone_stress_extreme": "EXTREME STRESS",
+	"stress.extreme": "EXTREME STRESS"
 }

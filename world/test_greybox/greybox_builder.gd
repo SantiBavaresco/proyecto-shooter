@@ -195,6 +195,7 @@ func _build_range(geo: Node3D) -> void:
 	# Zonas de prueba entre la armería y la línea de tiro (se dispara desde ahí)
 	var zones: Array = [["stress_medium", 21.75, Color(0.95, 0.72, 0.15), "greybox.zone_stress_medium"],
 		["stress_high", 25.75, Color(0.92, 0.28, 0.18), "greybox.zone_stress_high"],
+		["stress_extreme", 29.75, Color(0.7, 0.15, 0.55), "greybox.zone_stress_extreme"],
 		["worn", 38.0, Color(0.55, 0.62, 0.7), "greybox.zone_worn"]]
 	for zd: Array in zones:
 		var z := TestZone.new()
@@ -207,7 +208,7 @@ func _build_range(geo: Node3D) -> void:
 		geo.add_child(z)
 	var crate := AmmoCrate.new()
 	crate.name = "AmmoCrate"
-	crate.position = Vector3(cx - 2.0, 0, RANGE_LINE_Z - 1.6)
+	crate.position = Vector3(cx + 3.5, 0, RANGE_LINE_Z - 1.6)
 	geo.add_child(crate)
 
 	# Dianas: distancia (m) → tamaño de la cara (m), cada una en su carril

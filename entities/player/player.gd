@@ -227,11 +227,13 @@ func _update_camera_effects(delta: float) -> void:
 func _update_zones(delta: float) -> void:
 	zone_kinds = TestZone.kinds_at(get_tree(), global_position) if is_inside_tree() else PackedStringArray()
 	var lvl := 0
-	if zone_kinds.has("stress_high"):
+	if zone_kinds.has("stress_extreme"):
+		lvl = 3
+	elif zone_kinds.has("stress_high"):
 		lvl = 2
 	elif zone_kinds.has("stress_medium"):
 		lvl = 1
-	stress.target = Stress.LEVEL_VALUE[lvl]
+	stress.set_level(lvl)
 	stress.tick(delta)
 
 

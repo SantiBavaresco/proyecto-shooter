@@ -96,14 +96,14 @@ func _update_status() -> void:
 	var parts: PackedStringArray = []
 	var lvl := _player.stress.level()
 	if lvl > 0:
-		parts.append(tr("stress.high") if lvl == 2 else tr("stress.medium"))
+		parts.append([tr("stress.medium"), tr("stress.high"), tr("stress.extreme")][lvl - 1])
 	var w := _player.weapons
 	if w != null and w.current() != null:
 		var cond := w.effective_condition(w.current())
 		if cond < 0.995:
 			parts.append(tr("weapon.condition") % int(round(cond * 100.0)))
 	_status_label.text = "  ·  ".join(parts)
-	_status_label.add_theme_color_override("font_color", UiTheme.ALERT if lvl == 2 else UiTheme.TEXT_DIM)
+	_status_label.add_theme_color_override("font_color", UiTheme.ALERT if lvl >= 2 else UiTheme.TEXT_DIM)
 
 
 func _on_hit(info: HitInfo, killed: bool) -> void:

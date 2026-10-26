@@ -28,7 +28,7 @@ func _ready() -> void:
 	CombatWorld.get_for(player).hitstop_enabled = false
 
 	# Vista general de la armería
-	player.teleport(Vector3(30, 0.05, 28.5), 0.0)
+	player.teleport(Vector3(30, 0.05, 31.5), 0.0)
 	player.pitch_angle = -0.32
 	await _frames(40)
 	await _shot("A0_armeria")
