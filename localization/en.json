@@ -133,5 +133,17 @@
 	"action.zoom_out": "Zoom out (scope)",
 	"input.wheel_up": "Wheel up",
 	"input.wheel_down": "Wheel down",
-	"hit.lethal": "LETHAL"
+	"hit.lethal": "LETHAL",
+	"greybox.zone_stress_medium": "MEDIUM STRESS",
+	"greybox.zone_stress_high": "HIGH STRESS",
+	"greybox.zone_worn": "WORN WEAPONS",
+	"weapon.condition": "Condition %d%%",
+	"weapon.fault_misfire": "MISFIRE — [R] clear",
+	"weapon.fault_stovepipe": "STOVEPIPE — [R] clear",
+	"weapon.fault_double_feed": "DOUBLE FEED — [R] clear",
+	"weapon.fault_unchambered": "CHAMBER EMPTY — [R] chamber a round",
+	"weapon.clearing": "CLEARING",
+	"weapon.racking": "CHAMBERING",
+	"stress.medium": "STRESS",
+	"stress.high": "HIGH STRESS"
 }

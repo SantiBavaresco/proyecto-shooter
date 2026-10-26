@@ -47,7 +47,7 @@ func _ready() -> void:
 		var d := load("res://data/weapons/%s.tres" % id) as WeaponData
 		var m := WeaponModelBuilder.build(d)
 		if not with_arms:
-			for n in ["HandR", "HandL", "HookR", "HookL"]:
+			for n in ["HandR", "HandL", "HookR", "HookL", "HookP"]:
 				var h := m.find_child(n, true, false)
 				if h != null:
 					h.free()
@@ -70,7 +70,7 @@ func _ready() -> void:
 		await _shot("%s_34" % id)
 		# Primeros planos de las manos
 		if with_arms:
-			for hn in ["HandR", "HandL", "HookR", "HookL"]:
+			for hn in ["HandR", "HandL", "HookR", "HookL", "HookP"]:
 				var hand := m.find_child(hn, true, false) as Node3D
 				if hand == null:
 					continue

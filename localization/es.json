@@ -133,5 +133,17 @@
 	"action.zoom_out": "Menos aumento (visor)",
 	"input.wheel_up": "Rueda arriba",
 	"input.wheel_down": "Rueda abajo",
-	"hit.lethal": "LETAL"
+	"hit.lethal": "LETAL",
+	"greybox.zone_stress_medium": "ESTRÉS MEDIO",
+	"greybox.zone_stress_high": "ESTRÉS ALTO",
+	"greybox.zone_worn": "ARMAS GASTADAS",
+	"weapon.condition": "Estado %d%%",
+	"weapon.fault_misfire": "NO DISPARÓ — [R] destrabar",
+	"weapon.fault_stovepipe": "ENCASQUILLADA — [R] destrabar",
+	"weapon.fault_double_feed": "TRABADA — [R] destrabar",
+	"weapon.fault_unchambered": "SIN BALA EN RECÁMARA — [R] montar",
+	"weapon.clearing": "DESTRABANDO",
+	"weapon.racking": "MONTANDO",
+	"stress.medium": "ESTRÉS",
+	"stress.high": "ESTRÉS ALTO"
 }

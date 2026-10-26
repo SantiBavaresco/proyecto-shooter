@@ -133,3 +133,25 @@
 - Mano que carga los cartuchos: la muñeca sigue al antebrazo (ya no queda quebrada).
 - 79 tests.
 
+## F1.12 — Estrés de combate y fallas del arma (2026-10-26)
+
+### Funciona
+- **Zonas de prueba** pintadas entre la armería y la línea de tiro: *Estrés medio*, *Estrés alto* y *Armas gastadas*. Desde ahí se tira a las dianas.
+- **Estrés** (`core/stress.gd`): sube rápido y baja lento; niveles medio y alto. Por ahora lo fijan las zonas (después: supresión y daño).
+  - Visión: desenfoque leve (más en los bordes), algo desaturada, doble imagen apenas corrida y viñeta que late con el pulso (`ui/effects/stress_overlay.gd`, capa 0: no afecta al arma ni al HUD).
+  - Más dispersión desde la cadera (hasta ×2,1 en alto).
+  - Deriva lenta de la mira, menor apuntando; cada latido la empuja. Mueve la cámara de verdad: cambia dónde va la bala.
+  - Temblor de manos y arma, más fuerte manipulando.
+- **Recarga con estrés** (`entities/weapons/reload_plan.gd`): la recarga con cargador ahora es un plan armado al empezar.
+  - Medio: ~12 % más lenta y a veces le pega al brocal una vez.
+  - Alto: ~70–75 % más lenta; le erra al brocal dos veces (el cargador pega en el borde, lo baja y reintenta).
+  - Vacía con estrés, a veces se olvida de montar (15 % medio, 35 % alto): el primer gatillazo hace "clic" y R monta.
+  - Escopetas y cartucho a cartucho: solo más lentas.
+- **Fallas por desgaste**: cada arma tiene estado (baja con cada disparo; se ve en el HUD cuando no está al 100 %). La zona de armas gastadas lo simula al 18 %.
+  - *No disparó*: clic. R: golpe al cargador, monta, sale el cartucho.
+  - *Encasquillada*: vaina trabada en la ventana (se ve). R: monta y sale la vaina.
+  - *Doble alimentación*: manija apenas atrás. R: saca el cargador, monta dos veces, lo vuelve a meter y monta. Se pierde un cartucho.
+  - Cerrojos: se acciona el cerrojo. Pistolas: mano izquierda nueva que toma la corredera por arriba. Escopetas: falla el cartucho y se pasa al otro caño.
+  - Mensaje en rojo debajo del centro con la falla y "[R]".
+- 87 tests (8 nuevos: estrés, riesgo de falla, duración con estrés, planes, zonas, olvido de montar, destrabado, cerrojo).
+

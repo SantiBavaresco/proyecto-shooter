@@ -89,3 +89,14 @@ CombatWorld (uno por nivel, grupo "combat_world")
 - Recibir daño: cualquier nodo con `apply_hit(info: HitInfo) -> bool` (devuelve true si fue derribado). La zona sale de la metadata `hit_zone` del cuerpo golpeado.
 - Interacción: cualquier nodo con `interact(player)` y `get_interact_text() -> String` (clave de traducción con `%s` para la tecla).
 - El jugador expone `apply_recoil(pitch, yaw, recovery)` y `last_look`; el arma expone `fov_mult()`, `move_speed_mult()`, `blocks_sprint()`.
+
+### Estrés y fallas (F1.12)
+- `Stress` (`core/stress.gd`, sin escena): valor 0–1 que sigue a un objetivo; niveles, pulso, deriva de la
+  mira (`Player.aim_drift`, se suma a la cámara sin tocar yaw/pitch) y temblor. Hoy lo fijan las
+  `TestZone` (`world/props/test_zone.gd`, grupo "test_zones", el jugador las consulta cada tick).
+- `StressOverlay` (`ui/effects`): CanvasLayer 0 con shader que lee la pantalla; queda debajo del arma (capa 1).
+- `ReloadPlan` (`entities/weapons/reload_plan.gd`): la recarga con cargador y cada destrabado se arman al
+  empezar como claves (manos, cargador, mano de gancho, manija, golpes, eventos) en fracciones de la
+  duración; `WeaponController` solo los evalúa. Acciones: reload, rack, misfire, stovepipe, double_feed.
+- `WeaponSlot.condition` y `malfunction`; `WeaponController.fault_risk(estado)` da la probabilidad por disparo.
+  R con falla → estado `CLEARING` (o `CYCLING` en cerrojos).

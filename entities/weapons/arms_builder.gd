@@ -84,6 +84,8 @@ static func add_arms(root: Node3D, data: WeaponData) -> void:
 	_right_hand(root, p, is_pistol)
 	if is_pistol:
 		_left_pistol(root, p)
+		if root.has_node("Slide"):
+			_slide_hand(root)
 	else:
 		var parent := root
 		var center: Vector3 = p["lc"]
@@ -297,6 +299,36 @@ static func _hook_hand(root: Node3D, node_name: String, s: float) -> void:
 	var g := _finish(root, node_name, glove, sleeve)
 	g.visible = false
 	g.set_meta("palm", pc)
+
+
+## Pistolas: mano izquierda que toma la corredera por arriba, atrás (para montar):
+## palma sobre la corredera, dedos por el costado derecho y pulgar por el izquierdo.
+## El origen del nodo es el punto de agarre (meta "knob" del nodo).
+static func _slide_hand(root: Node3D) -> void:
+	var glove := MeshKit.new()
+	var sleeve := MeshKit.new()
+	var a := Vector3.BACK  # los dedos se escalonan a lo largo de la corredera
+	var u := Vector3.RIGHT
+	var v := Vector3.UP
+	var heights := [-0.03, -0.011, 0.008, 0.026]
+	for i in 4:
+		_wrap_finger(glove, Vector3.ZERO, a, u, v, heights[i], 0.03, deg_to_rad(140.0), -1.0, FINGER_LEN[i], FINGER_R[i])
+	# Palma arriba a la izquierda de la corredera
+	_palm(glove, Vector3(-0.012, 0.024, 0.0), a, u, v, deg_to_rad(120.0), Vector3(0.022, 0.074, 0.054))
+	# Pulgar bajando por el costado izquierdo
+	var t0 := Vector3(-0.03, 0.012, 0.03)
+	var t1 := t0 + Vector3(0.004, -0.014, -0.022)
+	var t2 := t1 + Vector3(0.002, -0.006, -0.024)
+	var t3 := t2 + Vector3(0.001, -0.002, -0.02)
+	glove.capsule(t0, t1, THUMB_R[0] * 1.25, THUMB_R[0])
+	glove.capsule(t1, t2, THUMB_R[0], THUMB_R[1])
+	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
+	var wrist := Vector3(-0.026, 0.02, 0.062)
+	_forearm(glove, sleeve, wrist, wrist + Vector3(-0.4, -0.72, 0.56).normalized() * FOREARM, Vector3(0.0, 0.5, 0.85))
+	var g := _finish(root, "HookP", glove, sleeve)
+	g.visible = false
+	g.set_meta("palm", Vector3(-0.012, 0.024, 0.0))
+	g.set_meta("knob", Vector3(0, 0.022, 0.02))
 
 
 # --- Mano izquierda de apoyo en la pistola ----------------------------------

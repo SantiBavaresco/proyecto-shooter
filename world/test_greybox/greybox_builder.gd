@@ -13,6 +13,8 @@ extends Node3D
 ##  - Pila de contenedores marítimos (medidas reales de 20 pies)
 ##  - Polígono de tiro detrás del spawn (+Z): dianas a 25/50/100/200 m,
 ##    maniquíes, placa de acero para rebotes y caja de munición
+##  - Zonas de prueba junto a la línea de tiro: estrés medio, estrés alto y
+##    armas gastadas (fallas frecuentes)
 
 const GridShader := preload("res://world/test_greybox/grid.gdshader")
 const Mannequin := preload("res://world/props/mannequin.gd")
@@ -190,6 +192,19 @@ func _build_range(geo: Node3D) -> void:
 	_box(geo, Vector3(cx, 0.012, RANGE_LINE_Z), Vector3(width, 0.02, 0.2), _mat_accent, false)
 	_sign(geo, Vector3(cx, 4.2, RANGE_LINE_Z - 1.0), tr("greybox.range"))
 	_label(geo, Vector3(cx, 0.35, RANGE_LINE_Z - 0.4), tr("greybox.firing_line"), 0.5)
+	# Zonas de prueba entre la armería y la línea de tiro (se dispara desde ahí)
+	var zones: Array = [["stress_medium", 21.75, Color(0.95, 0.72, 0.15), "greybox.zone_stress_medium"],
+		["stress_high", 25.75, Color(0.92, 0.28, 0.18), "greybox.zone_stress_high"],
+		["worn", 38.0, Color(0.55, 0.62, 0.7), "greybox.zone_worn"]]
+	for zd: Array in zones:
+		var z := TestZone.new()
+		z.name = "Zone_" + String(zd[0])
+		z.kind = zd[0]
+		z.size = Vector2(3.5, 3.2)
+		z.color = zd[2]
+		z.title = tr(zd[3])
+		z.position = Vector3(zd[1], 0, RANGE_LINE_Z - 2.2)
+		geo.add_child(z)
 	var crate := AmmoCrate.new()
 	crate.name = "AmmoCrate"
 	crate.position = Vector3(cx - 2.0, 0, RANGE_LINE_Z - 1.6)

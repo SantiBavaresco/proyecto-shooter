@@ -23,6 +23,9 @@ var _reserve_label: Label
 var _weapon_label: Label
 var _mode_label: Label
 var _hint_label: Label
+var _status_label: Label
+var _fault_label: Label
+var _player: Player
 
 
 func _ready() -> void:
@@ -46,6 +49,7 @@ func _apply_visibility() -> void:
 
 func _process(delta: float) -> void:
 	_stamina_root.modulate.a = move_toward(_stamina_root.modulate.a, _target_alpha, FADE_SPEED * delta)
+	_update_status()
 	if _hit_time > 0.0:
 		_hit_time -= delta
 		_hitmarker.modulate.a = clampf(_hit_time / 0.18, 0.0, 1.0)
@@ -69,7 +73,11 @@ func _on_weapon_state(s: Dictionary) -> void:
 	var low: bool = s["mag"] <= maxi(1, int(s["mag_size"] * 0.2))
 	_ammo_label.add_theme_color_override("font_color", UiTheme.ALERT if low else UiTheme.TEXT)
 	_weapon_label.text = "%s · %s" % [tr(s["name_key"]), s.get("caliber", "")] if s.get("caliber", "") != "" else tr(s["name_key"])
-	if s["reloading"]:
+	var fault: String = s.get("fault", "")
+	_fault_label.text = tr("weapon.fault_" + fault) if fault != "" and not s.get("clearing", false) else ""
+	if s.get("clearing", false):
+		_mode_label.text = tr("weapon.racking") if fault == "unchambered" else tr("weapon.clearing")
+	elif s["reloading"]:
 		_mode_label.text = tr("weapon.reloading")
 	elif s.get("zoom_variable", false):
 		_mode_label.text = "%s×" % String.num(s["zoom"], 1).trim_suffix(".0")
@@ -77,6 +85,25 @@ func _on_weapon_state(s: Dictionary) -> void:
 		_mode_label.text = tr("weapon.mode_auto") if s["mode"] == "auto" else tr("weapon.mode_semi")
 	else:
 		_mode_label.text = ""
+
+
+## Estrés y estado del arma (chico, arriba del nombre del arma).
+func _update_status() -> void:
+	if _player == null or not is_instance_valid(_player):
+		_player = get_tree().get_first_node_in_group("player") as Player
+		if _player == null:
+			return
+	var parts: PackedStringArray = []
+	var lvl := _player.stress.level()
+	if lvl > 0:
+		parts.append(tr("stress.high") if lvl == 2 else tr("stress.medium"))
+	var w := _player.weapons
+	if w != null and w.current() != null:
+		var cond := w.effective_condition(w.current())
+		if cond < 0.995:
+			parts.append(tr("weapon.condition") % int(round(cond * 100.0)))
+	_status_label.text = "  ·  ".join(parts)
+	_status_label.add_theme_color_override("font_color", UiTheme.ALERT if lvl == 2 else UiTheme.TEXT_DIM)
 
 
 func _on_hit(info: HitInfo, killed: bool) -> void:
@@ -144,11 +171,13 @@ func _build() -> void:
 	ammo_box.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	ammo_box.offset_left = -360
 	ammo_box.offset_right = -48
-	ammo_box.offset_top = -150
+	ammo_box.offset_top = -175
 	ammo_box.offset_bottom = -40
 	ammo_box.alignment = BoxContainer.ALIGNMENT_END
 	ammo_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(ammo_box)
+	_status_label = _label(16, UiTheme.TEXT_DIM, HORIZONTAL_ALIGNMENT_RIGHT)
+	ammo_box.add_child(_status_label)
 	_weapon_label = _label(20, UiTheme.TEXT_DIM, HORIZONTAL_ALIGNMENT_RIGHT)
 	ammo_box.add_child(_weapon_label)
 	var row := HBoxContainer.new()
@@ -170,6 +199,15 @@ func _build() -> void:
 	_hint_label.offset_top = 60
 	_hint_label.offset_bottom = 100
 	_root.add_child(_hint_label)
+
+	# Falla del arma: debajo del centro, en rojo
+	_fault_label = _label(22, UiTheme.ALERT, HORIZONTAL_ALIGNMENT_CENTER)
+	_fault_label.set_anchors_preset(Control.PRESET_CENTER)
+	_fault_label.offset_left = -360
+	_fault_label.offset_right = 360
+	_fault_label.offset_top = 110
+	_fault_label.offset_bottom = 150
+	_root.add_child(_fault_label)
 
 
 func _label(font_size: int, color: Color, align: HorizontalAlignment) -> Label:

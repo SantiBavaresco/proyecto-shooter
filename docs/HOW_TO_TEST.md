@@ -113,6 +113,24 @@ Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arm
 | 6 | Mirar las recámaras con los caños abiertos | Son huecas (no planas) |
 | 7 | Mano que carga la escopeta | La muñeca sigue la línea del antebrazo |
 
+## F1.12 — Estrés y fallas
+
+Las zonas están pintadas en el piso entre las mesas de la armería y la línea de tiro.
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Pararte en ESTRÉS ALTO | En ~1 s la vista se desenfoca en los bordes, late y se desatura; arriba de la munición dice ESTRÉS ALTO |
+| 2 | Apuntar ahí | La mira se mueve apenas, lento; los tiros se abren un poco |
+| 3 | Tirar desde la cadera ahí | Bastante más dispersión que afuera |
+| 4 | Vaciar el AR-M y R en estrés alto | Tarda ~70 % más; el cargador pega dos veces en el brocal antes de entrar; manos temblorosas |
+| 5 | Repetir varias veces | A veces no monta: el gatillo hace clic y aparece SIN BALA EN RECÁMARA; R monta |
+| 6 | ESTRÉS MEDIO | Lo mismo pero más leve |
+| 7 | Salir de la zona | El estrés baja de a poco (~5 s) |
+| 8 | ARMAS GASTADAS con un fusil, tirar ráfagas | Cada tanto: NO DISPARÓ, ENCASQUILLADA o TRABADA; el gatillo no hace nada hasta apretar R |
+| 9 | R con cada falla | No disparó: golpe al cargador y monta (sale el cartucho). Encasquillada: se ve la vaina parada en la ventana; al montar sale. Trabada: saca el cargador, monta dos veces, lo mete y monta |
+| 10 | Pistola en ARMAS GASTADAS | La mano izquierda toma la corredera por arriba y la tira |
+| 11 | R-700 en ARMAS GASTADAS | Si no dispara, R acciona el cerrojo |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

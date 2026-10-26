@@ -24,6 +24,12 @@ const LEAN_WALL_MARGIN := 0.22
 
 var input_provider: InputProvider
 var stamina: Stamina = Stamina.new()
+## Estrés de combate (por ahora lo fijan las zonas de prueba).
+var stress: Stress = Stress.new()
+## Zonas de prueba en las que está parado (ver TestZone).
+var zone_kinds: PackedStringArray = PackedStringArray()
+## Deriva de la mira por estrés (rad): se suma a la mirada sin cambiar yaw/pitch.
+var aim_drift: Vector2 = Vector2.ZERO
 var stance: Stance = Stance.STANDING
 
 var yaw: float = 0.0
@@ -88,6 +94,10 @@ func _ready() -> void:
 	weapons.name = "Weapons"
 	add_child(weapons)
 	weapons.setup(self)
+	var ov := StressOverlay.new()
+	ov.name = "StressOverlay"
+	ov.player = self
+	add_child(ov)
 	_update_head_transform()
 	EventBus.player_spawned.emit(self)
 	EventBus.stamina_changed.emit(stamina.current, stamina.maximum)
@@ -122,6 +132,7 @@ func _process(delta: float) -> void:
 	yaw = wrapf(yaw - look.x, -PI, PI)
 	pitch_angle = clampf(pitch_angle - look.y, -PITCH_LIMIT, PITCH_LIMIT)
 	_update_recoil(delta)
+	aim_drift = stress.aim_drift(weapons.ads_amount if weapons != null else 0.0)
 	eye_height = lerpf(eye_height, _target_eye_height(), 1.0 - exp(-config.stance_lerp_speed * delta))
 	_update_lean(delta)
 	_update_camera_effects(delta)
@@ -164,8 +175,8 @@ func _update_recoil(delta: float) -> void:
 func _update_head_transform() -> void:
 	var base := get_global_transform_interpolated().origin if is_inside_tree() else global_position
 	head.global_position = base + Vector3(0.0, eye_height, 0.0)
-	head.rotation = Vector3(0.0, yaw, 0.0)
-	pitch_node.rotation = Vector3(pitch_angle, 0.0, 0.0)
+	head.rotation = Vector3(0.0, yaw + aim_drift.x, 0.0)
+	pitch_node.rotation = Vector3(pitch_angle + aim_drift.y, 0.0, 0.0)
 
 
 func _update_lean(delta: float) -> void:
@@ -212,12 +223,25 @@ func _update_camera_effects(delta: float) -> void:
 		camera.position = camera.position.lerp(Vector3.ZERO, 1.0 - exp(-10.0 * delta))
 
 
+## Zonas de prueba: fijan el estrés objetivo; el arma consulta "worn".
+func _update_zones(delta: float) -> void:
+	zone_kinds = TestZone.kinds_at(get_tree(), global_position) if is_inside_tree() else PackedStringArray()
+	var lvl := 0
+	if zone_kinds.has("stress_high"):
+		lvl = 2
+	elif zone_kinds.has("stress_medium"):
+		lvl = 1
+	stress.target = Stress.LEVEL_VALUE[lvl]
+	stress.tick(delta)
+
+
 # --- Física ---------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	var cmd := input_provider.poll_command(delta)
 	_last_cmd = cmd
 	stamina.tick(delta)
+	_update_zones(delta)
 	_slide_cooldown = maxf(0.0, _slide_cooldown - delta)
 
 	var on_floor := is_on_floor()

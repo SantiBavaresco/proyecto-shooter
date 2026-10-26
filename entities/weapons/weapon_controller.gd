@@ -8,7 +8,7 @@ extends Node
 ## Apuntado real: al apuntar, el arma se coloca de forma que su marcador "Sight"
 ## quede exactamente en el eje de la cámara (centro de la pantalla).
 
-enum State { READY, RELOADING, HOLSTER, DRAW, CYCLING }
+enum State { READY, RELOADING, HOLSTER, DRAW, CYCLING, CLEARING }
 
 const WEAPON_FILES: Dictionary = {
 	1: "res://data/weapons/rifle.tres",
@@ -39,6 +39,10 @@ const DOUBLE_BARREL_GAP := 0.15
 const BREAK_OPEN_DEG := 62.0
 ## Cada muesca de la rueda multiplica el aumento por esto (visor variable).
 const ZOOM_STEP := 1.26
+## Desgaste por disparo según el mecanismo (fracción del estado).
+const WEAR_PER_SHOT := {"magazine": 1.0 / 4000.0, "rounds": 1.0 / 5000.0, "break": 1.0 / 6000.0}
+## Estado que simula la zona de armas gastadas.
+const WORN_CONDITION := 0.18
 
 
 ## Estado de un arma del jugador.
@@ -51,6 +55,12 @@ class WeaponSlot:
 	var shots: int = 0
 	## Aumento actual del visor (los variables lo cambian con la rueda).
 	var zoom: float = 1.0
+	## Estado del arma (1 nueva, 0 destruida): baja con cada disparo.
+	var condition: float = 1.0
+	## Falla actual: "", "misfire", "stovepipe", "double_feed", "unchambered".
+	var malfunction: String = ""
+	## Vaina trabada en la ventana (se ve hasta que se monta).
+	var case_stuck: bool = false
 
 	func mode() -> String:
 		return data.fire_modes[mode_index] if data.fire_modes.size() > 0 else "semi"
@@ -73,6 +83,11 @@ var _reload_fx_done: bool = false
 var _break_spent: int = 2
 ## Cargador fuera de la vista (se "cambia" por uno nuevo mientras no se ve).
 var _mag_hidden: bool = false
+## Plan de la recarga o del destrabado en curso (armas con cargador o manija).
+var _plan: ReloadPlan = null
+var _plan_ev: int = 0
+## Acción de destrabado en curso (para aplicar su efecto al terminar).
+var _clear_action: String = ""
 var _cooldown: float = 0.0
 var _sprint_block: float = 0.0
 var _sprint_pose: float = 0.0
@@ -235,6 +250,9 @@ func get_state_dict() -> Dictionary:
 		"mode": c.mode(),
 		"has_modes": c.data.fire_modes.size() > 1,
 		"reloading": state == State.RELOADING,
+		"clearing": state == State.CLEARING or (state == State.CYCLING and c.malfunction != ""),
+		"fault": c.malfunction,
+		"condition": effective_condition(c),
 		"infinite": DebugTools.infinite_ammo,
 		"zoom": scope_mag(c),
 		"zoom_variable": has_variable_zoom(c.data),
@@ -265,8 +283,11 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 		_play_mech(SynthSfx.click("mode", 1.3, 0.04), -8.0)
 		_emit_state()
 
-	if cmd.reload and state == State.READY and _can_reload(c):
-		_start_reload()
+	if cmd.reload and state == State.READY and (c.malfunction != "" or _can_reload(c)):
+		if c.malfunction != "":
+			_start_clear(c)
+		else:
+			_start_reload()
 		player.input_provider.cancel_aim()
 		cmd.aim = false
 
@@ -288,7 +309,12 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 
 	if state == State.READY and _cooldown <= 0.0 and _sprint_block <= 0.0:
 		var wants := cmd.fire_pressed if c.mode() == "semi" else cmd.fire
-		if wants:
+		if wants and c.malfunction != "":
+			# Trabada o sin bala en la recámara: el gatillo no hace nada
+			if cmd.fire_pressed:
+				_play_mech(SynthSfx.click("dry", 0.8, 0.05), -6.0)
+				_cooldown = 0.2
+		elif wants:
 			if c.mag > 0:
 				_fire(c)
 			elif cmd.fire_pressed:
@@ -305,6 +331,11 @@ func _advance_state(delta: float) -> void:
 		return
 	state_time += delta
 	var c := current()
+	if (state == State.RELOADING or state == State.CLEARING) and _plan != null:
+		_run_plan_events(c)
+	if state == State.CLEARING and state_time >= state_duration:
+		_finish_clear(c)
+		return
 	if state == State.RELOADING:
 		# Escopeta: expulsa las vainas al quebrarse
 		if c.data.reload_type == "break" and not _reload_fx_done and state_time >= state_duration * 0.3:
@@ -326,6 +357,9 @@ func _advance_state(delta: float) -> void:
 			_play_mech(SynthSfx.click("bolt_back", 0.75, 0.07), -7.0)
 		if state_time >= state_duration:
 			_play_mech(SynthSfx.click("bolt_fwd", 1.0, 0.05), -8.0)
+			if c.malfunction == "misfire":
+				# Cerrojo: sale el cartucho que no disparó y entra otro
+				c.malfunction = ""
 			_set_state(State.READY, 0.0)
 			_emit_state()
 
@@ -363,13 +397,118 @@ func _start_reload() -> void:
 	_reload_empty = c.mag == 0
 	_reload_fx_done = false
 	_break_spent = c.data.mag_size - c.mag
-	_set_state(State.RELOADING, reload_duration(c))
+	_plan = null
+	var dur := reload_duration(c)
+	if c.data.reload_type == "magazine" and c.model.has_node("Mag"):
+		_plan = ReloadPlan.make("reload", _plan_geo(c), player.stress.level(), _reload_empty, _rng,
+			c.data.reload_time, c.data.reload_time_empty)
+		dur = _plan.duration
+	else:
+		# Escopetas y cartucho a cartucho: solo más lento con estrés
+		dur *= [1.0, 1.15, 1.45][player.stress.level()]
+	_plan_ev = 0
+	_set_state(State.RELOADING, dur)
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
 	_emit_state()
 
 
-## Duración de la recarga según el tipo de arma y cuántos cartuchos faltan.
+## Destrabar (R con una falla): cerrojo → accionarlo; con manija o corredera → el
+## plan de la falla (golpe al cargador, montar, sacar el cargador...).
+func _start_clear(c: WeaponSlot) -> void:
+	_clear_action = c.malfunction
+	_reload_empty = false
+	if c.data.bolt_action:
+		_cycle_fx_done = false
+		_set_state(State.CYCLING, c.data.cycle_time * [1.0, 1.15, 1.4][player.stress.level()])
+		_emit_state()
+		return
+	var act := c.malfunction
+	if act == "unchambered":
+		act = "rack"
+	_plan = ReloadPlan.make(act, _plan_geo(c), player.stress.level(), false, _rng, c.data.reload_time, c.data.reload_time_empty)
+	_plan_ev = 0
+	_set_state(State.CLEARING, _plan.duration)
+	_play_mech(SynthSfx.click("reload_out", 1.1, 0.05), -9.0)
+	_emit_state()
+
+
+func _finish_clear(c: WeaponSlot) -> void:
+	if _clear_action == "double_feed" and c.mag > 0 and not DebugTools.infinite_ammo:
+		c.mag -= 1  # el cartucho que se trabó se pierde
+	c.malfunction = ""
+	c.case_stuck = false
+	_clear_action = ""
+	_set_state(State.READY, 0.0)
+	_emit_state()
+
+
+## Datos del arma que necesita el plan: palmas, cargador, manija o corredera.
+func _plan_geo(c: WeaponSlot) -> Dictionary:
+	var m := c.model
+	var z := Vector3.ZERO
+	var g := {"pistol": c.data.model == "pistol"}
+	var hl := m.get_node_or_null("HandL") as Node3D
+	var hr := m.get_node_or_null("HandR") as Node3D
+	g["pl"] = hl.get_meta("palm", z) if hl != null else z
+	g["pr"] = hr.get_meta("palm", z) if hr != null else z
+	if m.has_node("Mag"):
+		var mag := m.get_node("Mag") as Node3D
+		g["mag_base"] = _part_base[mag]
+		g["grab"] = mag.get_meta("grab", Vector3(0, -0.05, 0.0))
+	if m.has_node("Charging") and not g["pistol"]:
+		var ch := m.get_node("Charging") as Node3D
+		var kn: Vector3 = _part_base[ch] + (ch.get_meta("knob", z) as Vector3)
+		var sd := 1.0 if kn.x > 0.0 else -1.0
+		var hook := m.get_node_or_null("HookR" if sd > 0.0 else "HookL") as Node3D
+		g["rack"] = true
+		g["knob"] = kn
+		g["side"] = sd
+		g["hook_palm"] = hook.get_meta("palm", z) if hook != null else z
+		g["travel"] = 0.05 if absf(kn.x) < 0.016 else 0.075
+		g["pull_part"] = "Charging"
+	elif m.has_node("Slide") and m.has_node("HookP"):
+		var hp := m.get_node("HookP") as Node3D
+		g["rack"] = true
+		g["knob"] = hp.get_meta("knob", Vector3(0, 0.022, 0.02))
+		g["side"] = -1.0
+		g["hook_palm"] = hp.get_meta("palm", z)
+		g["travel"] = 0.032
+		g["pull_part"] = "Slide"
+	return g
+
+
+## Sonidos y efectos del plan (vainas, cartuchos) a medida que pasa el tiempo.
+func _run_plan_events(c: WeaponSlot) -> void:
+	var t := clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0)
+	while _plan_ev < _plan.events.size() and float(_plan.events[_plan_ev][0]) <= t:
+		var n: String = _plan.events[_plan_ev][1]
+		_plan_ev += 1
+		match n:
+			"mag_out":
+				_play_mech(SynthSfx.click("mag_out", 0.7, 0.06), -7.0)
+			"mag_in":
+				_play_mech(SynthSfx.click("mag_in", 0.95, 0.05), -5.0)
+			"fumble":
+				_play_mech(SynthSfx.click("fumble", 1.25, 0.03), -8.0)
+			"tap":
+				_play_mech(SynthSfx.click("tap", 0.55, 0.04), -8.0)
+			"rack_back":
+				_play_mech(SynthSfx.click("rack_back", 0.8, 0.06), -6.0)
+			"rack_fwd":
+				_play_mech(SynthSfx.click("rack_fwd", 1.05, 0.05), -5.0)
+			"slide_release":
+				_play_mech(SynthSfx.click("slide_rel", 1.0, 0.05), -6.0)
+			"eject_live", "eject_case":
+				c.case_stuck = false
+				var ej := c.model.get_node_or_null("Ejection") as Node3D
+				_eject_shell(c, false, 0, ej.global_position if ej != null else Vector3.INF)
+
+
+## Duración de la recarga según el tipo de arma y cuántos cartuchos faltan
+## (durante una recarga o un destrabado, la duración real, con estrés).
 func reload_duration(c: WeaponSlot) -> float:
+	if c == current() and (state == State.RELOADING or state == State.CLEARING):
+		return state_duration
 	var w := c.data
 	if w.reload_type == "rounds":
 		if c.mag == 0 and w.clip_reload:
@@ -387,6 +526,9 @@ func _finish_reload(c: WeaponSlot) -> void:
 	c.mag += take
 	if not DebugTools.infinite_ammo:
 		c.reserve -= take
+	if _plan != null and _plan.forgot_chamber:
+		# Con el apuro se olvidó de montar: la primera vez el gatillo hace "clic"
+		c.malfunction = "unchambered"
 	_play_mech(SynthSfx.click("reload_in", 0.9, 0.06), -6.0)
 	_set_state(State.READY, 0.0)
 	_emit_state()
@@ -394,6 +536,21 @@ func _finish_reload(c: WeaponSlot) -> void:
 
 func _fire(c: WeaponSlot) -> void:
 	var w := c.data
+	var cond := effective_condition(c)
+	c.condition = maxf(0.0, c.condition - float(WEAR_PER_SHOT.get(w.reload_type, 1.0 / 4000.0)))
+	var risk := fault_risk(cond)
+	if _rng.randf() < risk["misfire"]:
+		# No disparó: el cartucho queda en la recámara (con cargador o cerrojo hay que
+		# destrabar; en la escopeta se pasa al otro caño y se saca al recargar)
+		if not DebugTools.infinite_ammo:
+			c.mag -= 1
+		_play_mech(SynthSfx.click("dry", 0.75, 0.05), -4.0)
+		_cooldown = 0.25
+		if w.reload_type != "break":
+			c.malfunction = "misfire"
+		_kick_rot.x += deg_to_rad(0.6)
+		_emit_state()
+		return
 	if not DebugTools.infinite_ammo:
 		c.mag -= 1
 	c.shots += 1
@@ -403,7 +560,7 @@ func _fire(c: WeaponSlot) -> void:
 	var origin := cam.global_position
 	var basis := cam.global_basis
 	var fwd := -basis.z
-	var spread := lerpf(w.spread_hip, w.spread_ads, _smooth(ads_amount)) * _spread_factor(w)
+	var spread := lerpf(w.spread_hip * player.stress.hip_spread_mult(), w.spread_ads, _smooth(ads_amount)) * _spread_factor(w)
 	var combat := CombatWorld.get_for(player)
 	var muzzle_world := _vm_to_world(c.model.get_node("Muzzle").global_position)
 	for i in maxi(w.pellets, 1):
@@ -433,9 +590,35 @@ func _fire(c: WeaponSlot) -> void:
 		_cycle_fx_done = false
 		_set_state(State.CYCLING, w.cycle_time)
 	elif w.reload_type != "break":
-		_eject_shell(c, false, 0)
+		# Semiautomáticas: la vaina puede quedar trabada en la ventana o entrar dos
+		# cartuchos a la vez (solo si quedaba otro para alimentar)
+		var roll := _rng.randf()
+		if c.mag > 0 and roll < risk["stovepipe"]:
+			c.malfunction = "stovepipe"
+			c.case_stuck = true
+			_cooldown = 0.3
+		elif c.mag > 0 and w.reload_type == "magazine" and roll < risk["stovepipe"] + risk["double_feed"]:
+			c.malfunction = "double_feed"
+			_cooldown = 0.3
+			_eject_shell(c, false, 0)
+		else:
+			_eject_shell(c, false, 0)
 	EventBus.weapon_fired.emit(w.id)
 	_emit_state()
+
+
+## Estado con el que se comporta el arma (la zona de armas gastadas lo baja).
+func effective_condition(c: WeaponSlot) -> float:
+	if player != null and player.zone_kinds.has("worn"):
+		return minf(c.condition, WORN_CONDITION)
+	return c.condition
+
+
+## Probabilidad de cada falla por disparo según el estado: casi nada en un arma
+## sana; sube rápido por debajo del 70 %.
+static func fault_risk(condition: float) -> Dictionary:
+	var k := pow(clampf((0.7 - condition) / 0.7, 0.0, 1.0), 2.0)
+	return {"misfire": 0.0004 + 0.055 * k, "stovepipe": 0.0003 + 0.06 * k, "double_feed": 0.0001 + 0.018 * k}
 
 
 ## Multiplicador de dispersión por movimiento, aire y postura.
@@ -581,7 +764,7 @@ func _process(delta: float) -> void:
 			var t := _smooth(1.0 - clampf(state_time / state_duration, 0.0, 1.0))
 			pos.y -= 0.28 * t
 			rot.x -= deg_to_rad(40) * t
-		State.RELOADING:
+		State.RELOADING, State.CLEARING:
 			var t := clampf(state_time / state_duration, 0.0, 1.0)
 			var edge := minf(0.15, 0.35 / maxf(state_duration, 0.1))
 			var inn := _smooth(clampf(t / edge, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - (1.0 - edge)) / edge, 0.0, 1.0)))
@@ -597,16 +780,18 @@ func _process(delta: float) -> void:
 					rp = Vector3(-0.04, 0.05, 0.03)
 					rr = Vector3(12.0, 0.0, 22.0)
 				_:
-					if w.model == "pistol":
+					if w.model == "pistol" and state == State.CLEARING:
+						# Montar la pistola: más lejos y de costado, para ver la corredera
+						rp = Vector3(-0.05, 0.07, -0.03)
+						rr = Vector3(12.0, -18.0, -22.0)
+					elif w.model == "pistol":
 						rp = Vector3(-0.1, 0.12, 0.1)
 						rr = Vector3(24.0, -8.0, -30.0)
-			if w.reload_type == "magazine":
-				var tl := _mag_times(c)
-				if tl["rack"] and float(tl["side"]) > 0.0:
-					# Manija a la derecha: el arma vuelve a girar para mostrar ese lado
-					var k := _smooth(clampf((t - float(tl["seat"])) / 0.08, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - float(tl["ret"]) + 0.04) / 0.1, 0.0, 1.0)))
-					rr = rr.lerp(Vector3(10.0, -16.0, 16.0), k)
-					rp = rp.lerp(Vector3(-0.08, 0.05, 0.0), k)
+			if _plan != null and _plan.side > 0.0:
+				# Manija a la derecha: el arma gira para mostrar ese lado mientras monta
+				var k := _smooth(_path(t, _plan.roll_w).x)
+				rr = rr.lerp(Vector3(10.0, -16.0, 16.0), k)
+				rp = rp.lerp(Vector3(-0.08, 0.05, 0.0), k)
 			pos += rp * inn
 			rot += rr * (PI / 180.0) * inn
 			_reload_roll = deg_to_rad(rr.z) * inn
@@ -614,7 +799,7 @@ func _process(delta: float) -> void:
 			var bump := _reload_bumps(w, t)
 			pos += bump[0]
 			rot += bump[1] * (PI / 180.0)
-			if w.reload_type == "rounds":
+			if w.reload_type == "rounds" and state == State.RELOADING:
 				# Empuja cada cartucho: pequeño golpe por ronda
 				var per := w.round_time / maxf(state_duration, 0.01)
 				var k := fmod(t, maxf(per, 0.01)) / maxf(per, 0.01)
@@ -627,6 +812,13 @@ func _process(delta: float) -> void:
 			rot.z += deg_to_rad(lerpf(8.0, 1.2, a)) * b
 			pos.y -= 0.01 * b * (1.0 - a * 0.85)
 
+	# Estrés: temblor de las manos (más fuerte manipulando el arma)
+	var st := player.stress.value
+	if st > 0.001:
+		var busy := 1.6 if state == State.RELOADING or state == State.CLEARING else 1.0
+		var tr3 := player.stress.tremor()
+		pos += tr3 * 0.0011 * st * busy * (1.0 - a * 0.5)
+		rot += Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.35) * st * busy * (1.0 - a * 0.5)
 	_rig.position = pos
 	_rig.rotation = rot
 	_animate_parts(c, delta)
@@ -662,6 +854,8 @@ static func _path(t: float, keys: Array) -> Vector3:
 ## Golpes del arma durante la recarga: [desplazamiento, giro en grados].
 func _reload_bumps(w: WeaponData, t: float) -> Array:
 	var z := Vector3.ZERO
+	if state == State.CLEARING and _plan != null:
+		return [_path(t, _plan.bump_p), _path(t, _plan.bump_r)]
 	match w.reload_type:
 		"break":
 			return [_path(t, [[0.0, z], [0.1, z], [0.16, Vector3(0, -0.012, 0.004)], [0.24, Vector3(0, 0.004, 0)], [0.3, z],
@@ -670,69 +864,9 @@ func _reload_bumps(w: WeaponData, t: float) -> Array:
 				_path(t, [[0.0, z], [0.1, z], [0.16, Vector3(-5, 0, 1)], [0.24, Vector3(1, 0, 0)], [0.3, z], [0.56, z],
 				[0.6, Vector3(-2, 0, 0)], [0.66, z], [0.8, z], [0.86, Vector3(7, 0, -1)], [0.92, Vector3(-2, 0, 0)], [1.0, z]])]
 		"magazine":
-			var tl := _mag_times(current())
-			var g: float = tl["grab"]
-			var se: float = tl["seat"]
-			# Tirón al sacar el cargador y golpe de la palma al calzar el nuevo
-			var pk := [[0.0, z], [g, z], [g + 0.05, Vector3(0, -0.012, 0.004)], [g + 0.12, Vector3(0, 0.003, 0)], [g + 0.2, z],
-				[se - 0.04, z], [se - 0.015, Vector3(0, -0.004, 0)], [se + 0.02, Vector3(0, 0.014, -0.004)], [se + 0.08, z]]
-			var rk := [[0.0, z], [g, z], [g + 0.05, Vector3(-3, 0, 2)], [g + 0.12, Vector3(1, 0, 0)], [g + 0.2, z],
-				[se - 0.04, z], [se + 0.02, Vector3(5, 0, -2)], [se + 0.08, z]]
-			if tl["rack"]:
-				# Montar: el arma cede hacia atrás al tirar y se sacude al soltar la manija
-				var p0: float = tl["pull0"]
-				var p1: float = tl["pull1"]
-				var rl: float = tl["rel"]
-				var sd: float = tl["side"]
-				pk.append_array([[p0, z], [p1, Vector3(sd * 0.004, 0, 0.01)], [rl, Vector3(sd * 0.004, 0, 0.01)],
-					[rl + 0.025, Vector3(0, 0.006, -0.006)], [rl + 0.07, z], [1.0, z]])
-				rk.append_array([[p0, z], [p1, Vector3(1.5, sd * 3.0, -sd * 2.0)], [rl, Vector3(1.5, sd * 3.0, -sd * 2.0)],
-					[rl + 0.025, Vector3(-3, 0, sd * 1.5)], [rl + 0.08, z], [1.0, z]])
-			else:
-				pk.append([1.0, z])
-				rk.append([1.0, z])
-			return [_path(t, pk), _path(t, rk)]
+			if _plan != null:
+				return [_path(t, _plan.bump_p), _path(t, _plan.bump_r)]
 	return [z, z]
-
-
-## Tiempos de la recarga con cargador, en fracciones de la duración. Vacía y con
-## manija, se agrega montar en recámara con la mano del lado de la manija.
-func _mag_times(c: WeaponSlot) -> Dictionary:
-	var m := c.model
-	var rack := _reload_empty and m.has_node("Charging") and c.data.model != "pistol"
-	if not rack:
-		return {"reach": 0.1, "grab": 0.15, "out": 0.33, "back": 0.45, "in": 0.62, "seat": 0.67, "ret": 0.88, "rack": false}
-	var ch := m.get_node("Charging") as Node3D
-	var kx := ch.position.x + (ch.get_meta("knob", Vector3.ZERO) as Vector3).x
-	var se := 0.5
-	var lv := se + (0.1 if kx > 0.0 else 0.05)  # a la derecha, espera que la izquierda vuelva
-	var ar := lv + 0.075
-	var p0 := ar + 0.04
-	var p1 := p0 + 0.065
-	var rl := p1 + 0.03
-	return {"reach": 0.08, "grab": 0.12, "out": 0.25, "back": 0.33, "in": 0.45, "seat": se, "rack": true,
-		"side": 1.0 if kx > 0.0 else -1.0, "leave": lv, "arrive": ar, "pull0": p0, "pull1": p1, "rel": rl, "ret": 0.93,
-		"travel": 0.05 if absf(kx) < 0.016 else 0.075}
-
-
-## Recorrido de la manija de carga: la mano la lleva atrás, la sostiene y la suelta
-## (vuelve de golpe por el resorte).
-func _charging_back(c: WeaponSlot, t: float) -> float:
-	var tl := _mag_times(c)
-	if not tl["rack"]:
-		return 0.0
-	var p0: float = tl["pull0"]
-	var p1: float = tl["pull1"]
-	var rl: float = tl["rel"]
-	var tr: float = tl["travel"]
-	if t < p0:
-		return 0.0
-	if t < p1:
-		return tr * _smooth((t - p0) / (p1 - p0))
-	if t < rl:
-		return tr
-	var k := clampf((t - rl) / 0.018, 0.0, 1.0)
-	return tr * (1.0 - k) * (1.0 - k)
 
 
 ## Manos durante la recarga y el cerrojo. Mano derecha (izquierda en pistolas):
@@ -752,93 +886,47 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 	var rot_l := z  # giro de la muñeca izquierda (grados) alrededor de la palma
 	var rot_r := z
 	_mag_hidden = false
-	for hn: String in ["HookR", "HookL"]:
+	for hn: String in ["HookR", "HookL", "HookP"]:
 		if m.has_node(hn):
 			(m.get_node(hn) as Node3D).visible = false
 	if hr != null:
 		hr.visible = true
 	if hl != null:
 		hl.visible = true
-	if t >= 0.0 and w.reload_type == "magazine" and m.has_node("Mag") and hl != null:
-		var mag := m.get_node("Mag") as Node3D
-		var tl := _mag_times(c)
-		var rc: float = tl["reach"]
-		var g: float = tl["grab"]
-		var ou: float = tl["out"]
-		var bk: float = tl["back"]
-		var ins: float = tl["in"]
-		var se: float = tl["seat"]
-		var ret: float = tl["ret"]
-		# La derecha sostiene el arma; la izquierda cambia el cargador. El viejo baja
-		# y sale de la vista; el nuevo entra desde abajo.
-		var palm: Vector3 = hl.get_meta("palm", z)
-		var grab: Vector3 = _part_base[mag] + (mag.get_meta("grab", Vector3(0, -0.05, 0.0)) as Vector3) - palm
-		var drop := grab + Vector3(-0.004, -0.075, 0.014)
-		var out := grab + Vector3(-0.14, -0.5, 0.18)
-		var keys := [[0.0, z], [rc, grab * 0.62 + Vector3(0.012, -0.028, 0.03)], [g, grab], [g + 0.05, drop],
-			[ou, out], [bk, out], [ins - 0.06, drop + Vector3(-0.01, -0.03, 0.01)], [ins, grab + Vector3(0, -0.014, 0.003)], [se, grab]]
-		var rkeys := [[0.0, z], [rc, Vector3(6, 4, -8)], [g, Vector3(8, 4, -12)], [g + 0.05, Vector3(14, 6, -16)],
-			[ou, Vector3(26, 10, -30)], [bk, Vector3(26, 10, -30)], [ins - 0.06, Vector3(14, 6, -14)], [ins, Vector3(9, 4, -11)],
-			[se, Vector3(6, 3, -9)]]
-		if tl["rack"]:
-			var ch := m.get_node("Charging") as Node3D
-			var sd: float = tl["side"]
-			var lv: float = tl["leave"]
-			var ar: float = tl["arrive"]
-			var p0: float = tl["pull0"]
-			var rl: float = tl["rel"]
-			var knob: Vector3 = _part_base[ch] + (ch.get_meta("knob", Vector3.ZERO) as Vector3)
-			var hook := m.get_node_or_null("HookR" if sd > 0.0 else "HookL") as Node3D
-			var rack_hand := hr if sd > 0.0 else hl
-			var rpalm: Vector3 = rack_hand.get_meta("palm", z) if rack_hand != null else z
-			# La mano llega por afuera del arma (no la atraviesa) y cambia a la pose de gancho
-			var hook_palm: Vector3 = hook.get_meta("palm", z) if hook != null else z
-			var ap := knob + hook_palm + Vector3(sd * 0.012, 0.012, 0.02) - rpalm
-			var home_mid := func(from: Vector3) -> Vector3:
-				return from.lerp(ap, 0.5) + Vector3(sd * 0.07, 0.01, 0.04)
-			if sd > 0.0:
-				# AK y similares: la izquierda vuelve adelante y la derecha monta
-				keys.append_array([[se + 0.03, grab + Vector3(0.006, 0.016, 0.012)], [se + 0.1, grab * 0.3 + Vector3(0.006, -0.01, 0.02)],
-					[se + 0.15, z], [1.0, z]])
-				rkeys.append_array([[se + 0.1, Vector3(3, 1, -4)], [se + 0.15, z], [1.0, z]])
-				off_r = _path(t, [[0.0, z], [lv, z], [lv + (ar - lv) * 0.5, home_mid.call(z)], [ar, ap],
-					[rl + 0.03, ap], [rl + 0.03 + (ret - rl) * 0.4, home_mid.call(z) + Vector3(0, -0.03, 0.02)], [ret, z], [1.0, z]])
-				rot_r = _path(t, [[0.0, z], [lv, z], [lv + (ar - lv) * 0.5, Vector3(-10, 8, 14)], [ar, Vector3(-4, 4, 8)],
-					[rl + 0.03, Vector3(-4, 4, 8)], [ret - 0.05, Vector3(-6, 3, 6)], [ret, z], [1.0, z]])
-			else:
-				# Manija a la izquierda (G3, MP5, FAL, SCAR, AR): la izquierda va del brocal a la manija
-				keys.append_array([[lv, grab + Vector3(-0.012, 0.014, 0.01)], [lv + (ar - lv) * 0.55, home_mid.call(grab)], [ar, ap],
-					[rl + 0.03, ap], [rl + 0.03 + (ret - rl) * 0.45, ap.lerp(z, 0.5) + Vector3(-0.06, -0.05, 0.03)], [ret, z], [1.0, z]])
-				rkeys.append_array([[lv, Vector3(4, 2, -6)], [ar, z], [rl + 0.03, z], [ret - 0.06, Vector3(4, 2, -6)], [ret, z], [1.0, z]])
-			if hook != null and t >= ar and t < rl + 0.03:
-				# Gancho en la bola: entra, tira con la manija y la suelta (que vuelve sola)
-				var back := _charging_back(c, t)
-				var ho := _path(t, [[ar, Vector3(sd * 0.012, 0.012, 0.02)], [p0, z]])
-				if t >= p0:
-					ho = Vector3(0, 0, back if t < rl else float(tl["travel"]))
-					ho += Vector3(sd * 0.012, 0.012, 0.02) * _smooth(clampf((t - rl) / 0.03, 0.0, 1.0))
-				# Como la mano del guardamanos: compensa el giro del arma para que el brazo
-				# cuelgue hacia abajo en vez de cruzar la pantalla
+	if t >= 0.0 and _plan != null and (state == State.RELOADING or state == State.CLEARING):
+		# Recarga o destrabado según el plan: manos, cargador y mano de gancho
+		off_l = _path(t, _plan.hand_l)
+		rot_l = _path(t, _plan.rot_l)
+		off_r = _path(t, _plan.hand_r)
+		rot_r = _path(t, _plan.rot_r)
+		mag_follow = _path(t, _plan.mag)
+		_mag_hidden = ReloadPlan.in_window(t, _plan.mag_hidden)
+		if ReloadPlan.in_window(t, _plan.hook_on):
+			var hook_name := "HookP" if _plan.pull_part == "Slide" else ("HookR" if _plan.side > 0.0 else "HookL")
+			var hook := m.get_node_or_null(hook_name) as Node3D
+			var rack_hand := hr if _plan.side > 0.0 else hl
+			if hook != null:
+				var g := _plan_geo(c)
+				var ho := _path(t, _plan.hook)
+				# Mientras tira, la mano va pegada a la pieza
+				var pb := _plan.pull_back(t)
+				if pb > 0.0:
+					ho = Vector3(ho.x, ho.y, pb)
+				# Compensa el giro del arma: el brazo cuelga hacia abajo
 				var hb := Basis(Vector3.BACK, -_reload_roll * 0.85)
-				hook.transform = Transform3D(hb, knob + ho)
+				hook.transform = Transform3D(hb, (g["knob"] as Vector3) + ho)
 				hook.visible = true
 				if rack_hand != null:
 					rack_hand.visible = false
-		else:
-			keys.append_array([[se + 0.04, grab + Vector3(0.01, 0.018, 0.016)], [ret - 0.08, grab * 0.32 + Vector3(0.01, -0.012, 0.025)], [ret, z], [1.0, z]])
-			rkeys.append_array([[se + 0.04, Vector3(3, 1, -4)], [ret - 0.08, Vector3(2, 1, -3)], [ret, z], [1.0, z]])
-		var o := _path(t, keys)
-		rot_l = _path(t, rkeys)
-		if t >= g and t <= se:
-			mag_follow = o - grab
-			# Abajo, fuera de cuadro: el cargador viejo se "va" y vuelve el nuevo
-			_mag_hidden = mag_follow.y < -0.26
-		off_l = o
-		if not pistol and not (tl["rack"] and float(tl["side"]) > 0.0 and t > float(tl["leave"])):
-			# La mano de la empuñadura acompaña: se acomoda y aprieta
-			off_r += _path(t, [[0.0, z], [g, Vector3(0.002, 0.004, 0.006)], [ou, Vector3(0.003, 0.006, 0.01)],
-				[se, Vector3(0, -0.004, 0.002)], [se + 0.06, Vector3(0.002, 0.004, 0.008)], [1.0, z]])
-			rot_r += _path(t, [[0.0, z], [g, Vector3(2, 0, -2)], [ou, Vector3(3, 1, -3)], [se, Vector3(-2, 0, 1)], [se + 0.08, z], [1.0, z]])
+		# Estrés: las manos tiemblan al manipular
+		var st := player.stress.value
+		if st > 0.001:
+			var tr3 := player.stress.tremor()
+			off_l += Vector3(tr3.z, tr3.x, tr3.y) * 0.0022 * st
+			off_r += tr3 * 0.0012 * st
+			rot_l += Vector3(tr3.y, tr3.z, tr3.x) * 2.0 * st
+			if mag_follow.length() > 0.001:
+				mag_follow += Vector3(tr3.z, tr3.x, tr3.y) * 0.0022 * st
 	elif t >= 0.0 and w.reload_type == "rounds" and hr != null and m.has_node("Ejection"):
 		var palm: Vector3 = hr.get_meta("palm", z)
 		var port: Vector3 = (m.get_node("Ejection") as Node3D).position + Vector3(0.03, -0.04, 0.025) - palm
@@ -878,12 +966,14 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 			var c0: Vector3 = hl.get_meta("palm", z)
 			# Sobre el guardamanos compensa el giro; cuanto más lejos va, menos
 			var on_hg := 1.0 - _smooth(clampf(off_l.length() / 0.06, 0.0, 1.0))
-			if w.reload_type == "magazine" and t >= 0.0:
-				var tl := _mag_times(c)
-				if tl["rack"] and float(tl["side"]) < 0.0:
-					# Yendo a la manija de la izquierda: el brazo sigue colgando hacia abajo
-					on_hg = maxf(on_hg, _smooth(clampf((t - float(tl["seat"])) / 0.06, 0.0, 1.0))
-						* (1.0 - _smooth(clampf((t - float(tl["ret"]) + 0.06) / 0.06, 0.0, 1.0))))
+			if t >= 0.0 and _plan != null and _plan.side < 0.0 and not _plan.hook_on.is_empty():
+				# Yendo a la manija de la izquierda: el brazo sigue colgando hacia abajo
+				var w0: Array = _plan.hook_on[0]
+				var w1: Array = _plan.hook_on[_plan.hook_on.size() - 1]
+				# (al destrabar, desde el principio: la mano va directo a la manija)
+				var lead := 1.0 if state == State.CLEARING else 0.14
+				on_hg = maxf(on_hg, _smooth(clampf((t - float(w0[0]) + lead) / 0.08, 0.0, 1.0))
+					* (1.0 - _smooth(clampf((t - float(w1[1]) - 0.02) / 0.08, 0.0, 1.0))))
 			var b := Basis(Vector3.BACK, -_reload_roll * 0.85 * on_hg) * bw
 			hl.transform = Transform3D(b, _part_base[hl] + c0 - b * c0 + off_l)
 	return mag_follow
@@ -891,9 +981,11 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 
 func _animate_parts(c: WeaponSlot, delta: float) -> void:
 	var w := c.data
-	var t := clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0) if state == State.RELOADING else -1.0
+	var busy := state == State.RELOADING or state == State.CLEARING
+	var t := clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0) if busy else -1.0
 	var m := c.model
 	var mag_follow := _animate_hands(c, t)
+	_update_stuck_case(c)
 	if m.has_node("Mag"):
 		var mag := m.get_node("Mag") as Node3D
 		mag.position = _part_base[mag] + mag_follow
@@ -901,18 +993,29 @@ func _animate_parts(c: WeaponSlot, delta: float) -> void:
 	if m.has_node("Charging"):
 		var ch := m.get_node("Charging") as Node3D
 		var back := 0.0
-		if t >= 0.0 and w.reload_type == "rounds":
+		if t >= 0.0 and _plan != null and _plan.pull_part == "Charging":
+			back = _plan.pull_back(t)
+		elif t >= 0.0 and w.reload_type == "rounds":
 			back = 0.07 * _smooth(clampf(t / 0.08, 0.0, 1.0)) * (1.0 - _smooth(clampf((t - 0.92) / 0.08, 0.0, 1.0)))
-		elif t >= 0.0 and w.reload_type == "magazine":
-			back = _charging_back(c, t)
+		elif c.malfunction == "double_feed":
+			back = 0.012  # el cerrojo no cerró: la manija queda un poco atrás
 		ch.position = _part_base[ch] + Vector3(0, 0, back)
 	if m.has_node("Slide"):
 		var sl := m.get_node("Slide") as Node3D
 		_slide_kick = move_toward(_slide_kick, 0.0, delta / 0.07)
 		var back := sin(_slide_kick * PI) * 0.032 if _slide_kick > 0.0 else 0.0
-		var locked := c.mag == 0 and not (t >= 0.0 and t > float(_mag_times(c)["seat"]) + 0.07)
-		if locked and (state == State.READY or state == State.RELOADING) and _slide_kick <= 0.5:
+		# Corredera atrás: vacía (hasta que entra el cargador y se suelta), o sin montar
+		var released := t >= 0.0 and _plan != null and _plan.slide_release >= 0.0 and t > _plan.slide_release
+		var locked := (c.mag == 0 and not released) or (c.malfunction == "unchambered" and state != State.CLEARING)
+		if locked and _slide_kick <= 0.5 and state != State.CLEARING:
 			back = 0.032
+		if state == State.CLEARING and _plan != null and _plan.pull_part == "Slide":
+			back = _plan.pull_back(t)
+			# Sin montar, la corredera estaba atrás: sigue atrás hasta que la suelta
+			if c.malfunction == "unchambered" and not _plan.pulls.is_empty() and t < float(_plan.pulls[0][2]):
+				back = 0.032
+		elif c.malfunction == "double_feed" or c.malfunction == "stovepipe":
+			back = maxf(back, 0.01)
 		sl.position = _part_base[sl] + Vector3(0, 0, back)
 	if m.has_node("Bolt"):
 		var bolt := m.get_node("Bolt") as Node3D
@@ -937,6 +1040,26 @@ func _animate_parts(c: WeaponSlot, delta: float) -> void:
 	if m.has_node("Barrels"):
 		var br := m.get_node("Barrels") as Node3D
 		_animate_break(br, t)
+
+
+## Vaina trabada en la ventana ("encasquillada"): se crea la primera vez y se ve
+## mientras dure la falla, de pie, apretada por el cerrojo.
+func _update_stuck_case(c: WeaponSlot) -> void:
+	var m := c.model
+	var sc := m.get_node_or_null("StuckCase") as Node3D
+	if sc == null:
+		if not c.case_stuck or not m.has_node("Ejection"):
+			return
+		var pistol := c.data.model == "pistol"
+		sc = Node3D.new()
+		sc.name = "StuckCase"
+		m.add_child(sc)
+		var r := 0.0045 if pistol else 0.0055
+		var l := 0.022 if pistol else 0.042
+		WeaponModelBuilder.cyl(sc, "Case", r, l, Vector3.ZERO, WeaponModelBuilder.mat("brass"), 12, Vector3(PI * 0.5, 0, 0), 0.0008)
+		sc.position = (m.get_node("Ejection") as Node3D).position + Vector3(0.004, l * 0.42, 0.0)
+		sc.rotation = Vector3(0.0, 0.0, deg_to_rad(-48.0))
+	sc.visible = c.case_stuck
 
 
 ## Escopeta de quiebre: la mano izquierda suelta el guardamanos, los caños caen

@@ -23,7 +23,7 @@ const SCOPE_SHADER := preload("res://entities/weapons/scope_lens.gdshader")
 ## Piezas que se animan por separado (se funden por dentro, no con el resto).
 const GROUPS: Array[String] = ["Mag", "Slide", "Charging", "Bolt", "Barrels", "ShellL", "ShellR"]
 ## Mallas que nunca se funden.
-const KEEP: Array[String] = ["ScopeLens", "Lens", "HandR", "HandL", "HookR", "HookL", "Loader"]
+const KEEP: Array[String] = ["ScopeLens", "Lens", "HandR", "HandL", "HookR", "HookL", "HookP", "StuckCase", "Loader"]
 
 static var _mats: Dictionary = {}
 
