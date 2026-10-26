@@ -119,7 +119,7 @@ Las zonas están pintadas en el piso entre las mesas de la armería y la línea 
 
 | # | Probá | Esperado |
 |---|---|---|
-| 1 | Pararte en ESTRÉS ALTO | En ~1 s la vista se desenfoca en los bordes, late y se desatura; arriba de la munición dice ESTRÉS ALTO |
+| 1 | Pararte en ESTRÉS ALTO | En ~1 s la vista se desenfoca, ondula y late con el pulso (sin bordes oscuros); arriba de la munición dice ESTRÉS ALTO |
 | 2 | Apuntar ahí | La mira se mueve apenas, lento; los tiros se abren un poco |
 | 3 | Tirar desde la cadera ahí | Bastante más dispersión que afuera |
 | 4 | Vaciar el AR-M y R en estrés alto | Tarda ~70 % más; el cargador pega dos veces en el brocal antes de entrar; manos temblorosas |
