@@ -95,15 +95,23 @@ func aim_drift(ads: float) -> Vector2:
 ## irregular, sin vibrar (varias ondas lentas que no se repiten), con un tirón suave
 ## en cada latido.
 func tremor() -> Vector3:
+	var v := tremor_base()
+	# Extremo: además sube y baja con fuerza (respiración agitada), no solo de costado
+	var t := _time
+	v.y += (sin(t * 2.6 + 0.9) * 0.7 + sin(t * 3.9 + 2.2) * 0.3) * extreme * 1.4
+	return v * (1.0 + extreme * 2.8)
+
+
+## Balanceo base (−1..1), sin la amplificación del extremo: para las manos al
+## manipular, que se mueven respecto del arma (el hombro no puede viajar).
+func tremor_base() -> Vector3:
 	var t := _time
 	var p := pulse_soft() * 0.3
 	var v := Vector3(
 		sin(t * 1.7) * 0.5 + sin(t * 2.9 + 1.1) * 0.3 + sin(t * 4.3 + 2.0) * 0.2,
 		sin(t * 1.4 + 0.7) * 0.45 + sin(t * 3.1 + 2.4) * 0.3 + sin(t * 4.1 + 0.3) * 0.25 - p,
 		sin(t * 2.1 + 1.6) * 0.5 + sin(t * 3.4 + 0.2) * 0.3 + sin(t * 4.7 + 1.0) * 0.2)
-	# Extremo: además sube y baja con fuerza (respiración agitada), no solo de costado
-	v.y += (sin(t * 2.6 + 0.9) * 0.7 + sin(t * 3.9 + 2.2) * 0.3) * extreme * 1.4
-	return v * (1.0 + extreme * 2.8)
+	return v
 
 
 ## Multiplicador de la dispersión desde la cadera.

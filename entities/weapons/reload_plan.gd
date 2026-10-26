@@ -74,12 +74,15 @@ static func make(act: String, geo: Dictionary, level: int, empty: bool, rng: Ran
 	var uses_rack := false
 	match act:
 		"reload":
-			if level == 1:
-				p.fumbles = 1 if rng.randf() < 0.5 else 0
-			elif level == 2:
-				p.fumbles = 2
-			elif level >= 3:
-				p.fumbles = 3  # extremo: casi no le emboca
+			# Cada intento puede fallar: más probable cuanto más estrés, con un máximo
+			# (medio 2 intentos, alto 3, extremo 4; pistolas hasta 3)
+			var lv := clampi(level, 0, 3)
+			var fail_p: float = [0.0, 0.35, 0.55, 0.7][lv]
+			var max_f: int = [0, 1, 2, 3][lv]
+			if pistol:
+				max_f = mini(max_f, 2)
+			while p.fumbles < max_f and rng.randf() < fail_p:
+				p.fumbles += 1
 			var rack := empty and can_rack and not pistol
 			if empty and can_rack and level > 0 and rng.randf() < [0.0, 0.15, 0.35, 0.5][clampi(level, 0, 3)]:
 				rack = false

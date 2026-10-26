@@ -77,19 +77,32 @@ func _geo_for(id: String) -> Dictionary:
 	return weapons._plan_geo(weapons.current())
 
 
-func test_high_stress_reload_takes_70_to_90_percent_longer() -> void:
+func test_stress_fumbles_are_random_with_a_cap() -> void:
 	var geo: Dictionary = await _geo_for("akm")
 	var d := weapons.current_data()
 	var rng := RandomNumberGenerator.new()
-	for seed in 12:
+	var seen := {}
+	for seed in 40:
 		rng.seed = seed
 		var calm := ReloadPlan.make("reload", geo, 0, false, rng, d.reload_time, d.reload_time_empty)
 		var high := ReloadPlan.make("reload", geo, 2, false, rng, d.reload_time, d.reload_time_empty)
+		var extreme := ReloadPlan.make("reload", geo, 3, false, rng, d.reload_time, d.reload_time_empty)
 		assert_near(calm.duration, d.reload_time, 0.01, "sin estrés dura lo normal")
+		assert_eq(calm.fumbles, 0)
+		assert_lt(float(high.fumbles), 3.0, "alto: hasta 3 intentos")
+		assert_lt(float(extreme.fumbles), 4.0, "extremo: hasta 4 intentos")
 		var r := high.duration / calm.duration
-		assert_gt(r, 1.6, "alto: bastante más lenta (%.2f)" % r)
-		assert_lt(r, 1.95, "alto: no eterna (%.2f)" % r)
-		assert_gt(high.fumbles, 1, "alto: le erra al brocal")
+		assert_gt(r, 1.2, "alto: más lenta (%.2f)" % r)
+		assert_lt(r, 1.9, "alto: no eterna (%.2f)" % r)
+		seen[high.fumbles] = true
+	assert_gt(float(seen.size()), 1.0, "no siempre la misma cantidad de intentos")
+	# Pistola: hasta 3 intentos aunque sea extremo
+	var pg: Dictionary = await _geo_for("pistol")
+	var pd := weapons.current_data()
+	for seed in 30:
+		rng.seed = seed
+		var pp := ReloadPlan.make("reload", pg, 3, false, rng, pd.reload_time, pd.reload_time_empty)
+		assert_lt(float(pp.fumbles), 3.0, "pistola: hasta 3 intentos")
 
 
 func test_plan_keys_are_ordered_and_bounded() -> void:

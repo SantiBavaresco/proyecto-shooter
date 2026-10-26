@@ -78,7 +78,7 @@ func _ready() -> void:
 
 	if only.is_empty() or "recarga" in only:
 		await _equip("akm")
-		player.teleport(_zone("stress_high"), PI)
+		player.teleport(_zone("stress_extreme"), PI)
 		await _frames(240)
 		_look(dummy)
 		var c := player.weapons.current()
@@ -86,7 +86,7 @@ func _ready() -> void:
 		player.weapons._rng.seed = 3
 		bot.press_reload()
 		await _frames(2)
-		await _seq("R_akm_estres", [0.3, 0.38, 0.44, 0.5, 0.56, 0.62, 0.7, 0.8])
+		await _seq("R_akm_estres", [0.15, 0.3, 0.38, 0.44, 0.5, 0.56, 0.62, 0.7, 0.8, 0.9])
 		player.weapons.current().malfunction = ""
 
 	if only.is_empty() or "fallas" in only:

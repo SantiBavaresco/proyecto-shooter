@@ -165,3 +165,12 @@
 - **Código**: `WeaponController` quedó solo con la lógica (estados, disparo, recarga, fallas, munición, interacción; ~690 líneas) y la vista pasó a `WeaponViewmodel` (modelo, manos, pose, balanceo, retroceso visual, recargas animadas, visor; ~670 líneas), que solo lee el estado. Así los enemigos de F3 podrán usar la lógica de disparo sin la vista.
 - 90 tests (3 nuevos de penetración).
 
+## F1.14 — Ajustes de recarga con estrés, escopetas y cerrojos (2026-10-26)
+
+### Funciona
+- **Brazo izquierdo con estrés**: el balanceo de las manos al recargar ya no usa la amplificación del extremo y el giro del arma tiene tope; el brazo (y el hombro) no cruzan la pantalla.
+- **Intentos al brocal por probabilidad**: cada intento puede fallar (medio 35 %, alto 55 %, extremo 70 %) con un máximo de intentos: medio 2, alto 3, extremo 4; pistolas hasta 3. Ya no es siempre la misma cantidad.
+- **Escopetas**: las vainas saltan más rápido y casi verticales; las que caen al piso ahora son vainas de escopeta (tubo rojo con culote de latón), no casquillos de fusil.
+- **Cerrojos y SK-45 (cartucho a cartucho)**: el contador sube con cada cartucho que entra; apretar el gatillo corta la recarga, cierra el cerrojo y queda listo con los que ya entraron.
+- 91 tests.
+

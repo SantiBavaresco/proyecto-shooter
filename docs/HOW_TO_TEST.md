@@ -144,6 +144,16 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 | 4 | R-700 a la viga | Tampoco la pasa (20 cm es mucho); a la chapa de 4 mm sí |
 | 5 | F3 (trayectorias) | La línea sigue del otro lado del panel |
 
+## F1.14 — Ajustes
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Recargar en ESTRÉS EXTREMO varias veces | El brazo izquierdo no pasa por arriba de la pantalla; los intentos al brocal varían (1 a 4) |
+| 2 | Pistola en ESTRÉS EXTREMO | Hasta 3 intentos |
+| 3 | Escopeta: tirar y recargar | Las vainas rojas saltan rápido hacia arriba; no salen casquillos dorados |
+| 4 | R-700 vacío y R | El contador sube de a uno |
+| 5 | Durante esa recarga, clic | Cierra el cerrojo y se puede tirar con los que ya entraron |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

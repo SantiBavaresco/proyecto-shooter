@@ -32,6 +32,8 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var stats_impacts: int = 0
 var stats_ricochets: int = 0
 var stats_penetrations: int = 0
+var _shell_shape: Shape3D
+var _shell_shape_big: Shape3D
 
 var _projectiles: Array[Projectile] = []
 var _decals: Array[Decal] = []
@@ -137,7 +139,10 @@ func spawn_shell(xform: Transform3D, velocity: Vector3, big: bool = false) -> vo
 	s.freeze = false
 	s.visible = true
 	s.global_transform = xform
-	s.scale = Vector3.ONE * (1.5 if big else 1.0)
+	# Vaina de fusil/pistola (latón) o de escopeta (tubo rojo con culote de latón)
+	(s.get_child(0) as Node3D).visible = not big
+	(s.get_child(1) as Node3D).visible = big
+	(s.get_child(2) as CollisionShape3D).shape = _shell_shape_big if big else _shell_shape
 	s.linear_velocity = velocity
 	s.angular_velocity = Vector3(rng.randf_range(-20, 20), rng.randf_range(-20, 20), rng.randf_range(-20, 20))
 	s.sleeping = false
@@ -523,6 +528,26 @@ func _build_pools() -> void:
 	var shell_shape := CylinderShape3D.new()
 	shell_shape.radius = 0.006
 	shell_shape.height = 0.04
+	_shell_shape = shell_shape
+	_shell_shape_big = CylinderShape3D.new()
+	_shell_shape_big.radius = 0.011
+	_shell_shape_big.height = 0.065
+	# Vaina de escopeta: tubo rojo + culote de latón
+	var hull := CylinderMesh.new()
+	hull.top_radius = 0.0105
+	hull.bottom_radius = 0.0105
+	hull.height = 0.05
+	hull.radial_segments = 10
+	var hm := StandardMaterial3D.new()
+	hm.albedo_color = Color(0.62, 0.08, 0.06)
+	hm.roughness = 0.6
+	hull.material = hm
+	var base := CylinderMesh.new()
+	base.top_radius = 0.0112
+	base.bottom_radius = 0.0116
+	base.height = 0.015
+	base.radial_segments = 10
+	base.material = sm
 	_shell_time.resize(MAX_SHELLS)
 	for i in MAX_SHELLS:
 		var b := RigidBody3D.new()
@@ -536,6 +561,19 @@ func _build_pools() -> void:
 		mi.mesh = shell_mesh
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		b.add_child(mi)
+		var big := Node3D.new()
+		var hi := MeshInstance3D.new()
+		hi.mesh = hull
+		hi.position.y = 0.008
+		hi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		big.add_child(hi)
+		var bi := MeshInstance3D.new()
+		bi.mesh = base
+		bi.position.y = -0.024
+		bi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		big.add_child(bi)
+		big.visible = false
+		b.add_child(big)
 		var cs := CollisionShape3D.new()
 		cs.shape = shell_shape
 		b.add_child(cs)

@@ -67,6 +67,12 @@ var _plan: ReloadPlan = null
 var _plan_ev: int = 0
 ## Acción de destrabado en curso (para aplicar su efecto al terminar).
 var _clear_action: String = ""
+## Carga cartucho a cartucho: cuántos se van a meter, cuántos entraron y si se cortó
+## (disparando) para cerrar el cerrojo con lo que ya hay.
+var _rounds_planned: int = 0
+var _rounds_done: int = 0
+var _rounds_stop: bool = false
+var _clip_load: bool = false
 var _cooldown: float = 0.0
 var _sprint_block: float = 0.0
 var _hint_target: Node = null
@@ -239,6 +245,11 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 		_play_mech(SynthSfx.click("mode", 1.3, 0.04), -8.0)
 		_emit_state()
 
+	# Cartucho a cartucho: el gatillo corta la carga y se puede tirar con lo que entró
+	if state == State.RELOADING and c.data.reload_type == "rounds" and cmd.fire_pressed and c.mag > 0 \
+			and not _rounds_stop and state_time < state_duration * 0.9:
+		_stop_loading_rounds()
+
 	if cmd.reload and state == State.READY and (c.malfunction != "" or _can_reload(c)):
 		if c.malfunction != "":
 			_start_clear(c)
@@ -292,9 +303,11 @@ func _advance_state(delta: float) -> void:
 	if state == State.CLEARING and state_time >= state_duration:
 		_finish_clear(c)
 		return
+	if state == State.RELOADING and c.data.reload_type == "rounds":
+		_load_rounds(c)
 	if state == State.RELOADING:
 		# Escopeta: expulsa las vainas al quebrarse
-		if c.data.reload_type == "break" and not _reload_fx_done and state_time >= state_duration * 0.3:
+		if c.data.reload_type == "break" and not _reload_fx_done and state_time >= state_duration * 0.25:
 			_reload_fx_done = true
 			var spent := c.data.mag_size - c.mag
 			for i in spent:
@@ -363,9 +376,39 @@ func _start_reload() -> void:
 		# Escopetas y cartucho a cartucho: solo más lento con estrés
 		dur *= [1.0, 1.15, 1.45, 1.65][player.stress.level()]
 	_plan_ev = 0
+	_rounds_done = 0
+	_rounds_stop = false
+	_clip_load = c.data.reload_type == "rounds" and c.mag == 0 and c.data.clip_reload
+	var needed := c.data.mag_size - c.mag
+	_rounds_planned = needed if DebugTools.infinite_ammo else mini(needed, c.reserve)
 	_set_state(State.RELOADING, dur)
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
 	_emit_state()
+
+
+## Cartucho a cartucho: cada uno entra cuando la mano lo empuja (el contador sube de a
+## uno). Con peine (vacía), entran todos juntos a mitad de la recarga.
+func _load_rounds(c: WeaponSlot) -> void:
+	if _rounds_stop or _rounds_done >= _rounds_planned:
+		return
+	var t := state_time / maxf(state_duration, 0.001)
+	var due := _rounds_planned if (_clip_load and t >= 0.55) else 0
+	if not _clip_load:
+		while due < _rounds_planned and t >= 0.16 + 0.7 * (float(due) + 0.5) / float(_rounds_planned):
+			due += 1
+	while _rounds_done < due:
+		_rounds_done += 1
+		c.mag += 1
+		if not DebugTools.infinite_ammo:
+			c.reserve -= 1
+		_play_mech(SynthSfx.click("round_in", 1.15, 0.03), -9.0)
+		_emit_state()
+
+
+## Cortar la carga cartucho a cartucho (gatillo): cierra el cerrojo con lo que ya entró.
+func _stop_loading_rounds() -> void:
+	_rounds_stop = true
+	state_time = maxf(state_time, state_duration * 0.9)
 
 
 ## Destrabar (R con una falla): cerrojo → accionarlo; con manija o corredera → el
@@ -477,11 +520,14 @@ func reload_duration(c: WeaponSlot) -> float:
 
 
 func _finish_reload(c: WeaponSlot) -> void:
-	var needed := c.data.mag_size - c.mag
-	var take := needed if DebugTools.infinite_ammo else mini(needed, c.reserve)
-	c.mag += take
-	if not DebugTools.infinite_ammo:
-		c.reserve -= take
+	if c.data.reload_type == "rounds":
+		_load_rounds(c)  # los que faltaban por tiempo (los cartuchos ya entraron de a uno)
+	else:
+		var needed := c.data.mag_size - c.mag
+		var take := needed if DebugTools.infinite_ammo else mini(needed, c.reserve)
+		c.mag += take
+		if not DebugTools.infinite_ammo:
+			c.reserve -= take
 	if _plan != null and _plan.forgot_chamber:
 		# Con el apuro se olvidó de montar: la primera vez el gatillo hace "clic"
 		c.malfunction = "unchambered"
@@ -604,7 +650,7 @@ func _eject_shell(_c: WeaponSlot, shotgun_shell: bool, index: int, from := Vecto
 	if from != Vector3.INF:
 		local = from
 	var pos := cam * local
-	var vel := cam.basis * (Vector3(1.6, 1.4, 0.4) if not shotgun_shell else Vector3(-0.6 + index * 1.2, 2.0, 0.45))
+	var vel := cam.basis * (Vector3(1.6, 1.4, 0.4) if not shotgun_shell else Vector3(-0.25 + index * 0.5, 3.6, 0.35))
 	vel += player.velocity
 	CombatWorld.get_for(player).spawn_shell(Transform3D(cam.basis, pos), vel, shotgun_shell)
 

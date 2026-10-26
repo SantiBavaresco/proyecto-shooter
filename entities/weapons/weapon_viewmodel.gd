@@ -186,7 +186,7 @@ func _process(delta: float) -> void:
 			rot += bump[1] * (PI / 180.0)
 			if w.reload_type == "rounds" and wc.state == WeaponController.State.RELOADING:
 				# Empuja cada cartucho: pequeño golpe por ronda
-				var per := w.round_time / maxf(wc.state_duration, 0.01)
+				var per := 0.7 / maxf(float(wc._rounds_planned), 1.0)
 				var k := fmod(t, maxf(per, 0.01)) / maxf(per, 0.01)
 				pos.y -= sin(k * PI) * 0.006 * inn
 		WeaponController.State.CYCLING:
@@ -204,8 +204,13 @@ func _process(delta: float) -> void:
 		var tr3 := wc.player.stress.tremor()
 		# Más amplio en alto (value³ casi no suma en medio)
 		var big := 1.0 + pow(st, 3.0) * 0.6
-		pos += tr3 * 0.0026 * st * big * busy * (1.0 - a * 0.5)
-		rot += Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.9) * st * big * busy * (1.0 - a * 0.5)
+		var dp := tr3 * 0.0026 * st * big * busy * (1.0 - a * 0.5)
+		var dr := Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.9) * st * big * busy * (1.0 - a * 0.5)
+		# Tope: el arma (y los brazos con ella) se mueve, pero los hombros no viajan;
+		# manipulando, menos todavía (si no, el brazo cruza la pantalla)
+		var busy_now := busy > 1.0
+		pos += dp.limit_length(0.007 if busy_now else 0.014)
+		rot += dr.limit_length(deg_to_rad(1.6 if busy_now else 3.2))
 	rig.position = pos
 	rig.rotation = rot
 	_animate_parts(c, delta)
@@ -308,10 +313,10 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 		# Estrés: las manos tiemblan al manipular
 		var st := wc.player.stress.value
 		if st > 0.001:
-			var tr3 := wc.player.stress.tremor()
+			var tr3 := wc.player.stress.tremor_base()
 			off_l += Vector3(tr3.z, tr3.x, tr3.y) * 0.0045 * st
 			off_r += tr3 * 0.002 * st
-			rot_l += Vector3(tr3.y, tr3.z, tr3.x) * 3.5 * st
+			rot_l += Vector3(tr3.y, tr3.z, tr3.x) * 1.5 * st  # poco giro: el brazo entero gira con la mano
 			if mag_follow.length() > 0.001:
 				mag_follow += Vector3(tr3.z, tr3.x, tr3.y) * 0.0045 * st
 	elif t >= 0.0 and w.reload_type == "rounds" and hr != null and m.has_node("Ejection"):
@@ -321,7 +326,7 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 			[0.94, port * 0.4 + Vector3(0.02, -0.02, 0.02)], [1.0, z]])
 		if t > 0.16 and t < 0.86:
 			# Empuja cada cartucho hacia abajo
-			var per := w.round_time / maxf(wc.state_duration, 0.01)
+			var per := 0.7 / maxf(float(wc._rounds_planned), 1.0)
 			var k := fmod(t - 0.16, maxf(per, 0.01)) / maxf(per, 0.01)
 			o += Vector3(0, -0.012 * sin(k * PI), 0.004 * sin(k * TAU))
 		off_r = o
@@ -496,13 +501,13 @@ func _animate_break(br: Node3D, t: float) -> void:
 			sh.position = base + seat
 		elif t < 0.34 and spent:
 			# Vaina vieja: el extractor la saca un poco al abrir y el expulsor la tira
-			# hacia arriba y atrás (a 0.3 sigue como vaina física)
-			var ex := 0.03 * smooth(clampf((t - 0.12) / 0.1, 0.0, 1.0))
-			var k := clampf((t - 0.22) / 0.08, 0.0, 1.0)
-			var fly := inv * (Vector3((i * 2.0 - 1.0) * 0.035, 0.13, 0.07) * k + Vector3(0, -0.05, 0) * k * k)
-			sh.visible = t > 0.1 and t < 0.3
+			# hacia arriba, rápido y casi vertical (a 0.25 sigue como vaina física)
+			var ex := 0.03 * smooth(clampf((t - 0.11) / 0.08, 0.0, 1.0))
+			var k := clampf((t - 0.19) / 0.06, 0.0, 1.0)
+			var fly := inv * (Vector3((i * 2.0 - 1.0) * 0.015, 0.2, 0.025) * k)
+			sh.visible = t > 0.1 and t < 0.25
 			sh.position = base + seat + Vector3(0, 0, ex) + fly
-			sh.rotation = Vector3(-deg_to_rad(220.0) * k, 0, 0)
+			sh.rotation = Vector3(-deg_to_rad(90.0) * k, 0, 0)
 		elif not spent:
 			# Cartucho sin disparar: queda en la recámara (se ve con los caños abiertos)
 			sh.visible = t > 0.1 and t < 0.92

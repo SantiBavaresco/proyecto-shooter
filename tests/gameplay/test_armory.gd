@@ -128,6 +128,34 @@ func test_round_by_round_and_clip_reload() -> void:
 	assert_eq(c.mag, 5)
 
 
+func test_bolt_rounds_count_up_and_fire_interrupts() -> void:
+	var d := await _equip("rem700")
+	var c := weapons.current()
+	c.mag = 0
+	c.reserve = 20
+	bot.press_reload()
+	await physics_frames(2)
+	var dur := weapons.state_duration
+	var seen: Array[int] = []
+	for i in int(dur * 60.0 * 0.6):
+		await physics_frames(1)
+		if seen.is_empty() or seen[seen.size() - 1] != c.mag:
+			seen.append(c.mag)
+	assert_gt(float(seen.size()), 2.0, "el contador sube de a uno (%s)" % str(seen))
+	var loaded := c.mag
+	assert_gt(float(loaded), 0.0)
+	assert_lt(float(loaded), float(d.mag_size), "todavía no terminó")
+	# Gatillo: corta la recarga, cierra el cerrojo y queda listo con lo que entró
+	bot.press_fire()
+	await physics_frames(int(dur * 60.0 * 0.12) + 10)
+	assert_eq(weapons.state, WeaponController.State.READY, "cortó la recarga")
+	assert_eq(c.mag, loaded, "con los cartuchos que ya había metido")
+	assert_eq(c.reserve, 20 - loaded)
+	bot.press_fire()
+	await physics_frames(3)
+	assert_eq(c.mag, loaded - 1, "y dispara")
+
+
 func test_scope_magnifies() -> void:
 	var d := await _equip("svd")
 	bot.aim = true
