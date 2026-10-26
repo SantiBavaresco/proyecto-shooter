@@ -56,6 +56,19 @@ func _ready() -> void:
 			await _shot("S3_estres_alto_apuntando_%d" % i)
 		bot.aim = false
 		await _frames(20)
+		# Extremo: visión de túnel
+		player.teleport(_zone("stress_extreme"), PI)
+		await _frames(240)
+		_look(dummy)
+		await _frames(2)
+		await _shot("S4_estres_extremo_cadera")
+		bot.aim = true
+		await _frames(40)
+		_look(dummy)
+		await _frames(10)
+		await _shot("S5_estres_extremo_apuntando")
+		bot.aim = false
+		await _frames(20)
 
 	if only.is_empty() or "recarga" in only:
 		await _equip("akm")
