@@ -680,32 +680,32 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 	var pistol := w.model == "pistol"
 	if t >= 0.0 and w.reload_type == "magazine" and m.has_node("Mag"):
 		var mag := m.get_node("Mag") as Node3D
-		var hand := hl if pistol else hr
+		# La derecha sostiene el arma; la izquierda cambia el cargador
+		var hand := hl
 		if hand != null:
 			var palm: Vector3 = hand.get_meta("palm", z)
 			var grab: Vector3 = _part_base[mag] + (mag.get_meta("grab", Vector3(0, -0.05, 0.0)) as Vector3) - palm
-			var out := grab + (Vector3(-0.05, -0.3, 0.1) if pistol else Vector3(0.08, -0.3, 0.12))
+			var out := grab + Vector3(-0.07, -0.3, 0.1)
 			var keys := [[0.0, z], [0.06, grab * 0.5 + Vector3(0.02, -0.02, 0.03)], [0.12, grab], [0.2, grab + Vector3(0, -0.06, 0.01)],
 				[0.34, out], [0.46, out], [0.56, grab + Vector3(0, -0.07, 0.01)], [0.63, grab], [0.67, grab]]
 			if _reload_empty and m.has_node("Charging") and not pistol:
+				# La izquierda pasa por arriba del arma hasta la manija y tira
 				var ch := m.get_node("Charging") as Node3D
-				var ct: Vector3 = _part_base[ch] + Vector3(0.022 if ch.position.x >= 0.0 else -0.022, -0.012, 0.0) - palm
+				var ct: Vector3 = _part_base[ch] + Vector3(0.024 if ch.position.x >= 0.0 else -0.024, 0.01, 0.0) - palm
 				keys.append_array([[0.73, ct], [0.8, ct + Vector3(0, 0, 0.07)], [0.86, ct + Vector3(0.01, -0.01, 0.03)], [0.95, z], [1.0, z]])
 			else:
 				keys.append_array([[0.76, grab * 0.4 + Vector3(0.02, -0.01, 0.03)], [0.86, z], [1.0, z]])
 			var o := _path(t, keys)
 			if t >= 0.12 and t <= 0.63:
 				mag_follow = o - grab
-			if pistol:
-				off_l = o
-			else:
-				off_r = o
-				# La mano del guardamanos acompaña: se acomoda y aprieta
-				off_l = _path(t, [[0.0, z], [0.12, Vector3(0.003, 0.004, 0.012)], [0.4, Vector3(0.004, 0.006, 0.02)],
-					[0.63, Vector3(0, -0.004, 0.004)], [0.7, Vector3(0.002, 0.004, 0.014)], [1.0, z]])
+			off_l = o
+			if not pistol:
+				# La mano de la empuñadura acompaña: se acomoda y aprieta
+				off_r = _path(t, [[0.0, z], [0.12, Vector3(0.002, 0.004, 0.006)], [0.4, Vector3(0.003, 0.006, 0.01)],
+					[0.63, Vector3(0, -0.004, 0.002)], [0.7, Vector3(0.002, 0.004, 0.008)], [1.0, z]])
 	elif t >= 0.0 and w.reload_type == "rounds" and hr != null and m.has_node("Ejection"):
 		var palm: Vector3 = hr.get_meta("palm", z)
-		var port: Vector3 = (m.get_node("Ejection") as Node3D).position + Vector3(0.055, -0.01, 0.035) - palm
+		var port: Vector3 = (m.get_node("Ejection") as Node3D).position + Vector3(0.03, -0.04, 0.025) - palm
 		var o := _path(t, [[0.0, z], [0.1, port + Vector3(0.03, -0.04, 0.03)], [0.16, port], [0.86, port],
 			[0.94, port * 0.4 + Vector3(0.02, -0.02, 0.02)], [1.0, z]])
 		if t > 0.16 and t < 0.86:
@@ -723,6 +723,11 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 			var blend := _smooth(clampf(ct / 0.16, 0.0, 1.0)) * (1.0 - _smooth(clampf((ct - 0.84) / 0.16, 0.0, 1.0)))
 			off_r = tgt * blend
 	if hr != null and _part_base.has(hr):
+		# Con el ojo muy cerca de la mano (escopetas, garganta de culata), al apuntar
+		# la mano baja un poco para no tapar la vista
+		var eye_z := (m.get_node("Sight") as Node3D).position.z + eye_relief_for(c)
+		var near := clampf(0.2 - (eye_z - (hr.get_meta("palm", z) as Vector3).z), 0.0, 0.15)
+		off_r += Vector3(0.006, -0.45, 0.12) * near * _smooth(ads_amount)
 		hr.position = _part_base[hr] + off_r
 	if hl != null and _part_base.has(hl):
 		if pistol:
@@ -731,7 +736,9 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 			# Gira sobre el eje del guardamanos al revés que el arma: los dedos siguen
 			# agarrando y el brazo cuelga hacia abajo en vez de cruzar la pantalla
 			var c0: Vector3 = hl.get_meta("palm", z)
-			var b := Basis(Vector3.BACK, -_reload_roll * 0.85)
+			# Sobre el guardamanos compensa el giro; cuanto más lejos va, menos
+			var on_hg := 1.0 - _smooth(clampf(off_l.length() / 0.06, 0.0, 1.0))
+			var b := Basis(Vector3.BACK, -_reload_roll * 0.85 * on_hg)
 			hl.transform = Transform3D(b, _part_base[hl] + c0 - b * c0 + off_l)
 	return mag_follow
 

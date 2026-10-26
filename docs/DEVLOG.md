@@ -108,3 +108,12 @@
 - **Escopetas**: la muñeca de la mano que carga ahora sale de la palma; recorridos en arco.
 - Báscula y culatas de las escopetas redondeadas (secciones ovaladas que cambian a lo largo).
 - 79 tests.
+
+## F1.10 — Ajustes de manos (2026-10-26)
+
+### Funciona
+- Armas largas: la derecha sostiene el arma y la izquierda cambia el cargador y tira de la manija.
+- Escopetas: la mano que carga va con la palma sobre los culotes, nudillos arriba, dedos por adelante y pulgar del lado de la cámara (ya no se ve invertida).
+- Pistolas: la mano derecha toma alto, bajo la cola del armazón.
+- Cerrojos: la mano que carga cartucho a cartucho va pegada a la ventana.
+- Al apuntar, si el ojo queda muy cerca de la mano (escopetas), la mano baja un poco.

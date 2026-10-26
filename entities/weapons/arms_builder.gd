@@ -59,11 +59,11 @@ const POSES := {
 	"ou_hunt": {"top": Vector3(0, -0.048, 0.05), "bottom": Vector3(0, -0.102, 0.092), "r": 0.019, "trigger": Vector3(0, -0.062, -0.04),
 		"left": "forend", "left_in": "Barrels", "lc": Vector3(0, -0.028, -0.15), "lr": 0.032},
 	# Pistolas (con la mano de apoyo)
-	"pistol": {"top": Vector3(0, -0.024, 0.03), "bottom": Vector3(0, -0.1, 0.056), "r": 0.016, "trigger": Vector3(0, -0.024, -0.03), "left": "pistol"},
-	"bersa9": {"top": Vector3(0, -0.024, 0.032), "bottom": Vector3(0, -0.1, 0.054), "r": 0.016, "trigger": Vector3(0, -0.022, -0.032), "left": "pistol"},
-	"ballester45": {"top": Vector3(0, -0.024, 0.03), "bottom": Vector3(0, -0.1, 0.048), "r": 0.016, "trigger": Vector3(0, -0.021, -0.03), "left": "pistol"},
-	"m1911": {"top": Vector3(0, -0.024, 0.03), "bottom": Vector3(0, -0.1, 0.048), "r": 0.016, "trigger": Vector3(0, -0.021, -0.03), "left": "pistol"},
-	"p22": {"top": Vector3(0, -0.02, 0.032), "bottom": Vector3(0, -0.09, 0.062), "r": 0.016, "trigger": Vector3(0, -0.026, -0.03), "left": "pistol"},
+	"pistol": {"top": Vector3(0, -0.011, 0.026), "bottom": Vector3(0, -0.1, 0.056), "r": 0.016, "trigger": Vector3(0, -0.024, -0.03), "left": "pistol"},
+	"bersa9": {"top": Vector3(0, -0.011, 0.028), "bottom": Vector3(0, -0.1, 0.054), "r": 0.016, "trigger": Vector3(0, -0.022, -0.032), "left": "pistol"},
+	"ballester45": {"top": Vector3(0, -0.011, 0.027), "bottom": Vector3(0, -0.1, 0.048), "r": 0.016, "trigger": Vector3(0, -0.021, -0.03), "left": "pistol"},
+	"m1911": {"top": Vector3(0, -0.011, 0.027), "bottom": Vector3(0, -0.1, 0.048), "r": 0.016, "trigger": Vector3(0, -0.021, -0.03), "left": "pistol"},
+	"p22": {"top": Vector3(0, -0.008, 0.026), "bottom": Vector3(0, -0.09, 0.062), "r": 0.016, "trigger": Vector3(0, -0.026, -0.03), "left": "pistol"},
 }
 ## Por familia, para armas sin pose propia.
 const FAMILY_POSE := {"pistol": "pistol", "smg": "mp5", "rifle_ar": "ar15", "rifle_ak": "akm", "rifle_battle": "rifle",
@@ -109,8 +109,10 @@ static func _right_hand(root: Node3D, p: Dictionary, pistol: bool) -> void:
 	var sleeve := MeshKit.new()
 	var at := func(s: float, phi: float, rad: float) -> Vector3:
 		return top + a * s + (u * cos(phi) + v * sin(phi)) * rad
-	# Mayor, anular y meñique cerrados alrededor de la empuñadura (derecha → frente → izquierda)
-	var heights := [0.024, 0.044, 0.062]
+	# Mayor, anular y meñique cerrados alrededor de la empuñadura (derecha → frente → izquierda).
+	# En las pistolas la mano toma alto (bajo la cola del armazón): los dedos quedan
+	# en su lugar y la palma, el pulgar y la muñeca suben.
+	var heights := [0.036, 0.055, 0.072] if pistol else [0.024, 0.044, 0.062]
 	for i in 3:
 		_wrap_finger(glove, top, a, u, v, heights[i], r + 0.0085, deg_to_rad(38.0), 1.0, FINGER_LEN[i + 1], FINGER_R[i + 1])
 	# Índice: por el costado derecho del armazón hasta la cola del disparador
@@ -153,10 +155,54 @@ static func _shell_loader(barrels: Node3D) -> void:
 	loader.position = (a + b) * 0.5
 	loader.visible = false
 	barrels.add_child(loader)
-	# La mano agarra los culotes desde abajo; los cartuchos son los ShellL/ShellR
-	# Se ve con los caños abiertos: el antebrazo se orienta para ese ángulo
-	var comp := Basis(Vector3.RIGHT, deg_to_rad(WeaponController.BREAK_OPEN_DEG))
-	_left_forend(loader, Vector3(0, -0.004, 0.024), 0.027, "HandLoad", comp, Vector3(-0.85, -0.5, -0.05), Vector3(-0.2, 0.35, 0.9), true)
+	# La mano se ve solo con los caños abiertos: se arma en un nodo que compensa ese
+	# giro, así se diseña en el espacio del arma (arriba = arriba, adelante = −Z)
+	var pose := Node3D.new()
+	pose.name = "LoadPose"
+	pose.basis = Basis(Vector3.RIGHT, deg_to_rad(WeaponController.BREAK_OPEN_DEG))
+	loader.add_child(pose)
+	_shell_hand(pose, pose.basis.inverse() * Vector3.BACK)
+
+
+## Mano izquierda con dos cartuchos, palma abajo sobre los culotes: los dedos bajan
+## por el lado de adelante de los cartuchos y el pulgar por el lado de la cámara.
+## "d": dirección del culote de los cartuchos (hacia donde hay que empujarlos, al revés).
+static func _shell_hand(parent: Node3D, d: Vector3) -> void:
+	d = d.normalized()
+	var x := Vector3.RIGHT
+	var far := x.cross(d).normalized()  # del lado de adelante (lejos de la cámara)
+	if far.z > 0.0:
+		far = -far
+	var near := -far
+	var glove := MeshKit.new()
+	var sleeve := MeshKit.new()
+	var c := d * 0.004  # centro de los cartuchos, cerca de los culotes
+	# Palma sobre los culotes, mirando hacia ellos
+	var palm := c + d * 0.04 + near * 0.008
+	glove.box(Vector3.ZERO, Vector3(0.06, 0.02, 0.064), 0.01, Transform3D(Basis(x, d, far), palm))
+	# Nudillos y tendones en el dorso, para que se lea como una mano
+	for i in 4:
+		var kx := -0.022 + i * 0.0147
+		glove.ball(palm + x * kx + d * 0.009 + far * 0.026, 0.0085, Vector3(1, 0.8, 1), 8)
+		glove.capsule(palm + x * (kx * 0.7) + d * 0.011 - far * 0.012, palm + x * kx + d * 0.011 + far * 0.02, 0.003, 0.0035, 6)
+	# Dedos: nacen en el borde de adelante de la palma y bajan abrazando los cartuchos
+	var heights := [-0.024, -0.008, 0.008, 0.024]
+	for i in 4:
+		# Círculo alrededor del eje X: arranca arriba (d) y gira hacia adelante y abajo
+		var phi0 := deg_to_rad(35.0)
+		_wrap_finger(glove, c, x, d, far, heights[i], 0.03, phi0, 1.0, FINGER_LEN[i], FINGER_R[i])
+	# Pulgar del lado de la cámara, bajando por los cartuchos
+	var t0 := palm + near * 0.03 + x * 0.026
+	var t1 := t0 - d * 0.022 + near * 0.004
+	var t2 := t1 - d * 0.024 - near * 0.006
+	var t3 := t2 - d * 0.02 - near * 0.008
+	glove.capsule(t0, t1, THUMB_R[0] * 1.2, THUMB_R[0])
+	glove.capsule(t1, t2, THUMB_R[0], THUMB_R[1])
+	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
+	# Muñeca detrás de la palma (lado de la cámara) y el brazo hacia abajo a la izquierda
+	var wrist := palm + near * 0.045 + d * 0.006
+	_forearm(glove, sleeve, wrist, wrist + Vector3(-0.85, -0.5, 0.18).normalized() * FOREARM, Vector3(-0.2, 0.4, 0.9))
+	_finish(parent, "HandLoad", glove, sleeve)
 
 
 static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "HandL", comp := Basis.IDENTITY,
@@ -206,10 +252,10 @@ static func _left_pistol(root: Node3D, p: Dictionary) -> void:
 	var at := func(s: float, phi: float, rad: float) -> Vector3:
 		return top + a * s + (u * cos(phi) + v * sin(phi)) * rad
 	# Dedos sobre los de la derecha: de izquierda, por el frente, hacia la derecha
-	var heights := [0.03, 0.05, 0.068, 0.084]
+	var heights := [0.042, 0.061, 0.079, 0.095]
 	for i in 4:
 		_wrap_finger(glove, top, a, u, v, heights[i], r, deg_to_rad(195.0), -1.0, FINGER_LEN[i], FINGER_R[i])
-	_palm(glove, at.call(0.056, deg_to_rad(185.0), r - 0.012), a, u, v, deg_to_rad(185.0), Vector3(0.022, 0.07, 0.052))
+	_palm(glove, at.call(0.066, deg_to_rad(185.0), r - 0.012), a, u, v, deg_to_rad(185.0), Vector3(0.022, 0.07, 0.052))
 	# Pulgar adelante por el costado izquierdo del armazón
 	var t0: Vector3 = at.call(0.03, deg_to_rad(165.0), r - 0.006)
 	var t1 := t0 + Vector3(0.004, 0.008, -0.03)
