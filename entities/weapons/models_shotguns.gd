@@ -64,16 +64,17 @@ static func sxs(data: WeaponData) -> Node3D:
 	var barrels := WeaponModelBuilder.group(root, "Barrels", Vector3(0, 0.0, -0.12))
 	for s: float in [-1.0, 1.0]:
 		var n := "L" if s < 0 else "R"
-		WeaponModelBuilder.barrel(barrels, "Barrel" + n, 0.0, -blen, 0.0132, 0.0112, bl, 0.0092, Vector3(s * 0.0122, 0, 0), 0.06, 18)
+		WeaponModelBuilder.barrel(barrels, "Barrel" + n, 0.0, -blen, 0.0132, 0.0112, bl, 0.0092, Vector3(s * 0.0122, 0, 0), 0.06, 18, 0.0109)
 		_shell(barrels, "Shell" + n, Vector3(s * 0.0122, 0, 0.025))
 	WeaponModelBuilder.section(barrels, "Rib", [-0.0045, 0.0085, 0.0, 0.0045, 0.0085, 0.0, 0.0038, 0.0128, 0.0, -0.0038, 0.0128, 0.0], -blen + 0.004, -0.004, bl, 0.0006)
 	WeaponModelBuilder.section(barrels, "RibLow", [-0.0045, -0.0085, 0.0, -0.0038, -0.0125, 0.0, 0.0038, -0.0125, 0.0, 0.0045, -0.0085, 0.0], -blen + 0.004, -0.06, bl, 0.0006)
-	WeaponModelBuilder.rbox(barrels, "Lumps", Vector3(0.014, 0.016, 0.055), Vector3(0, -0.014, -0.03), bl, 0.003)
+	WeaponModelBuilder.rbox(barrels, "Lumps", Vector3(0.014, 0.016, 0.055), Vector3(0, -0.026, -0.03), bl, 0.003)
 	var fl := minf(0.2, blen * 0.55)
 	# Forend de astilla, redondeado y afinado hacia la punta
-	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.012, -fl, [[0.0, 0.0215, -0.033, -0.004, 2.8], [0.15, 0.022, -0.034, -0.004, 2.5],
+	# (arranca adelante de las recámaras, que son huecas)
+	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.072, -fl - 0.04, [[0.0, 0.0215, -0.033, -0.004, 2.8], [0.15, 0.022, -0.034, -0.004, 2.5],
 		[0.85, 0.021, -0.031, -0.004, 2.5], [1.0, 0.017, -0.022, -0.005, 3.0]])
-	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.04, 0.014, 0.03), Vector3(0, -0.024, -0.03), steel, 0.004)
+	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.04, 0.014, 0.03), Vector3(0, -0.024, -0.09), steel, 0.004)
 	WeaponModelBuilder.sphere(barrels, "Bead", 0.003, Vector3(0, 0.0155, -blen + 0.012), WeaponModelBuilder.mat("brass"), 8)
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0185, -0.12 - blen + 0.012), blen + 0.12 - 0.012 + 0.155)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0.0, -0.12 - blen - 0.01))
@@ -111,7 +112,7 @@ static func over_under(data: WeaponData) -> Node3D:
 	var ys := [0.0, -0.0245]
 	var names := ["L", "R"]
 	for i in 2:
-		WeaponModelBuilder.barrel(barrels, "Barrel" + names[i], 0.0, -blen, 0.0128, 0.0112, bl, 0.0092, Vector3(0, ys[i], 0), 0.07, 18)
+		WeaponModelBuilder.barrel(barrels, "Barrel" + names[i], 0.0, -blen, 0.0128, 0.0112, bl, 0.0092, Vector3(0, ys[i], 0), 0.07, 18, 0.0109)
 		_shell(barrels, "Shell" + names[i], Vector3(0, ys[i], 0.025))
 	for s: float in [-1.0, 1.0]:
 		WeaponModelBuilder.rbox(barrels, "SideRib", Vector3(0.002, 0.012, blen - 0.02), Vector3(s * 0.0098, -0.0122, -blen * 0.5), bl, 0.0006)
@@ -121,11 +122,14 @@ static func over_under(data: WeaponData) -> Node3D:
 	while z > -blen + 0.02:
 		WeaponModelBuilder.rbox(barrels, "RibPost", Vector3(0.004, 0.004, 0.005), Vector3(0, 0.0128, z), bl, 0.0005)
 		z -= 0.05
-	WeaponModelBuilder.rbox(barrels, "Monoblock", Vector3(0.03, 0.05, 0.03), Vector3(0, -0.012, -0.015), bl, 0.004)
+	# Monoblock: mejillas a los costados y talón abajo, dejando libres las bocas de las recámaras
+	for s: float in [-1.0, 1.0]:
+		WeaponModelBuilder.rbox(barrels, "Monoblock", Vector3(0.005, 0.05, 0.03), Vector3(s * 0.0128, -0.012, -0.015), bl, 0.002)
+	WeaponModelBuilder.rbox(barrels, "MonoLug", Vector3(0.022, 0.01, 0.03), Vector3(0, -0.04, -0.015), bl, 0.003)
 	# Forend con punta "schnabel" que abraza el caño inferior
-	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.016, -0.25, [[0.0, 0.0215, -0.05, -0.018, 2.8], [0.15, 0.0225, -0.051, -0.018, 2.5],
+	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.072, -0.28, [[0.0, 0.0215, -0.05, -0.018, 2.8], [0.15, 0.0225, -0.051, -0.018, 2.5],
 		[0.82, 0.0222, -0.047, -0.018, 2.5], [0.92, 0.024, -0.043, -0.017, 2.8], [1.0, 0.019, -0.032, -0.018, 3.0]])
-	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.036, 0.012, 0.025), Vector3(0, -0.038, -0.03), silver, 0.004)
+	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.036, 0.012, 0.025), Vector3(0, -0.038, -0.09), silver, 0.004)
 	WeaponModelBuilder.sphere(barrels, "Bead", 0.0028, Vector3(0, 0.0198, -blen + 0.012), WeaponModelBuilder.mat("brass"), 8)
 	WeaponModelBuilder.sphere(barrels, "MidBead", 0.0016, Vector3(0, 0.0182, -blen * 0.5), silver, 6)
 	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0222, -0.12 - blen + 0.012), blen + 0.12 - 0.012 + 0.155)

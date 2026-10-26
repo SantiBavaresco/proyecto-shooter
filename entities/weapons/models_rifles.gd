@@ -163,6 +163,7 @@ static func ar(data: WeaponData) -> Node3D:
 	_grip_ar(root, -0.046, poly)
 	# Manija de carga en T (atrás arriba)
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(0, 0.017, 0.075))
+	ch.set_meta("knob", Vector3(-0.014, 0.002, 0.016))
 	WeaponModelBuilder.rbox(ch, "ChShaft", Vector3(0.008, 0.005, 0.02), Vector3(0, 0, 0.004), al, 0.001)
 	WeaponModelBuilder.rbox(ch, "ChLatch", Vector3(0.036, 0.0065, 0.008), Vector3(0, 0, 0.016), al, 0.002)
 
@@ -307,6 +308,7 @@ static func scar(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.prism(root, "ButtPad", [0.3, 0.006, 0.003, 0.314, 0.006, 0.003, 0.316, -0.102, 0.004, 0.302, -0.102, 0.003], 0.04, WeaponModelBuilder.mat("rubber"), 0.003)
 	# Manija de carga lateral izquierda, adelante
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(-0.019, 0.006, -0.15))
+	ch.set_meta("knob", Vector3(-0.014, 0, 0))
 	WeaponModelBuilder.rbox(ch, "ChHandle", Vector3(0.018, 0.009, 0.014), Vector3(-0.009, 0, 0), steel, 0.003)
 	# Caño y boca
 	var bz := rf - 0.1
@@ -353,6 +355,7 @@ static func _ak_receiver(root: Node3D, rr: float, rf: float, grip_mat: Material,
 ## Manija de carga del AK (lado derecho, adelante de la ventana).
 static func _ak_charging(root: Node3D, z: float) -> void:
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(0.0158, 0.004, z))
+	ch.set_meta("knob", Vector3(0.018, 0, 0))
 	WeaponModelBuilder.cyl(ch, "ChStem", 0.0034, 0.016, Vector3(0.007, 0, 0), WeaponModelBuilder.mat("metal"), 10, Vector3(0, PI * 0.5, 0))
 	WeaponModelBuilder.cyl(ch, "ChKnob", 0.0062, 0.01, Vector3(0.018, 0, 0), WeaponModelBuilder.mat("metal"), 14, Vector3(0, PI * 0.5, 0), 0.0025)
 
@@ -545,6 +548,7 @@ static func mp5(data: WeaponData) -> Node3D:
 	# Tubo de amartillar sobre el caño y manija adelante a la izquierda
 	WeaponModelBuilder.lathe(root, "CockingTube", [-0.335, 0.0, -0.335, 0.0105, rf, 0.0105, rf, 0.0], m, Vector3(0, 0.018, 0), 16)
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(-0.009, 0.024, -0.285))
+	ch.set_meta("knob", Vector3(-0.022, 0.013, 0))
 	WeaponModelBuilder.rbox(ch, "ChLever", Vector3(0.026, 0.006, 0.01), Vector3(-0.011, 0.006, 0), m, 0.002, Vector3(0, 0, -0.6))
 	WeaponModelBuilder.cyl(ch, "ChKnob", 0.0045, 0.012, Vector3(-0.022, 0.013, 0.0), m, 10, Vector3.ZERO, 0.002)
 	# Guion con capucha y alza de tambor
@@ -622,6 +626,7 @@ static func fal(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.prism(root, "ButtPlate", [0.33, 0.007, 0.003, 0.342, 0.007, 0.004, 0.344, -0.129, 0.004, 0.334, -0.13, 0.003], 0.042, m, 0.003)
 	# Manija de carga plegable a la izquierda
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(-0.0155, 0.008, -0.17))
+	ch.set_meta("knob", Vector3(-0.012, 0, 0))
 	WeaponModelBuilder.rbox(ch, "ChHandle", Vector3(0.016, 0.01, 0.012), Vector3(-0.008, 0, 0), m, 0.003)
 	# Guardamanos con ventilaciones, bloque de gases con regulador
 	var hg: float = p.get("hg", 0.25)
@@ -671,6 +676,7 @@ static func g3(data: WeaponData) -> Node3D:
 	var z_fs := -0.47
 	WeaponModelBuilder.lathe(root, "CockingTube", [z_fs, 0.0, z_fs, 0.0125, rf, 0.0125, rf, 0.0], m, Vector3(0, 0.026, 0), 18)
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(-0.012, 0.03, -0.3))
+	ch.set_meta("knob", Vector3(-0.019, 0.012, 0))
 	WeaponModelBuilder.rbox(ch, "ChLever", Vector3(0.024, 0.007, 0.011), Vector3(-0.01, 0.006, 0), m, 0.002, Vector3(0, 0, -0.6))
 	# Guion con capucha y alza de tambor
 	WeaponModelBuilder.prism(root, "FrontBlock", [z_fs + 0.016, 0.04, 0.003, z_fs - 0.014, 0.04, 0.003, z_fs - 0.014, -0.012, 0.003, z_fs + 0.016, -0.012, 0.003],
@@ -735,6 +741,7 @@ static func sks(data: WeaponData) -> Node3D:
 		-0.121, 0.028, 0.0], 0.022, m, 0.0008)
 	WeaponModelBuilder.rear_notch(root, -0.12, ih, m, 0.0042, ih - 0.012)
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(0.015, 0.012, -0.03))
+	ch.set_meta("knob", Vector3(0.016, 0, 0))
 	WeaponModelBuilder.cyl(ch, "ChStem", 0.0034, 0.014, Vector3(0.006, 0, 0), m, 10, Vector3(0, PI * 0.5, 0))
 	WeaponModelBuilder.cyl(ch, "ChKnob", 0.0065, 0.01, Vector3(0.016, 0, 0), m, 14, Vector3(0, PI * 0.5, 0), 0.0025)
 	# Tubo de gases con guardamanos superior, bloque de gases, abrazadera
@@ -791,6 +798,7 @@ static func ebr(data: WeaponData) -> Node3D:
 		WeaponModelBuilder.rbox(root, "RailPost", Vector3(0.024, 0.012, 0.02), Vector3(0, 0.036, z), al, 0.002)
 	WeaponModelBuilder.rail(root, "TopRail", -0.17, 0.055, 0.04, al)
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(0.016, 0.014, -0.11))
+	ch.set_meta("knob", Vector3(0.014, 0, 0))
 	WeaponModelBuilder.prism(ch, "OpRod", [0.012, 0.004, 0.002, -0.012, 0.004, 0.002, -0.014, -0.006, 0.002, 0.008, -0.006, 0.003, 0.012, 0.0, 0.002],
 		0.012, m, 0.0015, Vector3(0.006, 0, 0))
 	# Empuñadura, guardamonte, culata retráctil con carrillera

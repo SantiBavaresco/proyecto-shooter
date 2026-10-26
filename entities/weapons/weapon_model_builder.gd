@@ -23,7 +23,7 @@ const SCOPE_SHADER := preload("res://entities/weapons/scope_lens.gdshader")
 ## Piezas que se animan por separado (se funden por dentro, no con el resto).
 const GROUPS: Array[String] = ["Mag", "Slide", "Charging", "Bolt", "Barrels", "ShellL", "ShellR"]
 ## Mallas que nunca se funden.
-const KEEP: Array[String] = ["ScopeLens", "Lens", "HandR", "HandL", "Loader"]
+const KEEP: Array[String] = ["ScopeLens", "Lens", "HandR", "HandL", "HookR", "HookL", "Loader"]
 
 static var _mats: Dictionary = {}
 
@@ -187,12 +187,18 @@ static func sphere(parent: Node3D, n: String, r: float, pos: Vector3, mat: Mater
 ## Caño con ánima hueca en la boca. z_rear > z_front (el frente es más negativo).
 ## "shank": tramo trasero recto y más grueso (recámara).
 static func barrel(parent: Node3D, n: String, z_rear: float, z_front: float, r_rear: float, r_front: float,
-		mat: Material, bore := -1.0, pos := Vector3.ZERO, shank := 0.0, seg := 16) -> MeshInstance3D:
+		mat: Material, bore := -1.0, pos := Vector3.ZERO, shank := 0.0, seg := 16, chamber := 0.0, chamber_depth := 0.07) -> MeshInstance3D:
 	var b := bore if bore >= 0.0 else r_front * 0.42
 	var pts := [z_front + 0.02, 0.0, z_front + 0.02, b, z_front, b, z_front, r_front * 0.9, z_front + 0.0015, r_front]
 	if shank > 0.0:
 		pts.append_array([z_rear - shank, r_rear * 0.9, z_rear - shank + 0.012, r_rear])
-	pts.append_array([z_rear, r_rear, z_rear, 0.0])
+	if chamber > 0.0:
+		# Recámara hueca (escopetas): boca achaflanada y fondo oscuro donde sigue el ánima
+		pts.append_array([z_rear - 0.0012, r_rear, z_rear, r_rear - 0.0012, z_rear, chamber + 0.0012, z_rear - 0.0012, chamber,
+			z_rear - chamber_depth, chamber, z_rear - chamber_depth, 0.0])
+		cyl(parent, n + "Bore", chamber * 0.98, 0.004, pos + Vector3(0, 0, z_rear - chamber_depth + 0.002), WeaponModelBuilder.mat("dark"), seg)
+	else:
+		pts.append_array([z_rear, r_rear, z_rear, 0.0])
 	return lathe(parent, n, pts, mat, pos, seg)
 
 

@@ -117,3 +117,19 @@
 - Pistolas: la mano derecha toma alto, bajo la cola del armazón.
 - Cerrojos: la mano que carga cartucho a cartucho va pegada a la ventana.
 - Al apuntar, si el ojo queda muy cerca de la mano (escopetas), la mano baja un poco.
+
+## F1.11 — Montar en recámara, vainas y recámaras huecas (2026-10-26)
+
+### Funciona
+- **Fusiles tipo AK (AR-74, AR-M, DR-1, PP-B) y SKS/EBR**: la izquierda cambia el cargador y vuelve al guardamanos; el arma gira para mostrar el lado derecho y la **mano derecha** monta con la manija y vuelve a la empuñadura.
+- **G-3A, MK5, FMR, SC-L y familia AR**: la izquierda va del brocal a la manija **por afuera del arma** (ya no la atraviesa).
+- Mano de montar con pose propia (gancho): índice y mayor enganchados delante de la bola, anular y meñique en puño, pulgar por abajo. El brazo cuelga hacia abajo aunque el arma esté girada.
+- La manija va atrás con la mano, se sostiene y **se suelta**: vuelve de golpe y el arma se sacude.
+- Recarga con cargador más fluida: tiempos nuevos, muñecas que giran en el recorrido, golpes del arma al sacar, calzar, tirar y soltar.
+- El cargador viejo baja y **sale de la vista** (se oculta abajo); el nuevo entra desde abajo. Ya no se ve el mismo cargador ir y volver.
+- Pistolas: la corredera se libera apenas entra el cargador.
+- **Escopetas**: al quebrar, el extractor saca las vainas y el expulsor las tira **hacia arriba y atrás**; siguen como vainas físicas. Un cartucho sin disparar queda en su recámara.
+- **Recámaras huecas** en las dos escopetas (boca achaflanada y fondo oscuro); forend, monoblock y herrajes corridos para no taparlas.
+- Mano que carga los cartuchos: la muñeca sigue al antebrazo (ya no queda quebrada).
+- 79 tests.
+

@@ -101,6 +101,18 @@ Detrás de la línea de tiro hay 25 mesas (cartel ARMERÍA), cada una con un arm
 | 4 | R-700 / Argentino 1909 | La mano derecha empuja cada cartucho; al disparar, va a la bola del cerrojo |
 | 5 | Escopetas | Báscula y culata redondeadas; la mano que carga los cartuchos no tiene la muñeca separada |
 
+## F1.11 — Montar en recámara
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Vaciar el AR-M (o AR-74, DR-1, PP-B) y R | La izquierda cambia el cargador y vuelve adelante; el arma gira y la mano derecha tira de la manija, la suelta y vuelve a la empuñadura |
+| 2 | Vaciar el G-3A (o MK5, FMR) y R | La izquierda va del cargador a la manija por afuera del arma, con los dedos enganchados; tira, suelta y vuelve al guardamanos |
+| 3 | Cualquier recarga con cargador | El cargador viejo baja y sale de la vista; no se ve el mismo cargador volver |
+| 4 | Escopeta: disparar los dos tiros y R | Al quebrar, las vainas salen hacia arriba y atrás; después entran los cartuchos nuevos |
+| 5 | Escopeta: disparar un solo tiro y R | Sale una vaina; el otro cartucho queda en su recámara |
+| 6 | Mirar las recámaras con los caños abiertos | Son huecas (no planas) |
+| 7 | Mano que carga la escopeta | La muñeca sigue la línea del antebrazo |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

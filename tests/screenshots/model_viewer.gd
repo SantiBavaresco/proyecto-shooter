@@ -47,7 +47,7 @@ func _ready() -> void:
 		var d := load("res://data/weapons/%s.tres" % id) as WeaponData
 		var m := WeaponModelBuilder.build(d)
 		if not with_arms:
-			for n in ["HandR", "HandL"]:
+			for n in ["HandR", "HandL", "HookR", "HookL"]:
 				var h := m.find_child(n, true, false)
 				if h != null:
 					h.free()
@@ -70,10 +70,18 @@ func _ready() -> void:
 		await _shot("%s_34" % id)
 		# Primeros planos de las manos
 		if with_arms:
-			for hn in ["HandR", "HandL"]:
+			for hn in ["HandR", "HandL", "HookR", "HookL"]:
 				var hand := m.find_child(hn, true, false) as Node3D
 				if hand == null:
 					continue
+				if hn.begins_with("Hook"):
+					# Mano de montar: en la bola de la manija, del lado que corresponde
+					var ch := m.get_node("Charging") as Node3D
+					var kn: Vector3 = ch.get_meta("knob", Vector3.ZERO)
+					if (kn.x + ch.position.x >= 0.0) != (hn == "HookR"):
+						continue
+					hand.position = ch.position + kn
+					hand.visible = true
 				var glove := hand.get_node("Glove") as MeshInstance3D
 				var hb := glove.global_transform * glove.get_aabb()
 				# La mano es la parte delantera del guante (el antebrazo va atrás)

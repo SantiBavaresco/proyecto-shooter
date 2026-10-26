@@ -49,7 +49,7 @@ func _build() -> void:
 			_mesh(Vector3(0.05, TABLE_HEIGHT, 0.05), Vector3(x, TABLE_HEIGHT * 0.5, z), wood)
 	# Arma acostada sobre la mesa, de costado, con el caño hacia +X
 	_model = WeaponModelBuilder.build(data)
-	for n in ["HandR", "HandL"]:
+	for n in ["HandR", "HandL", "HookR", "HookL"]:
 		var h := _model.find_child(n, true, false)
 		if h != null:
 			h.get_parent().remove_child(h)

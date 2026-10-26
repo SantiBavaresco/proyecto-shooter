@@ -65,7 +65,7 @@ func _ready() -> void:
 			bot.press_reload()
 			var prev := 0.0
 			var dur := player.weapons.reload_duration(player.weapons.current())
-			for f: float in [0.08, 0.2, 0.34, 0.5, 0.62, 0.78, 0.9]:
+			for f: float in [0.08, 0.2, 0.28, 0.34, 0.5, 0.62, 0.7, 0.76, 0.8, 0.9]:
 				await _frames(maxi(1, int(dur * 60.0 * (f - prev))))
 				prev = f
 				await _shot("W_%s_recarga_%02d" % [id, int(f * 100)])

@@ -91,6 +91,10 @@ static func add_arms(root: Node3D, data: WeaponData) -> void:
 			parent = root.get_node(String(p["left_in"])) as Node3D
 			center -= parent.position
 		_left_forend(parent, center, float(p["lr"]))
+		# Manos de montar en recámara (las dos: según el arma tira una u otra)
+		if root.has_node("Charging"):
+			_hook_hand(root, "HookR", 1.0)
+			_hook_hand(root, "HookL", -1.0)
 		if parent.name == "Barrels" and parent.has_node("ShellL") and parent.has_node("ShellR"):
 			_shell_loader(parent)
 
@@ -200,8 +204,11 @@ static func _shell_hand(parent: Node3D, d: Vector3) -> void:
 	glove.capsule(t1, t2, THUMB_R[0], THUMB_R[1])
 	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
 	# Muñeca detrás de la palma (lado de la cámara) y el brazo hacia abajo a la izquierda
-	var wrist := palm + near * 0.045 + d * 0.006
-	_forearm(glove, sleeve, wrist, wrist + Vector3(-0.85, -0.5, 0.18).normalized() * FOREARM, Vector3(-0.2, 0.4, 0.9))
+	# El antebrazo sigue el eje largo de la mano (hacia la cámara y abajo), apenas
+	# abierto a la izquierda: la muñeca queda recta, no quebrada
+	var fdir := Vector3(-0.6, -0.7, 0.4).normalized()  # abajo a la izquierda, sin tapar la vista
+	var wrist := palm + near * 0.03 + fdir * 0.016 + d * 0.004
+	_forearm(glove, sleeve, wrist, wrist + fdir * FOREARM, Vector3(-0.25, 0.45, 0.85))
 	_finish(parent, "HandLoad", glove, sleeve)
 
 
@@ -236,6 +243,60 @@ static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "Han
 	# El codo queda abajo y afuera, fuera de la vista; el brazo sube hacia el hombro
 	_forearm(glove, sleeve, wrist, wrist + (comp * arm_dir).normalized() * FOREARM, comp * upper_dir)
 	_finish(parent, node_name, glove, sleeve).set_meta("palm", c)
+
+
+# --- Mano que toma la manija de carga ------------------------------------------
+
+## Segunda pose de una mano para montar en recámara: por arriba, con el índice y el
+## mayor enganchados delante de la bola de la manija (el anular y el meñique cerrados
+## en puño, afuera) y el pulgar por debajo. El origen del nodo es la bola.
+## "s": +1 manija a la derecha (mano derecha), −1 a la izquierda (mano izquierda).
+static func _hook_hand(root: Node3D, node_name: String, s: float) -> void:
+	var glove := MeshKit.new()
+	var sleeve := MeshKit.new()
+	var xs := [0.007, 0.024, 0.04, 0.054]  # de la bola hacia afuera
+	for i in 4:
+		var x: float = s * xs[i]
+		var lens: Array = FINGER_LEN[i]
+		var rad: Array = FINGER_R[i]
+		var k := Vector3(x, 0.017, 0.03 - i * 0.002)
+		var p1: Vector3
+		var p2: Vector3
+		var p3: Vector3
+		if i < 2:
+			# Gancho: pasa por arriba de la bola, baja por delante y se mete por abajo
+			p1 = k + Vector3(0, -0.003, -float(lens[0]))
+			p2 = p1 + Vector3(0, -float(lens[1]) * 0.96, 0.006)
+			p3 = p2 + Vector3(-s * 0.002, -0.007, float(lens[2]) * 0.8)
+		else:
+			# Cerrados en puño
+			p1 = k + Vector3(0, -0.008, -float(lens[0]) * 0.82)
+			p2 = p1 + Vector3(0, -float(lens[1]) * 0.85, float(lens[1]) * 0.4)
+			p3 = p2 + Vector3(0, -0.002, float(lens[2]) * 0.92)
+		glove.ball(k, float(rad[0]) * 1.05, Vector3(1, 1, 1), 8)
+		glove.capsule(k, p1, rad[0], rad[1], 10)
+		glove.capsule(p1, p2, rad[1], rad[2], 10)
+		glove.capsule(p2, p3, rad[2], float(rad[2]) * 0.9, 10)
+	# Dorso de la mano (palma hacia abajo) con nudillos
+	var pc := Vector3(s * 0.031, 0.014, 0.062)
+	glove.box(Vector3.ZERO, Vector3(0.07, 0.024, 0.07), 0.011, Transform3D(Basis(Vector3.RIGHT, deg_to_rad(-8.0)), pc))
+	for i in 4:
+		glove.capsule(pc + Vector3(s * (xs[i] - 0.031) * 0.6, 0.012, 0.025), Vector3(s * xs[i], 0.026, 0.031), 0.003, 0.0035, 6)
+	# Pulgar: del lado del arma, por debajo de la bola
+	var t0 := Vector3(-s * 0.002, 0.004, 0.072)
+	var t1 := t0 + Vector3(-s * 0.003, -0.014, -0.026)
+	var t2 := t1 + Vector3(0, -0.006, -0.025)
+	var t3 := t2 + Vector3(s * 0.002, 0.0, -0.021)
+	glove.capsule(t0, t1, THUMB_R[0] * 1.25, THUMB_R[0])
+	glove.capsule(t1, t2, THUMB_R[0], THUMB_R[1])
+	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
+	# Muñeca atrás de la mano y el antebrazo hacia atrás, abajo y afuera
+	var wrist := Vector3(s * 0.03, 0.01, 0.1)
+	var fdir := Vector3(s * 0.42, -0.5, 0.76).normalized()
+	_forearm(glove, sleeve, wrist, wrist + fdir * FOREARM, Vector3(-s * 0.15, 0.5, 0.85))
+	var g := _finish(root, node_name, glove, sleeve)
+	g.visible = false
+	g.set_meta("palm", pc)
 
 
 # --- Mano izquierda de apoyo en la pistola ----------------------------------
