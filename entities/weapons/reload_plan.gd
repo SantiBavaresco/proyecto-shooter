@@ -353,7 +353,7 @@ func pull_back(t: float) -> float:
 		if t < p0:
 			continue
 		if t < p1:
-			return travel * WeaponController._smooth((t - p0) / maxf(p1 - p0, 0.001))
+			return travel * WeaponViewmodel.smooth((t - p0) / maxf(p1 - p0, 0.001))
 		if t < rl:
 			return travel
 		var k := clampf((t - rl) / 0.02, 0.0, 1.0)

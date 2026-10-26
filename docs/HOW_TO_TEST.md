@@ -132,6 +132,18 @@ Las zonas están pintadas en el piso entre las mesas de la armería y la línea 
 | 10 | Pistola en ARMAS GASTADAS | La mano izquierda toma la corredera por arriba y la tira |
 | 11 | R-700 en ARMAS GASTADAS | Si no dispara, R acciona el cerrojo |
 
+## F1.13 — Penetración
+
+La estación está a la izquierda del polígono, afuera del muro, con su propia línea amarilla.
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Fusil (AR-M) a cada panel | Atraviesa madera 2 cm, chapa 1 mm y chapa 4 mm (la diana de atrás marca el impacto); la viga de 20 cm lo frena |
+| 2 | Pistola a cada panel | Atraviesa madera 2 cm y chapa 1 mm; la chapa de 4 mm y la viga la frenan |
+| 3 | Escopeta | Los perdigones casi no pasan la madera; la chapa fina sí, apenas |
+| 4 | R-700 a la viga | Tampoco la pasa (20 cm es mucho); a la chapa de 4 mm sí |
+| 5 | F3 (trayectorias) | La línea sigue del otro lado del panel |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

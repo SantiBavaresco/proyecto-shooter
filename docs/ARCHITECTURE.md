@@ -100,3 +100,11 @@ CombatWorld (uno por nivel, grupo "combat_world")
   duración; `WeaponController` solo los evalúa. Acciones: reload, rack, misfire, stovepipe, double_feed.
 - `WeaponSlot.condition` y `malfunction`; `WeaponController.fault_risk(estado)` da la probabilidad por disparo.
   R con falla → estado `CLEARING` (o `CYCLING` en cerrojos).
+
+### Vista y lógica de las armas (F1.13)
+- `WeaponController` (lógica, tick de física) y `WeaponViewmodel` (vista, cada frame) están separados:
+  la vista solo lee el estado (`wc.state`, `wc.state_time`, `wc._plan`...) y el controlador le avisa
+  `kick()`, `flash()`, `add_model()` / `remove_model()`. Las animaciones usan `WeaponViewmodel.path()` (Catmull-Rom) y `smooth()`.
+- Penetración en `CombatWorld._try_penetrate`: espesor medido con un rayo desde atrás hacia la entrada;
+  capacidad = `Surface.TABLE[s].pen × WeaponData.penetration_power() × (v/v0)²`.
+

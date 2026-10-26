@@ -10,16 +10,19 @@ extends RefCounted
 ## ricochet_chance: probabilidad de rebote a ángulo 0; baja linealmente hasta 0
 ##   al llegar a ricochet_angle.
 ## ricochet_energy: fracción de la velocidad que conserva al rebotar.
+## pen: espesor (m) que atraviesa una bala de poder 1 (un fusil de asalto, ver
+##   WeaponData.penetration_power). 0 = no se atraviesa. El espesor se mide a lo largo
+##   del recorrido, así que un tiro en diagonal encuentra más material.
 
 const DEFAULT := "concrete"
 
 const TABLE: Dictionary = {
 	"concrete": {"ricochet_angle": 22.0, "ricochet_chance": 0.7, "ricochet_energy": 0.45,
-		"decal": Color(0.12, 0.12, 0.11), "particle": Color(0.62, 0.6, 0.55), "sparks": false, "decals": true},
+		"decal": Color(0.12, 0.12, 0.11), "particle": Color(0.62, 0.6, 0.55), "sparks": false, "decals": true, "pen": 0.0},
 	"metal": {"ricochet_angle": 32.0, "ricochet_chance": 0.9, "ricochet_energy": 0.6,
-		"decal": Color(0.25, 0.24, 0.22), "particle": Color(1.0, 0.72, 0.3), "sparks": true, "decals": true},
+		"decal": Color(0.25, 0.24, 0.22), "particle": Color(1.0, 0.72, 0.3), "sparks": true, "decals": true, "pen": 0.005},
 	"wood": {"ricochet_angle": 10.0, "ricochet_chance": 0.25, "ricochet_energy": 0.3,
-		"decal": Color(0.18, 0.11, 0.05), "particle": Color(0.55, 0.4, 0.22), "sparks": false, "decals": true},
+		"decal": Color(0.18, 0.11, 0.05), "particle": Color(0.55, 0.4, 0.22), "sparks": false, "decals": true, "pen": 0.07},
 	"dirt": {"ricochet_angle": 7.0, "ricochet_chance": 0.15, "ricochet_energy": 0.2,
 		"decal": Color(0.14, 0.1, 0.07), "particle": Color(0.42, 0.33, 0.24), "sparks": false, "decals": true},
 	"water": {"ricochet_angle": 9.0, "ricochet_chance": 0.5, "ricochet_energy": 0.3,
@@ -42,6 +45,11 @@ static func of(collider: Object) -> String:
 			return s if TABLE.has(s) else DEFAULT
 		n = n.get_parent()
 	return DEFAULT
+
+
+## Espesor que puede atravesar una bala de ese poder (m).
+static func penetrable_thickness(surface: String, power: float) -> float:
+	return float(data(surface).get("pen", 0.0)) * maxf(power, 0.0)
 
 
 static func data(surface: String) -> Dictionary:

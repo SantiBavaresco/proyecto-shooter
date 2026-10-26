@@ -97,6 +97,12 @@ extends Resource
 @export var sfx_volume_db: float = -2.0
 
 
+## Poder de penetración (1 ≈ fusil de asalto): de la energía del proyectil
+## (daño × velocidad). Una pistola ~0,3; un perdigón ~0,15; un .308 de cerrojo ~2.
+func penetration_power() -> float:
+	return damage * muzzle_velocity / 30000.0
+
+
 func seconds_per_shot() -> float:
 	return 60.0 / maxf(rpm, 1.0)
 

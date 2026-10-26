@@ -104,6 +104,29 @@ func _ready() -> void:
 			bot.press_reload()
 			await _frames(2)
 			await _seq("F_%s_%s" % spec, [0.15, 0.3, 0.45, 0.6, 0.75, 0.9])
+	if "penetracion" in only:
+		# Estación de penetración: un tiro de fusil y uno de pistola a cada panel
+		for id: String in ["akm", "pistol"]:
+			await _equip(id)
+			for i in 4:
+				var px: float = [9.0, 10.4, 11.8, 13.2][i]
+				# Desde atrás de cada panel, derecho: la bala sigue hacia su diana
+				player.teleport(Vector3(px, 0.05, 31.0), PI)
+				await _frames(3)
+				_look(Vector3(px + (0.1 if id == "pistol" else -0.1), 1.5 + (0.08 if id == "pistol" else -0.05), 34.0))
+				await _frames(3)
+				bot.press_fire()
+				await _frames(12)
+		player.teleport(Vector3(11.1, 0.05, 32.2), PI)
+		await _frames(3)
+		_look(Vector3(11.1, 1.3, 36.5))
+		await _frames(20)
+		await _shot("P0_paneles")
+		player.teleport(Vector3(11.1, 0.05, 34.9), PI)
+		await _frames(3)
+		_look(Vector3(11.1, 1.5, 36.5))
+		await _frames(20)
+		await _shot("P1_dianas_detras")
 	print("CAPTURAS_OK -> ", ProjectSettings.globalize_path(out_dir))
 	get_tree().quit()
 

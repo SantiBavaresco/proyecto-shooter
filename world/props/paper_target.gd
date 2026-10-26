@@ -4,6 +4,8 @@ extends Node3D
 ## bala en el último impacto (útil para ver la balística a 100 y 200 m).
 
 @export var face_size: float = 1.0
+## Escala del texto con la distancia y la caída (más chico en dianas cercanas).
+@export var label_scale: float = 1.0
 
 var last_hit: HitInfo
 var _label: Label3D
@@ -63,7 +65,7 @@ func _build() -> void:
 	_label.position = Vector3(0, 1.2 + face_size + 0.25, 0)
 	_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_label.font_size = 64
-	_label.pixel_size = 0.004 * maxf(face_size, 1.0) * 2.0
+	_label.pixel_size = 0.004 * maxf(face_size, 1.0) * 2.0 * label_scale
 	_label.outline_size = 12
 	_label.text = "—"
 	add_child(_label)

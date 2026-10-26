@@ -135,3 +135,55 @@ class _Target extends StaticBody3D:
 	func apply_hit(info: HitInfo) -> bool:
 		last = info
 		return false
+
+
+# --- Penetración ---------------------------------------------------------------
+
+func _paper(z: float) -> _Target:
+	var t := _Target.new()
+	t.set_meta("surface", "paper")
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = Vector3(4, 4, 0.02)
+	cs.shape = sh
+	t.add_child(cs)
+	t.position = Vector3(0, 0, z)
+	world.add_child(t)
+	return t
+
+
+func test_rifle_goes_through_thin_wood_and_loses_energy() -> void:
+	_wall(Vector3(0, 0, -10), Vector3(2, 2, 0.02), "wood")
+	var t := _paper(-14.0)
+	await physics_frames(2)
+	combat.fire_projectile(Vector3.ZERO, Vector3.FORWARD, rifle)
+	await physics_frames(10)
+	assert_true(t.last != null, "atravesó la madera de 2 cm")
+	if t.last != null:
+		assert_lt(t.last.damage, rifle.damage * 0.9, "llega con menos energía")
+	assert_eq(combat.stats_penetrations, 1)
+
+
+func test_thick_wood_stops_rifle() -> void:
+	_wall(Vector3(0, 0, -10), Vector3(2, 2, 0.25), "wood")
+	var t := _paper(-14.0)
+	await physics_frames(2)
+	combat.fire_projectile(Vector3.ZERO, Vector3.FORWARD, rifle)
+	await physics_frames(10)
+	assert_true(t.last == null, "una viga de 25 cm frena la bala")
+	assert_eq(combat.stats_penetrations, 0)
+
+
+func test_sheet_metal_rifle_yes_pistol_no() -> void:
+	var pistol := load("res://data/weapons/pistol.tres") as WeaponData
+	assert_gt(Surface.penetrable_thickness("metal", rifle.penetration_power()), 0.003, "fusil: más de 3 mm de chapa")
+	assert_lt(Surface.penetrable_thickness("metal", pistol.penetration_power()), 0.003, "pistola: menos de 3 mm")
+	_wall(Vector3(0, 0, -10), Vector3(2, 2, 0.003), "metal")
+	var t := _paper(-14.0)
+	await physics_frames(2)
+	combat.fire_projectile(Vector3.ZERO, Vector3.FORWARD, pistol)
+	await physics_frames(10)
+	assert_true(t.last == null, "la pistola no pasa 3 mm de chapa")
+	combat.fire_projectile(Vector3.ZERO, Vector3.FORWARD, rifle)
+	await physics_frames(10)
+	assert_true(t.last != null, "el fusil sí")

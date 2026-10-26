@@ -12,6 +12,8 @@ extends Node3D
 
 const DAMAGE_MODEL := preload("res://data/combat/damage_model.tres")
 const MAX_PROJECTILES := 256
+## Materiales que puede atravesar una bala.
+const MAX_PENETRATIONS := 3
 const MAX_LIFETIME := 3.0
 const MAX_DECALS := 120
 const MAX_PARTICLES := 24
@@ -29,6 +31,7 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Contadores para diagnóstico y tests.
 var stats_impacts: int = 0
 var stats_ricochets: int = 0
+var stats_penetrations: int = 0
 
 var _projectiles: Array[Projectile] = []
 var _decals: Array[Decal] = []
@@ -64,6 +67,9 @@ class Projectile:
 	var age: float = 0.0
 	var ricochets: int = 0
 	var max_ricochets: int = 2
+	## Poder de penetración (WeaponData.penetration_power) y materiales atravesados.
+	var power: float = 1.0
+	var penetrations: int = 0
 	var exclude: Array[RID] = []
 	var source: Node
 	var tracer: MeshInstance3D
@@ -108,6 +114,7 @@ func fire_projectile(origin: Vector3, dir: Vector3, weapon: WeaponData, source: 
 	p.damage = weapon.damage
 	p.weapon_id = weapon.id
 	p.max_ricochets = weapon.max_ricochets
+	p.power = weapon.penetration_power()
 	p.exclude = exclude
 	p.source = source
 	if tracer:
@@ -187,8 +194,8 @@ func _step(p: Projectile, space: PhysicsDirectSpaceState3D, g: float, delta: flo
 	var from := p.pos
 	var to := p.pos + p.vel * delta
 	var remaining := 1.0
-	# Hasta 3 sub-tramos por tick para resolver rebotes en el mismo frame.
-	for _sub in 3:
+	# Hasta 4 sub-tramos por tick para resolver rebotes y penetraciones en el mismo frame.
+	for _sub in 4:
 		var q := PhysicsRayQueryParameters3D.create(from, to)
 		q.exclude = p.exclude
 		q.collide_with_areas = false
@@ -206,19 +213,22 @@ func _step(p: Projectile, space: PhysicsDirectSpaceState3D, g: float, delta: flo
 		var seg_len := from.distance_to(to)
 		remaining *= 1.0 - (from.distance_to(hp) / seg_len if seg_len > 0.0 else 1.0)
 		var collider: Object = hit["collider"]
-		var ricocheted := _handle_impact(p, hp, hn, collider)
-		if not ricocheted:
+		var next := _handle_impact(p, hp, hn, collider, space)
+		if next == Vector3.INF:
 			p.alive = false
 			p.pos = hp
 			return
-		# Rebote: refleja y sigue con el tiempo que quedaba del tick
-		from = hp + hn * 0.01
+		# Rebote o penetración: sigue desde ahí con el tiempo que quedaba del tick
+		from = next
 		to = from + p.vel * delta * remaining
 	p.pos = to
 	_update_tracer(p, from)
 
 
-func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Object) -> bool:
+## Impacto: daño, efectos y qué sigue. Devuelve desde dónde continúa el proyectil
+## (rebote o salida del material atravesado) o Vector3.INF si se detuvo.
+func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Object,
+		space: PhysicsDirectSpaceState3D = null) -> Vector3:
 	stats_impacts += 1
 	var surface := Surface.of(collider)
 	var dir := p.vel.normalized()
@@ -263,8 +273,43 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 		stats_ricochets += 1
 		p.damage *= 0.7
 		play_sound_at(SynthSfx.ricochet(), pos, -6.0, rng.randf_range(0.85, 1.2))
-		return true
-	return false
+		return pos + normal * 0.01
+	# ¿Lo atraviesa? (chapa, madera: según el espesor que encuentra en su recorrido)
+	if target == null and space != null and p.penetrations < MAX_PENETRATIONS:
+		var exit := _try_penetrate(p, pos, dir, surface, collider, space)
+		if exit != Vector3.INF:
+			return exit
+	return Vector3.INF
+
+
+## Penetración: mide el espesor a lo largo del recorrido (un rayo desde atrás hacia
+## la entrada que golpea la cara de salida) y, si alcanza, la bala sale del otro lado
+## más lenta y apenas desviada, dejando agujero de salida.
+func _try_penetrate(p: Projectile, pos: Vector3, dir: Vector3, surface: String, collider: Object,
+		space: PhysicsDirectSpaceState3D) -> Vector3:
+	var vel_factor := clampf(p.vel.length() / maxf(p.v0, 1.0), 0.0, 1.0)
+	var cap := Surface.penetrable_thickness(surface, p.power * vel_factor * vel_factor)
+	if cap <= 0.0005:
+		return Vector3.INF
+	var far := pos + dir * (cap + 0.002)
+	var q := PhysicsRayQueryParameters3D.create(far, pos + dir * 0.0002)
+	q.collide_with_areas = false
+	q.collision_mask = 0xFFFFFFFF & ~(1 << (SHELL_LAYER - 1))
+	var back := space.intersect_ray(q)
+	if back.is_empty() or back["collider"] != collider:
+		return Vector3.INF  # más grueso de lo que puede atravesar (o pegado a otra cosa)
+	var exit: Vector3 = back["position"]
+	var thick := pos.distance_to(exit)
+	var used := clampf(thick / cap, 0.0, 1.0)
+	# Pierde velocidad según cuánto de su capacidad gastó, y se desvía un poco
+	var keep := sqrt(1.0 - used) * 0.92
+	var new_dir := dir.rotated(Vector3.UP, rng.randf_range(-1.0, 1.0) * deg_to_rad(4.0) * used)
+	new_dir = new_dir.rotated(new_dir.cross(Vector3.UP).normalized(), rng.randf_range(-1.0, 1.0) * deg_to_rad(3.0) * used)
+	p.vel = new_dir * p.vel.length() * keep
+	p.penetrations += 1
+	stats_penetrations += 1
+	_spawn_impact_fx(exit, back["normal"], surface, collider, false)
+	return exit + new_dir * 0.002
 
 
 ## Zona golpeada. Si el cuerpo tiene un "zone_owner" con refine_zone(), este puede

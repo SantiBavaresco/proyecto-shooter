@@ -13,6 +13,7 @@ extends Node3D
 ##  - Pila de contenedores marítimos (medidas reales de 20 pies)
 ##  - Polígono de tiro detrás del spawn (+Z): dianas a 25/50/100/200 m,
 ##    maniquíes, placa de acero para rebotes y caja de munición
+##  - Penetración: paneles de madera y chapa (finos y gruesos) con dianas detrás
 ##  - Zonas de prueba junto a la línea de tiro: estrés medio, estrés alto y
 ##    armas gastadas (fallas frecuentes)
 
@@ -235,6 +236,8 @@ func _build_range(geo: Node3D) -> void:
 		geo.add_child(m)
 	_box(geo, Vector3(cx, 0.5, RANGE_LINE_Z + 28.8), Vector3(2.0, 1.0, 0.3), _mat_block)
 
+	_build_penetration(geo)
+
 	# Placa de acero inclinada: los tiros rasantes rebotan
 	var plate := StaticBody3D.new()
 	plate.name = "SteelPlate"
@@ -258,6 +261,46 @@ func _build_range(geo: Node3D) -> void:
 	plate.rotation = Vector3(0, deg_to_rad(70), 0)
 	geo.add_child(plate)
 	_sign(geo, Vector3(RANGE_X_MAX - 3.0, 2.6, RANGE_LINE_Z + 12.0), tr("greybox.steel"))
+
+
+## Estación de penetración: paneles de distinto material y espesor con una diana
+## de papel detrás de cada uno para ver qué los atraviesa.
+func _build_penetration(geo: Node3D) -> void:
+	var wood := StandardMaterial3D.new()
+	wood.albedo_color = Color(0.62, 0.45, 0.26)
+	wood.roughness = 0.9
+	var beam := StandardMaterial3D.new()
+	beam.albedo_color = Color(0.45, 0.3, 0.17)
+	beam.roughness = 0.9
+	var sheet := StandardMaterial3D.new()
+	sheet.albedo_color = Color(0.55, 0.57, 0.58)
+	sheet.metallic = 0.7
+	sheet.roughness = 0.45
+	var z := RANGE_LINE_Z + 4.0
+	# [x, espesor, material, superficie, texto]
+	# A la izquierda del polígono, afuera del muro: no tapa ningún carril
+	var panels: Array = [[9.0, 0.02, wood, "wood", "MADERA 2 cm"],
+		[10.4, 0.001, sheet, "metal", "CHAPA 1 mm"],
+		[11.8, 0.004, sheet, "metal", "CHAPA 4 mm"],
+		[13.2, 0.2, beam, "wood", "VIGA 20 cm"]]
+	for pd: Array in panels:
+		var x: float = pd[0]
+		var th: float = pd[1]
+		var panel := _box(geo, Vector3(x, 1.35, z), Vector3(1.0, 1.3, th), pd[2], true, pd[3])
+		panel.name = "Pen_" + String(pd[4]).replace(" ", "_")
+		# Patas para que se lea como un panel parado
+		for sx: float in [-0.45, 0.45]:
+			_box(geo, Vector3(x + sx, 0.35, z + th * 0.5 + 0.03), Vector3(0.05, 0.7, 0.05), _mat_block, false)
+		_label(geo, Vector3(x, 2.25, z), pd[4], 0.32)
+		var pt := PaperTarget.new()
+		pt.name = "PenTarget_%d" % int(x * 10.0)
+		pt.face_size = 0.6
+		pt.label_scale = 0.3
+		pt.position = Vector3(x, 0.0, z + 2.5)
+		pt.rotation = Vector3(0, PI, 0)
+		geo.add_child(pt)
+	_sign(geo, Vector3(11.1, 3.0, z), tr("greybox.penetration"))
+	_box(geo, Vector3(11.1, 0.012, RANGE_LINE_Z), Vector3(6.0, 0.02, 0.2), _mat_accent, false)
 
 
 # --- Helpers ----------------------------------------------------------------

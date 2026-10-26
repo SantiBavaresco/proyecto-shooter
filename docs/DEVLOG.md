@@ -155,3 +155,13 @@
   - Mensaje en rojo debajo del centro con la falla y "[R]".
 - 87 tests (8 nuevos: estrés, riesgo de falla, duración con estrés, planes, zonas, olvido de montar, destrabado, cerrojo).
 
+## F1.13 — Penetración de materiales y orden del código (2026-10-26)
+
+### Funciona
+- **Penetración**: chapa y madera se atraviesan según el espesor que la bala encuentra en su recorrido (un tiro en diagonal encuentra más material) y el poder del arma (daño × velocidad; fusil de asalto ≈ 1, pistola ≈ 0,3, perdigón ≈ 0,15, cerrojo .308 ≈ 2). Con poder 1: ~7 cm de madera o ~5 mm de chapa.
+  - Sale del otro lado más lenta (pega menos) y apenas desviada; agujero y polvo/chispas en la entrada y en la salida.
+  - Hasta 3 materiales por bala. Concreto, tierra y cuerpos no se atraviesan (todavía).
+- **Estación de penetración** a la izquierda del polígono, afuera del muro (no tapa ningún carril): madera 2 cm, chapa 1 mm, chapa 4 mm y viga de 20 cm, con una diana de papel detrás de cada panel.
+- **Código**: `WeaponController` quedó solo con la lógica (estados, disparo, recarga, fallas, munición, interacción; ~690 líneas) y la vista pasó a `WeaponViewmodel` (modelo, manos, pose, balanceo, retroceso visual, recargas animadas, visor; ~670 líneas), que solo lee el estado. Así los enemigos de F3 podrán usar la lógica de disparo sin la vista.
+- 90 tests (3 nuevos de penetración).
+

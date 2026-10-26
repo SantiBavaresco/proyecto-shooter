@@ -147,5 +147,6 @@
 	"stress.medium": "STRESS",
 	"stress.high": "HIGH STRESS",
 	"greybox.zone_stress_extreme": "EXTREME STRESS",
-	"stress.extreme": "EXTREME STRESS"
+	"stress.extreme": "EXTREME STRESS",
+	"greybox.penetration": "PENETRATION"
 }
