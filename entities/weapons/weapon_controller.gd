@@ -817,8 +817,8 @@ func _process(delta: float) -> void:
 	if st > 0.001:
 		var busy := 1.6 if state == State.RELOADING or state == State.CLEARING else 1.0
 		var tr3 := player.stress.tremor()
-		pos += tr3 * 0.0011 * st * busy * (1.0 - a * 0.5)
-		rot += Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.35) * st * busy * (1.0 - a * 0.5)
+		pos += tr3 * 0.0026 * st * busy * (1.0 - a * 0.5)
+		rot += Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.9) * st * busy * (1.0 - a * 0.5)
 	_rig.position = pos
 	_rig.rotation = rot
 	_animate_parts(c, delta)
@@ -922,11 +922,11 @@ func _animate_hands(c: WeaponSlot, t: float) -> Vector3:
 		var st := player.stress.value
 		if st > 0.001:
 			var tr3 := player.stress.tremor()
-			off_l += Vector3(tr3.z, tr3.x, tr3.y) * 0.0022 * st
-			off_r += tr3 * 0.0012 * st
-			rot_l += Vector3(tr3.y, tr3.z, tr3.x) * 2.0 * st
+			off_l += Vector3(tr3.z, tr3.x, tr3.y) * 0.0045 * st
+			off_r += tr3 * 0.002 * st
+			rot_l += Vector3(tr3.y, tr3.z, tr3.x) * 3.5 * st
 			if mag_follow.length() > 0.001:
-				mag_follow += Vector3(tr3.z, tr3.x, tr3.y) * 0.0022 * st
+				mag_follow += Vector3(tr3.z, tr3.x, tr3.y) * 0.0045 * st
 	elif t >= 0.0 and w.reload_type == "rounds" and hr != null and m.has_node("Ejection"):
 		var palm: Vector3 = hr.get_meta("palm", z)
 		var port: Vector3 = (m.get_node("Ejection") as Node3D).position + Vector3(0.03, -0.04, 0.025) - palm

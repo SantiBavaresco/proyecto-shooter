@@ -141,7 +141,7 @@
   - Visión: desenfoque leve (más en los bordes), distorsión que ondula y late con el pulso, algo desaturada y doble imagen apenas corrida; sin oscurecer los bordes (`ui/effects/stress_overlay.gd`, capa 0: no afecta al arma ni al HUD).
   - Más dispersión desde la cadera (hasta ×2,1 en alto).
   - Deriva lenta de la mira, menor apuntando; cada latido la empuja. Mueve la cámara de verdad: cambia dónde va la bala.
-  - Temblor de manos y arma, más fuerte manipulando.
+  - Pulso inestable: el arma y las manos se balancean lento e irregular (no vibran), con un tirón en cada latido; más fuerte manipulando. En alto, bastante más desenfoque.
 - **Recarga con estrés** (`entities/weapons/reload_plan.gd`): la recarga con cargador ahora es un plan armado al empezar.
   - Medio: ~12 % más lenta y a veces le pega al brocal una vez.
   - Alto: ~70–75 % más lenta; le erra al brocal dos veces (el cargador pega en el borde, lo baja y reintenta).

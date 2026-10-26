@@ -22,6 +22,8 @@ void fragment() {
 	uv += warp;
 	// Desenfoque: un poco en el centro, más en los bordes; el latido lo empuja
 	float lod = amount * (0.35 + 1.9 * edge) + pulse * amount * 0.5;
+	// Estrés alto: bastante más borroso (en medio casi no suma)
+	lod += amount * amount * amount * (0.9 + 0.9 * edge);
 	vec3 col = textureLod(screen_tex, uv, lod).rgb;
 	// Doble imagen apenas corrida (visión que no termina de enfocar)
 	vec3 ghost = textureLod(screen_tex, uv + vec2(0.004, 0.0015) * amount, lod + 0.5).rgb;

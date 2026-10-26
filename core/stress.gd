@@ -59,11 +59,15 @@ func aim_drift(ads: float) -> Vector2:
 	return Vector2(x, y) * amp
 
 
-## Temblor rápido de las manos (−1..1 por eje), para el arma y las manos.
+## Pulso inestable de las manos (−1..1 por eje): balanceo lento e irregular, sin
+## vibrar (varias ondas lentas que no se repiten), con un tirón suave en cada latido.
 func tremor() -> Vector3:
 	var t := _time
-	return Vector3(sin(t * 47.0) * 0.5 + sin(t * 71.0 + 1.0) * 0.5, sin(t * 53.0 + 2.0) * 0.5 + sin(t * 89.0) * 0.5,
-		sin(t * 61.0 + 0.5) * 0.5 + sin(t * 37.0 + 2.5) * 0.5)
+	var p := pulse() * 0.35
+	return Vector3(
+		sin(t * 2.3) * 0.5 + sin(t * 3.7 + 1.1) * 0.3 + sin(t * 6.1 + 2.0) * 0.2,
+		sin(t * 1.9 + 0.7) * 0.45 + sin(t * 4.3 + 2.4) * 0.3 + sin(t * 5.3 + 0.3) * 0.25 - p,
+		sin(t * 2.9 + 1.6) * 0.5 + sin(t * 4.7 + 0.2) * 0.3 + sin(t * 7.1 + 1.0) * 0.2)
 
 
 ## Multiplicador de la dispersión desde la cadera.
