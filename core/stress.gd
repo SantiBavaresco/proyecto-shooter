@@ -67,9 +67,9 @@ func pulse_soft() -> float:
 	return clampf(a + b, 0.0, 1.0)
 
 
-## Desenfoque extra (0..1): en alto la mitad, en extremo todo.
+## Desenfoque extra (0..1): en alto apenas un poco más que el base, en extremo todo.
 func blur_extra() -> float:
-	return pow(value, 3.0) * 0.5 + extreme * 0.5
+	return pow(value, 3.0) * 0.15 + extreme * 0.85
 
 
 ## Deriva de la mira (radianes, x = yaw, y = pitch). Lenta y errática; menor
@@ -81,6 +81,8 @@ func aim_drift(ads: float) -> Vector2:
 	var y := sin(t * 1.07 + 2.1) * 0.5 + sin(t * 2.33 + 0.2) * 0.32 + sin(t * 3.9 + 1.7) * 0.18
 	# Cada latido empuja un poco la mira
 	y += pulse_soft() * 0.25
+	# Extremo: la mira también sube y baja bastante
+	y *= 1.0 + extreme * 1.3
 	return Vector2(x, y) * amp
 
 
@@ -94,6 +96,8 @@ func tremor() -> Vector3:
 		sin(t * 1.7) * 0.5 + sin(t * 2.9 + 1.1) * 0.3 + sin(t * 4.3 + 2.0) * 0.2,
 		sin(t * 1.4 + 0.7) * 0.45 + sin(t * 3.1 + 2.4) * 0.3 + sin(t * 4.1 + 0.3) * 0.25 - p,
 		sin(t * 2.1 + 1.6) * 0.5 + sin(t * 3.4 + 0.2) * 0.3 + sin(t * 4.7 + 1.0) * 0.2)
+	# Extremo: además sube y baja con fuerza (respiración agitada), no solo de costado
+	v.y += (sin(t * 2.6 + 0.9) * 0.7 + sin(t * 3.9 + 2.2) * 0.3) * extreme * 1.4
 	return v * (1.0 + extreme * 2.2)
 
 
