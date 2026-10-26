@@ -817,8 +817,10 @@ func _process(delta: float) -> void:
 	if st > 0.001:
 		var busy := 1.6 if state == State.RELOADING or state == State.CLEARING else 1.0
 		var tr3 := player.stress.tremor()
-		pos += tr3 * 0.0026 * st * busy * (1.0 - a * 0.5)
-		rot += Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.9) * st * busy * (1.0 - a * 0.5)
+		# Más amplio en alto (value³ casi no suma en medio)
+		var big := 1.0 + pow(st, 3.0) * 0.6
+		pos += tr3 * 0.0026 * st * big * busy * (1.0 - a * 0.5)
+		rot += Vector3(tr3.y, tr3.x, tr3.z) * deg_to_rad(0.9) * st * big * busy * (1.0 - a * 0.5)
 	_rig.position = pos
 	_rig.rotation = rot
 	_animate_parts(c, delta)

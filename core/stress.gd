@@ -72,6 +72,11 @@ func blur_extra() -> float:
 	return pow(value, 3.0) * 0.15 + extreme * 0.85
 
 
+## Visión de túnel (0..1): nada en medio, suave en alto, completa en extremo.
+func tunnel() -> float:
+	return smoothstep(0.75, 1.0, value) * 0.45 + extreme * 0.55
+
+
 ## Deriva de la mira (radianes, x = yaw, y = pitch). Lenta y errática; menor
 ## apuntando ("apenas se mueve la mira"), mayor desde la cadera y en extremo.
 func aim_drift(ads: float) -> Vector2:
@@ -98,7 +103,7 @@ func tremor() -> Vector3:
 		sin(t * 2.1 + 1.6) * 0.5 + sin(t * 3.4 + 0.2) * 0.3 + sin(t * 4.7 + 1.0) * 0.2)
 	# Extremo: además sube y baja con fuerza (respiración agitada), no solo de costado
 	v.y += (sin(t * 2.6 + 0.9) * 0.7 + sin(t * 3.9 + 2.2) * 0.3) * extreme * 1.4
-	return v * (1.0 + extreme * 2.2)
+	return v * (1.0 + extreme * 2.8)
 
 
 ## Multiplicador de la dispersión desde la cadera.

@@ -137,7 +137,7 @@
 
 ### Funciona
 - **Zonas de prueba** pintadas entre la armería y la línea de tiro: *Estrés medio*, *Estrés alto*, *Estrés extremo* y *Armas gastadas*. Desde ahí se tira a las dianas.
-- **Estrés** (`core/stress.gd`): sube rápido y baja lento; niveles medio, alto y extremo (este último para casos puntuales: balanceo mucho más amplio, también arriba y abajo, más deriva, desenfoque máximo con visión de túnel (el centro queda nítido), recarga con tres intentos al brocal y 50 % de olvidar montar). Por ahora lo fijan las zonas (después: supresión y daño).
+- **Estrés** (`core/stress.gd`): sube rápido y baja lento; niveles medio, alto y extremo (este último para casos puntuales: balanceo mucho más amplio, también arriba y abajo, más deriva, desenfoque máximo con visión de túnel estrecha (el centro queda nítido; en alto hay un túnel suave y ancho), recarga con tres intentos al brocal y 50 % de olvidar montar). Por ahora lo fijan las zonas (después: supresión y daño).
   - Visión: desenfoque leve (más en los bordes), distorsión que ondula y late con el pulso, algo desaturada y doble imagen apenas corrida; sin oscurecer los bordes (`ui/effects/stress_overlay.gd`, capa 0: no afecta al arma ni al HUD).
   - Más dispersión desde la cadera (hasta ×2,1 en alto).
   - Deriva lenta de la mira, menor apuntando; cada latido la empuja. Mueve la cámara de verdad: cambia dónde va la bala.
