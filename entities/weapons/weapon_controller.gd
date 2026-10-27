@@ -76,6 +76,10 @@ var _rounds_planned: int = 0
 var _rounds_done: int = 0
 var _rounds_stop: bool = false
 var _clip_load: bool = false
+## Escopetas con estrés: veces que los cartuchos pegan en el borde de la recámara antes
+## de entrar, y cuánto alarga eso la recarga (en fracciones de la recarga normal).
+var break_fumbles: int = 0
+var break_extra: float = 0.0
 ## Aguantar la respiración (Shift con visor): cuánto lo está haciendo (0..1), aire que
 ## le queda (s) y castigo por quedarse sin aire (s).
 var breath_hold: float = 0.0
@@ -316,7 +320,7 @@ func _advance_state(delta: float) -> void:
 		_load_rounds(c)
 	if state == State.RELOADING:
 		# Escopeta: expulsa las vainas al quebrarse
-		if c.data.reload_type == "break" and not _reload_fx_done and state_time >= state_duration * 0.25:
+		if c.data.reload_type == "break" and not _reload_fx_done and break_time(state_time / maxf(state_duration, 0.001)).x >= 0.22:
 			_reload_fx_done = true
 			var spent := c.data.mag_size - c.mag
 			for i in spent:
@@ -381,8 +385,18 @@ func _start_reload() -> void:
 		_plan = ReloadPlan.make("reload", _plan_geo(c), player.stress.level(), _reload_empty, _rng,
 			c.data.reload_time, c.data.reload_time_empty)
 		dur = _plan.duration
+	elif c.data.reload_type == "break":
+		# Escopetas: más lenta con estrés y, a veces, los cartuchos pegan en el borde de la
+		# recámara (como el cargador en el brocal): se sacan y se vuelve a intentar
+		var lv := player.stress.level()
+		break_fumbles = 0
+		var fail_p: float = [0.0, 0.35, 0.55, 0.7][lv]
+		while break_fumbles < [0, 1, 2, 3][lv] and _rng.randf() < fail_p:
+			break_fumbles += 1
+		break_extra = break_fumbles * 0.1
+		dur *= [1.0, 1.12, 1.27, 1.4][lv] * (1.0 + break_extra)
 	else:
-		# Escopetas y cartucho a cartucho: solo más lento con estrés
+		# Cartucho a cartucho: más lento con estrés
 		dur *= [1.0, 1.15, 1.45, 1.65][player.stress.level()]
 	_plan_ev = 0
 	_rounds_done = 0
@@ -393,6 +407,17 @@ func _start_reload() -> void:
 	_set_state(State.RELOADING, dur)
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
 	_emit_state()
+
+
+## Escopetas: pasa la fracción real de la recarga a la del quiebre normal (x) y, si
+## está en un intento fallido de meter los cartuchos, la fase del intento (y: 0..n).
+func break_time(t: float) -> Vector2:
+	var tu := t * (1.0 + break_extra)
+	if tu < 0.5:
+		return Vector2(tu, -1.0)
+	if tu < 0.5 + break_extra:
+		return Vector2(0.5, (tu - 0.5) / 0.1)
+	return Vector2(tu - break_extra, -1.0)
 
 
 ## Cartucho a cartucho: cada uno entra cuando la mano lo empuja (el contador sube de a

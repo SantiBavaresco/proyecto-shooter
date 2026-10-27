@@ -42,7 +42,8 @@ static func sxs(data: WeaponData) -> Node3D:
 	for s: float in [-1.0, 1.0]:
 		WeaponModelBuilder.lathe(root, "Fence", [-0.124, 0.0, -0.124, 0.0122, -0.119, 0.0146, -0.1, 0.0146, -0.1, 0.0], steel, Vector3(s * 0.0122, 0, 0), 18)
 	WeaponModelBuilder.pin(root, Vector3(0, -0.024, -0.112), 0.0058, 0.049, "steel")
-	WeaponModelBuilder.rbox(root, "TopLever", Vector3(0.011, 0.005, 0.042), Vector3(0.005, 0.0165, -0.012), bl, 0.002, Vector3(0, 0.28, 0))
+	# Palanca de apertura baja, por debajo de la línea de mira
+	WeaponModelBuilder.rbox(root, "TopLever", Vector3(0.011, 0.004, 0.042), Vector3(0.005, 0.0142, -0.012), bl, 0.0016, Vector3(0, 0.28, 0))
 	WeaponModelBuilder.rbox(root, "Safety", Vector3(0.006, 0.004, 0.01), Vector3(0, 0.016, 0.028), bl, 0.0015)
 	_triggers(root, [-0.052, -0.03], -0.038, bl)
 	ModelsRifles._guard_u(root, -0.07, 0.03, -0.038, 0.03, bl, 0.011)
@@ -75,8 +76,10 @@ static func sxs(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.loft(barrels, "Forend", wood, -0.072, -fl - 0.04, [[0.0, 0.0215, -0.033, -0.004, 2.8], [0.15, 0.022, -0.034, -0.004, 2.5],
 		[0.85, 0.021, -0.031, -0.004, 2.5], [1.0, 0.017, -0.022, -0.005, 3.0]])
 	WeaponModelBuilder.rbox(barrels, "ForendIron", Vector3(0.04, 0.014, 0.03), Vector3(0, -0.024, -0.09), steel, 0.004)
-	WeaponModelBuilder.sphere(barrels, "Bead", 0.003, Vector3(0, 0.0155, -blen + 0.012), WeaponModelBuilder.mat("brass"), 8)
-	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0185, -0.12 - blen + 0.012), blen + 0.12 - 0.012 + 0.155)
+	# Guion alto sobre la banda: se ve por encima de la báscula al apuntar
+	WeaponModelBuilder.rbox(barrels, "BeadPost", Vector3(0.002, 0.004, 0.003), Vector3(0, 0.0145, -blen + 0.012), bl, 0.0005)
+	WeaponModelBuilder.sphere(barrels, "Bead", 0.003, Vector3(0, 0.0185, -blen + 0.012), WeaponModelBuilder.mat("brass"), 8)
+	WeaponModelBuilder.marker(root, "Sight", Vector3(0, 0.0215, -0.12 - blen + 0.012), blen + 0.12 - 0.012 + 0.155)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0.0, -0.12 - blen - 0.01))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0, 0.0, -0.11))
 	return root

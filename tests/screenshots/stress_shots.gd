@@ -104,6 +104,18 @@ func _ready() -> void:
 			bot.press_reload()
 			await _frames(2)
 			await _seq("F_%s_%s" % spec, [0.15, 0.3, 0.45, 0.6, 0.75, 0.9])
+	if "escopeta" in only:
+		await _equip("shotgun")
+		player.teleport(_zone("stress_extreme"), PI)
+		await _frames(240)
+		_look(dummy)
+		player.weapons.current().mag = 0
+		player.weapons._rng.seed = 7
+		bot.press_reload()
+		await _frames(2)
+		print("FUMBLES ", player.weapons.break_fumbles, " DUR ", player.weapons.state_duration)
+		await _seq("E_escopeta_estres", [0.1, 0.2, 0.3, 0.42, 0.5, 0.58, 0.66, 0.74, 0.82, 0.92])
+
 	if "penetracion" in only:
 		# Estación de penetración: un tiro de fusil y uno de pistola a cada panel
 		for id: String in ["akm", "pistol"]:

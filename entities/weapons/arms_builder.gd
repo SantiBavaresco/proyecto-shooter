@@ -52,9 +52,9 @@ const POSES := {
 	"bolt22": {"top": Vector3(0, -0.05, 0.062), "bottom": Vector3(0, -0.104, 0.096), "r": 0.019, "trigger": Vector3(0, -0.055, 0.026),
 		"left": "forend", "lc": Vector3(0, -0.022, -0.24), "lr": 0.025},
 	# Escopetas (la mano izquierda va con los caños)
-	"shotgun": {"top": Vector3(0, -0.034, 0.05), "bottom": Vector3(0, -0.066, 0.125), "r": 0.021, "trigger": Vector3(0, -0.044, -0.04),
+	"shotgun": {"top": Vector3(0, -0.042, 0.05), "bottom": Vector3(0, -0.074, 0.125), "r": 0.021, "trigger": Vector3(0, -0.044, -0.04),
 		"left": "forend", "left_in": "Barrels", "lc": Vector3(0, -0.014, -0.13), "lr": 0.03},
-	"sawedoff": {"top": Vector3(0, -0.028, 0.045), "bottom": Vector3(0, -0.108, 0.1), "r": 0.018, "trigger": Vector3(0, -0.044, -0.04),
+	"sawedoff": {"top": Vector3(0, -0.038, 0.045), "bottom": Vector3(0, -0.114, 0.1), "r": 0.018, "trigger": Vector3(0, -0.044, -0.04),
 		"left": "forend", "left_in": "Barrels", "lc": Vector3(0, -0.014, -0.1), "lr": 0.028},
 	"ou_hunt": {"top": Vector3(0, -0.048, 0.05), "bottom": Vector3(0, -0.102, 0.092), "r": 0.019, "trigger": Vector3(0, -0.062, -0.04),
 		"left": "forend", "left_in": "Barrels", "lc": Vector3(0, -0.028, -0.15), "lr": 0.032},

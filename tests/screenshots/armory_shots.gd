@@ -7,6 +7,7 @@ const Level := preload("res://world/test_greybox/test_greybox.tscn")
 var out_dir := "user://screenshots_armory"
 var ids: PackedStringArray = []
 var with_reload := false
+var no_reload := false
 
 
 func _ready() -> void:
@@ -15,6 +16,8 @@ func _ready() -> void:
 			out_dir = arg.trim_prefix("--out=")
 		if arg == "--recarga":
 			with_reload = true
+		if arg == "--sin-recarga":
+			no_reload = true
 		if arg.begins_with("--ids="):
 			ids = arg.trim_prefix("--ids=").split(",")
 	DirAccess.make_dir_recursive_absolute(out_dir)
@@ -58,7 +61,7 @@ func _ready() -> void:
 		await _frames(15)
 		await _shot("W_%s_apuntando" % id)
 		# Secuencia de recarga (escopetas siempre; el resto con --recarga)
-		if d.reload_type == "break" or with_reload:
+		if (d.reload_type == "break" and not no_reload) or with_reload:
 			bot.aim = false
 			await _frames(30)
 			player.weapons.current().mag = 0

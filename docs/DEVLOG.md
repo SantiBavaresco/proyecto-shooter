@@ -183,3 +183,11 @@
 - Con visor, Shift no corre; con miras abiertas sigue corriendo (y cancela el apuntado) como antes.
 - 93 tests (2 nuevos).
 
+## F1.16 — Escopetas: mira, estrés y quiebre (2026-10-26)
+
+### Funciona
+- **Yuxtapuestas (larga y recortada)**: al apuntar ya no tapan la mira. La palanca de apertura quedó por debajo de la línea de mira y el guion es más alto sobre la banda (como en la superpuesta); la mano derecha toma un poco más abajo.
+- **Recarga de escopetas con estrés**: más lenta y, como el cargador en el brocal, los cartuchos pueden pegar en el borde de la recámara (medio hasta 2 intentos, alto 3, extremo 4, por probabilidad); la mano que carga tiembla.
+- **Quiebre más rápido**: abre seco (~0,1 de la recarga en vez de 0,16) y cierra de golpe; las vainas saltan antes.
+- 94 tests.
+

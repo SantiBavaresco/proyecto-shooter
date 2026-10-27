@@ -165,6 +165,14 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 | 5 | En ESTRÉS EXTREMO | Shift no hace nada |
 | 6 | Agachado | Se mece menos |
 
+## F1.16 — Escopetas
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | Escopeta doble caño y recortada, apuntar | Se ve el guion (punto dorado) arriba de la báscula, como en la superpuesta |
+| 2 | Recargar | Los caños se abren rápido y secos |
+| 3 | Recargar en ESTRÉS ALTO / EXTREMO | Más lenta; a veces los cartuchos pegan en el borde de la recámara y reintenta; la mano tiembla |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

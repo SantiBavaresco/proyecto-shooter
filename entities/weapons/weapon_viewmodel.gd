@@ -268,11 +268,20 @@ func _reload_bumps(w: WeaponData, t: float) -> Array:
 		return [path(t, wc._plan.bump_p), path(t, wc._plan.bump_r)]
 	match w.reload_type:
 		"break":
-			return [path(t, [[0.0, z], [0.1, z], [0.16, Vector3(0, -0.012, 0.004)], [0.24, Vector3(0, 0.004, 0)], [0.3, z],
+			var bt := wc.break_time(t)
+			var tb := bt.x
+			var p := path(tb, [[0.0, z], [0.08, z], [0.13, Vector3(0, -0.014, 0.004)], [0.19, Vector3(0, 0.004, 0)], [0.24, z],
 				[0.56, z], [0.6, Vector3(0, 0.002, -0.006)], [0.66, z], [0.8, z], [0.86, Vector3(0, 0.012, 0)],
-				[0.92, Vector3(0, -0.004, 0)], [1.0, z]]),
-				path(t, [[0.0, z], [0.1, z], [0.16, Vector3(-5, 0, 1)], [0.24, Vector3(1, 0, 0)], [0.3, z], [0.56, z],
-				[0.6, Vector3(-2, 0, 0)], [0.66, z], [0.8, z], [0.86, Vector3(7, 0, -1)], [0.92, Vector3(-2, 0, 0)], [1.0, z]])]
+				[0.91, Vector3(0, -0.004, 0)], [1.0, z]])
+			var r := path(tb, [[0.0, z], [0.08, z], [0.13, Vector3(-6, 0, 1)], [0.19, Vector3(1, 0, 0)], [0.24, z], [0.56, z],
+				[0.6, Vector3(-2, 0, 0)], [0.66, z], [0.8, z], [0.86, Vector3(7, 0, -1)], [0.91, Vector3(-2, 0, 0)], [1.0, z]])
+			if bt.y >= 0.0:
+				# Los cartuchos pegan en el borde de la recámara: pequeño golpe
+				var k := fmod(bt.y, 1.0)
+				var hit := exp(-pow((k - 0.4) / 0.08, 2.0))
+				p += Vector3(0, -0.003, 0.002) * hit
+				r += Vector3(-1.2, 0, 0.6) * hit
+			return [p, r]
 		"magazine":
 			if wc._plan != null:
 				return [path(t, wc._plan.bump_p), path(t, wc._plan.bump_r)]
@@ -478,11 +487,17 @@ func _update_stuck_case(c: WeaponController.WeaponSlot) -> void:
 ##   0.02–0.12 la mano se va · 0.10–0.26 abre (salen las vainas a 0.3)
 ##   0.34–0.48 trae los cartuchos · 0.48–0.60 los mete · 0.62–0.74 la mano se va
 ##   0.80–0.92 cierra · 0.88–0.98 la mano vuelve al guardamanos
-func _animate_break(br: Node3D, t: float) -> void:
-	var r := t >= 0.0
+func _animate_break(br: Node3D, t_real: float) -> void:
+	var r := t_real >= 0.0
+	# Con estrés, la recarga se estira en los intentos fallidos: "t" es el tiempo del
+	# quiebre normal y "fumble" la fase del intento (−1 si no hay)
+	var bt := wc.break_time(t_real) if r else Vector2(-1.0, -1.0)
+	var t := bt.x
+	var fumble := bt.y
 	var open := 0.0
 	if r:
-		open = smooth(clampf((t - 0.1) / 0.16, 0.0, 1.0)) * (1.0 - smooth(clampf((t - 0.8) / 0.12, 0.0, 1.0)))
+		# Quiebre rápido (seco) y cierre de golpe
+		open = smooth(clampf((t - 0.08) / 0.1, 0.0, 1.0)) * (1.0 - smooth(clampf((t - 0.82) / 0.07, 0.0, 1.0)))
 	br.rotation = Vector3(deg_to_rad(-WeaponController.BREAK_OPEN_DEG) * open, 0, 0)
 	var inv := br.basis.inverse()
 	var z := Vector3.ZERO
@@ -505,6 +520,17 @@ func _animate_break(br: Node3D, t: float) -> void:
 		if r and t >= 0.34 and t < 0.78:
 			o = path(t, [[0.34, away], [0.41, Vector3(-0.07, -0.12, 0.05)], [0.47, behind + Vector3(-0.01, 0.004, 0.01)],
 				[0.5, behind], [0.6, seated], [0.63, seated], [0.69, Vector3(-0.05, -0.1, 0.06)], [0.78, away]])
+		if r and fumble >= 0.0:
+			# Intento fallido: los cartuchos pegan en el borde, se traban y vuelven atrás
+			var k := fmod(fumble, 1.0)
+			var miss := br.basis * Vector3(0.006 if int(fumble) % 2 == 0 else -0.005, -0.004, -0.012)
+			o = behind + path(k, [[0.0, z], [0.4, miss], [0.55, miss + br.basis * Vector3(0.002, 0.0, 0.003)],
+				[0.85, br.basis * Vector3(-0.004, 0.006, 0.02)], [1.0, z]])
+		# Estrés: el pulso de la mano que carga
+		var st := wc.player.stress.value
+		if r and st > 0.001:
+			var tr3 := wc.player.stress.tremor_base()
+			o += Vector3(tr3.x, tr3.y, tr3.z * 0.5) * 0.004 * st
 		load_off = inv * o
 		loader.visible = r and t >= 0.34 and t < 0.78
 		loader.position = part_base[loader] + load_off
@@ -520,18 +546,18 @@ func _animate_break(br: Node3D, t: float) -> void:
 		elif t < 0.34 and spent:
 			# Vaina vieja: el extractor la saca un poco al abrir y el expulsor la tira
 			# hacia arriba, rápido y casi vertical (a 0.25 sigue como vaina física)
-			var ex := 0.03 * smooth(clampf((t - 0.11) / 0.08, 0.0, 1.0))
-			var k := clampf((t - 0.19) / 0.06, 0.0, 1.0)
+			var ex := 0.03 * smooth(clampf((t - 0.09) / 0.06, 0.0, 1.0))
+			var k := clampf((t - 0.16) / 0.06, 0.0, 1.0)
 			var fly := inv * (Vector3((i * 2.0 - 1.0) * 0.015, 0.2, 0.025) * k)
-			sh.visible = t > 0.1 and t < 0.25
+			sh.visible = t > 0.08 and t < 0.22
 			sh.position = base + seat + Vector3(0, 0, ex) + fly
 			sh.rotation = Vector3(-deg_to_rad(90.0) * k, 0, 0)
 		elif not spent:
 			# Cartucho sin disparar: queda en la recámara (se ve con los caños abiertos)
-			sh.visible = t > 0.1 and t < 0.92
+			sh.visible = t > 0.08 and t < 0.9
 			sh.position = base + seat
 		else:
-			sh.visible = t >= 0.34 and t < 0.92
+			sh.visible = t >= 0.34 and t < 0.9
 			# Los cartuchos viajan en la mano hasta que entran; después quedan en la recámara
 			sh.position = base + (load_off if (t < 0.6 and loader != null) else seat)
 

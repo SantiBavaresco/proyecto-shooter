@@ -268,3 +268,31 @@ func test_breath_hold_by_stress_level() -> void:
 	assert_lt(weapons.breath_hold, 0.01, "estrés extremo: no se puede aguantar")
 	bot.sprint = false
 	bot.aim = false
+
+
+func test_shotgun_reload_feels_stress() -> void:
+	var d := await _equip("shotgun")
+	var c := weapons.current()
+	c.mag = 0
+	bot.press_reload()
+	await physics_frames(2)
+	var calm_dur := weapons.state_duration
+	assert_eq(weapons.break_fumbles, 0, "sin estrés no le erra")
+	await physics_frames(int(calm_dur * 60.0) + 10)
+	assert_eq(c.mag, 2)
+	player.teleport(_zone_pos("stress_extreme"), PI)
+	await physics_frames(200)
+	var seen := {}
+	for i in 12:
+		c.mag = 0
+		c.reserve = 20
+		weapons._rng.seed = i
+		bot.press_reload()
+		await physics_frames(2)
+		assert_gt(weapons.state_duration, calm_dur * 1.3, "extremo: más lenta")
+		assert_lt(float(weapons.break_fumbles), 4.0, "hasta 4 intentos")
+		seen[weapons.break_fumbles] = true
+		await physics_frames(int(weapons.state_duration * 60.0) + 10)
+		assert_eq(c.mag, 2, "igual termina cargando")
+	assert_gt(float(seen.size()), 1.0, "los intentos varían")
+	assert_true(d != null)
