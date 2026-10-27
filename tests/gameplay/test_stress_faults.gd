@@ -299,3 +299,41 @@ func test_shotgun_reload_feels_stress() -> void:
 		assert_eq(c.mag, 2, "igual termina cargando")
 	assert_gt(float(seen.size()), 1.0, "los intentos varían")
 	assert_true(d != null)
+
+
+func test_imported_reload_fumbles_with_stress() -> void:
+	var d := await _equip("ak74u")
+	var c := weapons.current()
+	c.mag = 5
+	bot.press_reload()
+	await physics_frames(2)
+	assert_eq(weapons.imported_fumbles, 0, "sin estrés no le erra al brocal")
+	var calm_dur := weapons.state_duration
+	await physics_frames(int(calm_dur * 60.0) + 10)
+	assert_eq(c.mag, d.mag_size, "carga completa")
+	player.teleport(_zone_pos("stress_extreme"), PI)
+	await physics_frames(200)
+	var seen := {}
+	for i in 10:
+		c.mag = 5
+		c.reserve = 200
+		weapons._rng.seed = i
+		bot.press_reload()
+		await physics_frames(2)
+		var n := weapons.imported_fumbles
+		seen[n] = true
+		assert_lt(float(n), 4.0, "hasta 3 intentos fallidos")
+		if n > 0:
+			assert_gt(weapons.state_duration, calm_dur * 1.5, "cada intento alarga la recarga")
+			# En la mitad de un intento la animación está detrás del punto donde calza
+			var span := ImportedWeapon.fumble_span(d, "reload")
+			var seat: Array = (d.model_params["seat"] as Dictionary)["reload"]
+			var total := ImportedWeapon.anim_length(c.model, d, "reload") + span * n
+			var u := float(seat[1]) + span * 0.5
+			var at := ImportedWeapon.reload_anim_time(d, "reload", u, n)
+			assert_lt(at.x, float(seat[1]), "vuelve a intentar")
+			assert_gt(at.y, -0.5, "fase de intento")
+			assert_true(total > 0.0)
+		await physics_frames(int(weapons.state_duration * 60.0) + 10)
+		assert_eq(c.mag, d.mag_size, "igual termina cargando")
+	assert_gt(float(seen.size()), 1.0, "los intentos varían")

@@ -105,6 +105,11 @@ CombatWorld (uno por nivel, grupo "combat_world")
 - `WeaponController` (lógica, tick de física) y `WeaponViewmodel` (vista, cada frame) están separados:
   la vista solo lee el estado (`wc.state`, `wc.state_time`, `wc._plan`...) y el controlador le avisa
   `kick()`, `flash()`, `add_model()` / `remove_model()`. Las animaciones usan `WeaponViewmodel.path()` (Catmull-Rom) y `smooth()`.
+- Armas importadas (F1.18, `ImportedWeapon`): el .glb trae arma, brazos y animaciones; la vista maneja la
+  animación según el estado (la recarga con tiempo propio para los intentos fallidos con estrés).
+- Brazos (F1.19, `SkinnedArms`): un solo juego de brazos con esqueleto en el mundo del arma. `ArmsBuilder`
+  sigue armando las manos procedurales (con metadatos `kind`, empuñadura, guardamanos...) y la vista las
+  anima; `SkinnedArms.update()` las oculta y lleva cada mano del esqueleto a la procedural visible con IK.
 - Penetración en `CombatWorld._try_penetrate`: espesor medido con un rayo desde atrás hacia la entrada;
   capacidad = `Surface.TABLE[s].pen × WeaponData.penetration_power() × (v/v0)²`.
 

@@ -74,6 +74,42 @@ static func rack_time(model: Node3D, data: WeaponData) -> float:
 	return anim_length(model, data, "reload_empty") - float(data.model_params.get("rack_from", 0.0))
 
 
+## Intentos fallidos al brocal (estrés): cuánto tiempo de animación agrega cada uno.
+## En cada intento el cargador llega al brocal, pega, vuelve atrás y reintenta.
+const FUMBLE_HOLD := 0.12
+
+
+static func fumble_span(data: WeaponData, key: String) -> float:
+	var seat: Array = (data.model_params.get("seat", {}) as Dictionary).get(key, [])
+	if seat.size() < 2:
+		return 0.0
+	return (float(seat[1]) - float(seat[0])) * 2.0 + FUMBLE_HOLD
+
+
+## Tiempo de la animación de recarga para "u" segundos de animación extendida con
+## "n" intentos fallidos. Devuelve [tiempo, fase del intento (−1 si no hay)].
+static func reload_anim_time(data: WeaponData, key: String, u: float, n: int) -> Vector2:
+	var seat: Array = (data.model_params.get("seat", {}) as Dictionary).get(key, [])
+	if n <= 0 or seat.size() < 2:
+		return Vector2(u, -1.0)
+	var t_back := float(seat[0])
+	var t_miss := float(seat[1])
+	var span := fumble_span(data, key)
+	if u < t_miss:
+		return Vector2(u, -1.0)
+	if u >= t_miss + span * n:
+		return Vector2(u - span * n, -1.0)
+	var k := fmod(u - t_miss, span)
+	var phase := floorf((u - t_miss) / span)
+	var back := t_miss - t_back
+	if k < FUMBLE_HOLD:
+		return Vector2(t_miss, phase)  # pega en el borde del brocal
+	k -= FUMBLE_HOLD
+	if k < back:
+		return Vector2(t_miss - k, phase + 0.3)  # lo saca un poco
+	return Vector2(t_back + (k - back), phase + 0.6)  # y vuelve a intentar
+
+
 ## Mira sobre el hueso del arma, en el espacio del modelo instanciado (sin la pose
 ## de cadera/apuntado que la vista le aplica encima).
 static func sight_in_inst(model: Node3D) -> Transform3D:

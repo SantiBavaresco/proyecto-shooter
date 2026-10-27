@@ -146,7 +146,14 @@ static func _right_hand(root: Node3D, p: Dictionary, pistol: bool) -> void:
 	var dir := Vector3(0.15, -0.25, 0.95) if pistol else Vector3(0.38, -0.55, 0.74)
 	var up := Vector3(0.0, 0.5, 0.85) if pistol else Vector3(-0.2, 0.9, 0.37)
 	_forearm(glove, sleeve, wrist, wrist + dir.normalized() * FOREARM, up)
-	_finish(root, "HandR", glove, sleeve).set_meta("palm", top + a * 0.04)
+	var g := _finish(root, "HandR", glove, sleeve)
+	g.set_meta("palm", top + a * 0.04)
+	# Para los brazos con esqueleto (SkinnedArms): cómo es la empuñadura
+	g.set_meta("kind", "grip")
+	g.set_meta("grip_top", top)
+	g.set_meta("grip_axis", a)
+	g.set_meta("grip_r", r)
+	g.set_meta("pistol", pistol)
 
 
 # --- Mano izquierda: guardamanos --------------------------------------------
@@ -211,7 +218,11 @@ static func _shell_hand(parent: Node3D, d: Vector3) -> void:
 	var fdir := Vector3(-0.6, -0.7, 0.4).normalized()  # abajo a la izquierda, sin tapar la vista
 	var wrist := palm + near * 0.03 + fdir * 0.016 + d * 0.004
 	_forearm(glove, sleeve, wrist, wrist + fdir * FOREARM, Vector3(-0.25, 0.45, 0.85))
-	_finish(parent, "HandLoad", glove, sleeve)
+	var g := _finish(parent, "HandLoad", glove, sleeve)
+	g.set_meta("kind", "loader")
+	g.set_meta("palm", palm)
+	g.set_meta("d", d)
+	g.set_meta("far", far)
 
 
 static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "HandL", comp := Basis.IDENTITY,
@@ -244,7 +255,10 @@ static func _left_forend(parent: Node3D, c: Vector3, r: float, node_name := "Han
 		wrist = at.call(0.01, deg_to_rad(-128.0), r + 0.014) + (comp * arm_dir).normalized() * 0.035
 	# El codo queda abajo y afuera, fuera de la vista; el brazo sube hacia el hombro
 	_forearm(glove, sleeve, wrist, wrist + (comp * arm_dir).normalized() * FOREARM, comp * upper_dir)
-	_finish(parent, node_name, glove, sleeve).set_meta("palm", c)
+	var g := _finish(parent, node_name, glove, sleeve)
+	g.set_meta("palm", c)
+	g.set_meta("kind", "forend")
+	g.set_meta("lr", r)
 
 
 # --- Mano que toma la manija de carga ------------------------------------------
@@ -299,6 +313,8 @@ static func _hook_hand(root: Node3D, node_name: String, s: float) -> void:
 	var g := _finish(root, node_name, glove, sleeve)
 	g.visible = false
 	g.set_meta("palm", pc)
+	g.set_meta("kind", "hook")
+	g.set_meta("side", s)
 
 
 ## Pistolas: mano izquierda que toma la corredera por arriba, atrás (para montar):
@@ -329,6 +345,7 @@ static func _slide_hand(root: Node3D) -> void:
 	g.visible = false
 	g.set_meta("palm", Vector3(-0.012, 0.024, 0.0))
 	g.set_meta("knob", Vector3(0, 0.022, 0.02))
+	g.set_meta("kind", "slide")
 
 
 # --- Mano izquierda de apoyo en la pistola ----------------------------------
@@ -359,7 +376,9 @@ static func _left_pistol(root: Node3D, p: Dictionary) -> void:
 	glove.capsule(t2, t3, THUMB_R[1], THUMB_R[2])
 	var wrist: Vector3 = at.call(0.07, deg_to_rad(200.0), r + 0.008)
 	_forearm(glove, sleeve, wrist, wrist + Vector3(-0.35, -0.25, 0.9).normalized() * FOREARM, Vector3(0.0, 0.5, 0.85))
-	_finish(root, "HandL", glove, sleeve).set_meta("palm", at.call(0.056, deg_to_rad(185.0), r - 0.012))
+	var g := _finish(root, "HandL", glove, sleeve)
+	g.set_meta("palm", at.call(0.056, deg_to_rad(185.0), r - 0.012))
+	g.set_meta("kind", "support")
 
 
 # --- Piezas ------------------------------------------------------------------

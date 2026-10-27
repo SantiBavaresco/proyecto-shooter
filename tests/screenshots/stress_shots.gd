@@ -142,9 +142,11 @@ func _ready() -> void:
 		await _frames(240)
 		_look(dummy)
 		c.mag = 0
+		player.weapons._rng.seed = 2
 		bot.press_reload()
 		await _frames(2)
-		await _seq("I_recarga_extremo", [0.15, 0.4, 0.65, 0.85])
+		print("IMPORTED_FUMBLES ", player.weapons.imported_fumbles, " dur ", player.weapons.state_duration)
+		await _seq("I_recarga_extremo", [0.25, 0.35, 0.45, 0.55, 0.65, 0.75])
 
 	if "penetracion" in only:
 		# Estación de penetración: un tiro de fusil y uno de pistola a cada panel

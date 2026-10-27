@@ -81,6 +81,10 @@ var _clip_load: bool = false
 var break_fumbles: int = 0
 ## Arma importada: en esta recarga vacía se olvidó de montar (usa la recarga corta).
 var imported_forgot: bool = false
+## Arma importada: intentos fallidos al brocal en esta recarga y animación usada.
+var imported_fumbles: int = 0
+var imported_anim_key: String = "reload"
+var _imported_fumble_seen: int = -1
 var _clear_eject_done: bool = false
 var break_extra: float = 0.0
 ## Aguantar la respiración (Shift con visor): cuánto lo está haciendo (0..1), aire que
@@ -329,6 +333,14 @@ func _advance_state(delta: float) -> void:
 		return
 	if state == State.RELOADING and c.data.reload_type == "rounds":
 		_load_rounds(c)
+	if state == State.RELOADING and c.model.has_meta("imported") and imported_fumbles > 0:
+		# Golpe y sonido cada vez que el cargador pega en el brocal
+		var bt := imported_reload_time(c)
+		if bt.y >= 0.0 and int(bt.y) != _imported_fumble_seen and fmod(bt.y, 1.0) < 0.05:
+			_imported_fumble_seen = int(bt.y)
+			_play_mech(SynthSfx.click("fumble", 1.25, 0.03), -8.0)
+			view.kick_rot += Vector3(deg_to_rad(-1.2), 0, deg_to_rad(0.8))
+			view.kick_pos += Vector3(0, -0.004, 0.003)
 	if state == State.RELOADING:
 		# Escopeta: expulsa las vainas al quebrarse
 		if c.data.reload_type == "break" and not _reload_fx_done and break_time(state_time / maxf(state_duration, 0.001)).x >= 0.22:
@@ -403,8 +415,15 @@ func _start_reload() -> void:
 		var lv := player.stress.level()
 		if _reload_empty and lv > 0 and _rng.randf() < [0.0, 0.15, 0.35, 0.5][lv]:
 			imported_forgot = true
-			dur = c.data.reload_time
-		dur *= [1.0, 1.15, 1.35, 1.55][lv]
+		imported_anim_key = "reload_empty" if _reload_empty and not imported_forgot else "reload"
+		# Intentos fallidos al brocal: igual que con las demás armas (por probabilidad)
+		imported_fumbles = 0
+		var fail_p: float = [0.0, 0.35, 0.55, 0.7][lv]
+		while imported_fumbles < [0, 1, 2, 3][lv] and _rng.randf() < fail_p:
+			imported_fumbles += 1
+		_imported_fumble_seen = -1
+		var anim_len := ImportedWeapon.anim_length(c.model, c.data, imported_anim_key)
+		dur = (anim_len + ImportedWeapon.fumble_span(c.data, imported_anim_key) * imported_fumbles) * [1.0, 1.12, 1.25, 1.35][lv]
 	elif c.data.reload_type == "magazine" and c.model.has_node("Mag"):
 		_plan = ReloadPlan.make("reload", _plan_geo(c), player.stress.level(), _reload_empty, _rng,
 			c.data.reload_time, c.data.reload_time_empty)
@@ -433,6 +452,14 @@ func _start_reload() -> void:
 	_set_state(State.RELOADING, dur)
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
 	_emit_state()
+
+
+## Arma importada: tiempo de la animación de recarga ahora (con los intentos fallidos).
+func imported_reload_time(c: WeaponSlot) -> Vector2:
+	var total := ImportedWeapon.anim_length(c.model, c.data, imported_anim_key) \
+		+ ImportedWeapon.fumble_span(c.data, imported_anim_key) * imported_fumbles
+	var u := clampf(state_time / maxf(state_duration, 0.001), 0.0, 1.0) * total
+	return ImportedWeapon.reload_anim_time(c.data, imported_anim_key, u, imported_fumbles)
 
 
 ## Escopetas: pasa la fracción real de la recarga a la del quiebre normal (x) y, si

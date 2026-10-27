@@ -173,6 +173,10 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 | 2 | Recargar | Los caños se abren rápido y secos |
 | 3 | Recargar en ESTRÉS ALTO / EXTREMO | Más lenta; a veces los cartuchos pegan en el borde de la recámara y reintenta; la mano tiembla |
 
+## F1.19 — Brazos y recarga importada con estrés
+1. Recorré la armería con varias armas (pistola, AK, escopeta, cerrojo): todas usan ahora los brazos del AR-74K. Mirá las manos en cadera, apuntando y en cada recarga (sacar y poner cargador, montar, cartuchos en la escopeta, cerrojo).
+2. Con la AR-74K parate en ESTRÉS ALTO o EXTREMO y recargá varias veces: a veces el cargador pega en el brocal y reintenta (golpe y sonido), hasta 2 veces en alto y 3 en extremo.
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

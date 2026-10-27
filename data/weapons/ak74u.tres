@@ -16,6 +16,7 @@ model_params = {
 "eye": [0.0, 1.62, 0.02],
 "eye_relief": 0.36,
 "rack_from": 1.9,
+"seat": {"reload": [1.17, 1.37], "reload_empty": [1.0, 1.2]},
 "anims": {"draw": "DRAW", "idle": "IDLE", "shoot": "SHOOT", "reload": "RELOAD1", "reload_empty": "RELOAD2", "holster": "OLSER", "idle_from": 1.0}
 }
 sight = "iron"

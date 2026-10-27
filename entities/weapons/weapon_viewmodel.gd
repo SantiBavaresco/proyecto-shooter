@@ -57,6 +57,8 @@ var _rng := RandomNumberGenerator.new()
 var _anim_key := ""
 var _last_state: int = -1
 var _shot_new: bool = false
+## Brazos con esqueleto para las armas hechas por código (las importadas traen los suyos).
+var arms: SkinnedArms
 
 
 func _ready() -> void:
@@ -69,6 +71,8 @@ func _ready() -> void:
 func add_model(model: Node3D) -> void:
 	rig.add_child(model)
 	_remember_parts(model)
+	if arms != null and arms.ok and not model.has_meta("imported"):
+		SkinnedArms.hide_procedural(model)
 	if model.has_node("ScopeLens"):
 		var lens := model.get_node("ScopeLens") as MeshInstance3D
 		(lens.material_override as ShaderMaterial).set_shader_parameter("scope_tex", _scope_vp.get_texture())
@@ -124,6 +128,7 @@ func _drive_anims(c: WeaponController.WeaponSlot) -> void:
 	var entered := st != _last_state
 	_last_state = st
 	var restart := false
+	var manual := -1.0
 	match wc.state:
 		WeaponController.State.DRAW:
 			want = ImportedWeapon.anim_name(d, "draw")
@@ -134,9 +139,9 @@ func _drive_anims(c: WeaponController.WeaponSlot) -> void:
 			speed = ImportedWeapon.anim_length(c.model, d, "holster") / maxf(wc.state_duration, 0.05)
 			restart = entered
 		WeaponController.State.RELOADING:
-			var key := "reload_empty" if wc._reload_empty and not wc.imported_forgot else "reload"
-			want = ImportedWeapon.anim_name(d, key)
-			speed = ImportedWeapon.anim_length(c.model, d, key) / maxf(wc.state_duration, 0.05)
+			# Se maneja a mano (seek): con estrés el tiempo vuelve atrás en el brocal
+			want = ImportedWeapon.anim_name(d, wc.imported_anim_key)
+			manual = wc.imported_reload_time(c).x
 			restart = entered
 		WeaponController.State.CLEARING:
 			want = ImportedWeapon.anim_name(d, "reload_empty")
@@ -156,6 +161,9 @@ func _drive_anims(c: WeaponController.WeaponSlot) -> void:
 		ap.seek(from if from >= 0.0 else (idle_from if want == idle else 0.0), true)
 		_anim_key = key_now
 	ap.speed_scale = speed
+	if manual >= 0.0:
+		ap.speed_scale = 0.0
+		ap.seek(manual, true)
 	# La animación quieta no está en bucle: vuelve al principio útil
 	if want == idle and ap.current_animation == idle and ap.current_animation_position >= ap.current_animation_length - 0.05:
 		ap.seek(idle_from, true)
@@ -313,6 +321,10 @@ func _process(delta: float) -> void:
 	rig.rotation = rot
 	if not imported:
 		_animate_parts(c, delta)
+	if arms != null:
+		arms.visible = arms.ok and not imported
+		if arms.visible:
+			arms.update(c.model, delta)
 
 	vm_camera.fov = lerpf(VM_FOV_HIP, VM_FOV_ADS, a)
 	_update_scope(c, a)
@@ -769,6 +781,9 @@ func _build_viewmodel() -> void:
 	rig = Node3D.new()
 	rig.name = "Rig"
 	vm_viewport.add_child(rig)
+	arms = SkinnedArms.new()
+	arms.name = "SkinnedArms"
+	vm_viewport.add_child(arms)
 
 	_flash = MeshInstance3D.new()
 	var q := QuadMesh.new()

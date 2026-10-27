@@ -216,3 +216,19 @@
 - No hay vaina trabada visible al encasquillarse (el aviso sí).
 - Los brazos tienen piel y buzo gris (no los guantes del resto).
 
+
+## F1.19 — Brazos del .glb para todas las armas y estrés en la recarga importada (2026-10-27)
+
+### Funciona
+- **Brazos con esqueleto en todas las armas** (`entities/weapons/skinned_arms.gd`): los brazos y manos del modelo del AR-74K (Mixamo, CC-BY) reemplazan a los guantes hechos por código en las 25 armas por código.
+  - Las manos procedurales siguen existiendo y animándose igual (recargas, manija, cerrojo, cartuchos, destrabados), pero ocultas: son los objetivos. Cada cuadro la mano del esqueleto va a la mano procedural visible y el codo y el hombro se acomodan solos (IK de dos huesos, el codo cae abajo y afuera; si la mano no llega, el hombro acompaña).
+  - Calibración: en el AR-74K se mide dónde queda cada mano respecto de la empuñadura y del guardamanos, y en cada arma se usa la misma relación sobre su empuñadura (con su ángulo y grosor) y su guardamanos (con su radio). Manija, corredera, mano de apoyo de pistola y mano con cartuchos de escopeta tienen su propia toma.
+  - Al pasar de una toma a otra (empuñadura → manija) la mano viaja en 0,09 s en vez de saltar.
+  - Los dedos quedan con la pose de agarre del modelo.
+- **AR-74K con estrés: intentos fallidos al brocal.** La animación se maneja a mano (tiempo propio): con estrés el cargador llega al brocal, pega, vuelve un poco y reintenta, con golpe del arma y sonido en cada intento. Misma probabilidad y tope que el resto (medio 1, alto 2, extremo 3; 35/55/70 %). El olvido de montar sigue igual.
+- 97 tests (nuevo: intentos fallidos de la recarga importada).
+
+### Limitaciones
+- Los dedos no se cierran distinto según lo que agarran (misma pose de agarre en todas las tomas).
+- La mano con el cargador lo lleva al costado de la palma, no entre los dedos.
+- Los brazos son de piel con buzo gris para todas las armas.
