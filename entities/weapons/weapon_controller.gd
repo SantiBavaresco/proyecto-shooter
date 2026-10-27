@@ -22,6 +22,9 @@ const BREAK_OPEN_DEG := 62.0
 const ZOOM_STEP := 1.26
 ## Desgaste por disparo según el mecanismo (fracción del estado).
 const WEAR_PER_SHOT := {"magazine": 1.0 / 4000.0, "rounds": 1.0 / 5000.0, "break": 1.0 / 6000.0}
+## Aguantar la respiración: segundos de aire, castigo al quedarse sin aire.
+const BREATH_MAX := 5.0
+const BREATH_PENALTY := 3.0
 ## Estado que simula la zona de armas gastadas.
 const WORN_CONDITION := 0.18
 
@@ -73,6 +76,11 @@ var _rounds_planned: int = 0
 var _rounds_done: int = 0
 var _rounds_stop: bool = false
 var _clip_load: bool = false
+## Aguantar la respiración (Shift con visor): cuánto lo está haciendo (0..1), aire que
+## le queda (s) y castigo por quedarse sin aire (s).
+var breath_hold: float = 0.0
+var breath_left: float = BREATH_MAX
+var out_of_breath: float = 0.0
 var _cooldown: float = 0.0
 var _sprint_block: float = 0.0
 var _hint_target: Node = null
@@ -290,6 +298,7 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 				if c.reserve <= 0:
 					EventBus.toast.emit(tr("weapon.empty"))
 
+	_update_breath(cmd, delta)
 	_update_interaction(cmd)
 
 
@@ -560,7 +569,9 @@ func _fire(c: WeaponSlot) -> void:
 
 	var cam := player.camera
 	var origin := cam.global_position
-	var basis := cam.global_basis
+	# Apuntando, la bala sale por el eje del arma (respiración y pulso incluidos):
+	# donde está la retícula, no el centro fijo de la pantalla
+	var basis := cam.global_basis * Basis.from_euler(view.aim_rot)
 	var fwd := -basis.z
 	var spread := lerpf(w.spread_hip * player.stress.hip_spread_mult(), w.spread_ads, WeaponViewmodel.smooth(ads_amount)) * _spread_factor(w)
 	var combat := CombatWorld.get_for(player)
@@ -604,6 +615,36 @@ func _fire(c: WeaponSlot) -> void:
 			_eject_shell(c, false, 0)
 	EventBus.weapon_fired.emit(w.id)
 	_emit_state()
+
+
+## Aguantar la respiración (Shift) mirando por un visor. Dura unos segundos (menos con
+## estrés alto); si se agota, el pulso empeora un rato. En estrés extremo no se puede.
+func _update_breath(cmd: PlayerCommand, delta: float) -> void:
+	var c := current()
+	var scoped := aiming and c != null and c.data.sight == "scope"
+	var lvl := player.stress.level()
+	var max_air := BREATH_MAX * (0.6 if lvl == 2 else 1.0)
+	var want := cmd.sprint and scoped and lvl < 3 and out_of_breath <= 0.0 and breath_left > 0.0
+	if want:
+		breath_left -= delta
+		if breath_left <= 0.0:
+			breath_left = 0.0
+			out_of_breath = BREATH_PENALTY
+			want = false
+	else:
+		out_of_breath = maxf(0.0, out_of_breath - delta)
+		if not cmd.sprint or not scoped:
+			breath_left = minf(max_air, breath_left + delta * 1.2)
+	breath_left = minf(breath_left, max_air)
+	breath_hold = move_toward(breath_hold, 1.0 if want else 0.0, delta / 0.35)
+
+
+## Multiplicador del balanceo con visor: aguantando, casi quieto (en estrés alto la mitad);
+## sin aire, peor.
+func breath_sway_factor() -> float:
+	var calm := 0.12 if player.stress.level() < 2 else 0.5
+	var f := lerpf(1.0, calm, breath_hold)
+	return f * (1.0 + 1.2 * clampf(out_of_breath / BREATH_PENALTY, 0.0, 1.0))
 
 
 ## Estado con el que se comporta el arma (la zona de armas gastadas lo baja).

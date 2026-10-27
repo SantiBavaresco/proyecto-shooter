@@ -306,6 +306,9 @@ func _wish_direction(cmd: PlayerCommand) -> Vector3:
 
 
 func _can_sprint(cmd: PlayerCommand, on_floor: bool) -> bool:
+	# Apuntando con visor, Shift es aguantar la respiración (no corre)
+	if weapons != null and weapons.aiming and weapons.current_data() != null and weapons.current_data().sight == "scope":
+		return false
 	return cmd.sprint and stance == Stance.STANDING and on_floor \
 		and cmd.move.y > 0.3 and stamina.can_sprint() and absf(lean_amount) < 0.2
 	# Correr cancela el apuntado (lo resuelve WeaponController).

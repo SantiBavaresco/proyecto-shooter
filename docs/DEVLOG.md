@@ -174,3 +174,12 @@
 - **Cerrojos y SK-45 (cartucho a cartucho)**: el contador sube con cada cartucho que entra; apretar el gatillo corta la recarga, cierra el cerrojo y queda listo con los que ya entraron.
 - 91 tests.
 
+## F1.15 — Respiración con visor (2026-10-26)
+
+### Funciona
+- Con visor, el rifle se mece lento por la respiración (más parado que agachado, más moviéndose y con estrés) y la retícula se mueve sobre el blanco.
+- Apuntando, la bala sale por el eje del arma (respiración y pulso incluidos): donde está la retícula, no el centro fijo de la pantalla.
+- **Shift con visor: aguantar la respiración** (5 s; 3 s en estrés alto). Calma: casi quieto. Estrés alto: la mitad (no es 100 % preciso). Estrés extremo: no se puede. Si se agota, 3 s "sin aire" con más balanceo; el aire se recupera soltando Shift. En el HUD: "AGUANTANDO LA RESPIRACIÓN n s" / "SIN AIRE".
+- Con visor, Shift no corre; con miras abiertas sigue corriendo (y cancela el apuntado) como antes.
+- 93 tests (2 nuevos).
+

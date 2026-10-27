@@ -154,6 +154,17 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 | 4 | R-700 vacío y R | El contador sube de a uno |
 | 5 | Durante esa recarga, clic | Cierra el cerrojo y se puede tirar con los que ya entraron |
 
+## F1.15 — Respiración con visor
+
+| # | Probá | Esperado |
+|---|---|---|
+| 1 | R-700 o DR-1 apuntando a la diana de 200 m | La retícula se mece lento sobre el blanco; la bala va donde está la retícula |
+| 2 | Mantener Shift apuntando | Se queda casi quieta; en el HUD "AGUANTANDO LA RESPIRACIÓN" con los segundos |
+| 3 | Mantenerlo más de 5 s | "SIN AIRE": se mueve más unos segundos |
+| 4 | En ESTRÉS ALTO | Shift ayuda pero sigue moviéndose; dura menos |
+| 5 | En ESTRÉS EXTREMO | Shift no hace nada |
+| 6 | Agachado | Se mece menos |
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

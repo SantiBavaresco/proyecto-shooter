@@ -214,3 +214,57 @@ func test_bolt_misfire_clears_with_the_bolt() -> void:
 	assert_eq(weapons.state, WeaponController.State.CYCLING, "cerrojo: se acciona")
 	await physics_frames(int(c.data.cycle_time * 60.0) + 5)
 	assert_eq(c.malfunction, "")
+
+
+# --- Respiración con visor ------------------------------------------------------
+
+## Cuánto se mueve el eje del arma (retícula) en un rato apuntando.
+func _sway_range(frames: int) -> float:
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	for i in frames:
+		await process_frames(1)
+		var r := weapons.view.aim_rot
+		lo = Vector2(minf(lo.x, r.x), minf(lo.y, r.y))
+		hi = Vector2(maxf(hi.x, r.x), maxf(hi.y, r.y))
+	return (hi - lo).length()
+
+
+func test_scope_sways_and_holding_breath_steadies_it() -> void:
+	await _equip("rem700")
+	player.teleport(Vector3(30, 0.05, 31.5), PI)
+	bot.aim = true
+	await physics_frames(60)
+	var free := await _sway_range(150)
+	assert_gt(free, deg_to_rad(0.05), "con visor la retícula se mece (%.3f°)" % rad_to_deg(free))
+	bot.sprint = true
+	await physics_frames(30)
+	assert_gt(weapons.breath_hold, 0.9, "Shift con visor: aguanta la respiración")
+	assert_false(player.is_sprinting, "no corre")
+	var held := await _sway_range(150)
+	assert_lt(held, free * 0.35, "aguantando, casi quieta (%.3f° vs %.3f°)" % [rad_to_deg(held), rad_to_deg(free)])
+	# Se le acaba el aire
+	await physics_frames(int(WeaponController.BREATH_MAX * 60.0))
+	assert_gt(weapons.out_of_breath, 0.0, "a los segundos se queda sin aire")
+	assert_lt(weapons.breath_hold, 0.5)
+	bot.sprint = false
+	bot.aim = false
+
+
+func test_breath_hold_by_stress_level() -> void:
+	await _equip("rem700")
+	player.teleport(_zone_pos("stress_high"), PI)
+	await physics_frames(150)
+	bot.aim = true
+	bot.sprint = true
+	await physics_frames(40)
+	assert_gt(weapons.breath_sway_factor(), 0.4, "estrés alto: aguantar ayuda pero no del todo")
+	assert_lt(weapons.breath_sway_factor(), 0.6)
+	player.teleport(_zone_pos("stress_extreme"), PI)
+	bot.sprint = false
+	await physics_frames(150)
+	bot.sprint = true
+	await physics_frames(40)
+	assert_lt(weapons.breath_hold, 0.01, "estrés extremo: no se puede aguantar")
+	bot.sprint = false
+	bot.aim = false

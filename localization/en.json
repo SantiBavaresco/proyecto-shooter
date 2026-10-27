@@ -148,5 +148,7 @@
 	"stress.high": "HIGH STRESS",
 	"greybox.zone_stress_extreme": "EXTREME STRESS",
 	"stress.extreme": "EXTREME STRESS",
-	"greybox.penetration": "PENETRATION"
+	"greybox.penetration": "PENETRATION",
+	"breath.hold": "HOLDING BREATH %d s",
+	"breath.out": "OUT OF BREATH"
 }

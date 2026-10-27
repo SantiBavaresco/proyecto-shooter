@@ -102,6 +102,11 @@ func _update_status() -> void:
 		var cond := w.effective_condition(w.current())
 		if cond < 0.995:
 			parts.append(tr("weapon.condition") % int(round(cond * 100.0)))
+	if w != null:
+		if w.out_of_breath > 0.0:
+			parts.append(tr("breath.out"))
+		elif w.breath_hold > 0.5:
+			parts.append(tr("breath.hold") % int(ceil(w.breath_left)))
 	_status_label.text = "  ·  ".join(parts)
 	_status_label.add_theme_color_override("font_color", UiTheme.ALERT if lvl >= 2 else UiTheme.TEXT_DIM)
 

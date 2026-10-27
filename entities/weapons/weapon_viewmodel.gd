@@ -36,6 +36,9 @@ var kick_pos: Vector3 = Vector3.ZERO
 var kick_rot: Vector3 = Vector3.ZERO
 var slide_kick: float = 0.0
 var flash_time: float = 0.0
+## Desvío del eje del arma por respiración y pulso (euler, rad): la bala sale por ahí
+## apuntando (lo usa WeaponController al disparar) y la retícula del visor lo muestra.
+var aim_rot: Vector3 = Vector3.ZERO
 
 var _vm_layer: CanvasLayer
 var _vm_light: DirectionalLight3D
@@ -197,7 +200,10 @@ func _process(delta: float) -> void:
 			rot.z += deg_to_rad(lerpf(8.0, 1.2, a)) * b
 			pos.y -= 0.01 * b * (1.0 - a * 0.85)
 
-	# Estrés: temblor de las manos (más fuerte manipulando el arma)
+	# Estrés: temblor de las manos (más fuerte manipulando el arma). Apuntando con visor,
+	# aguantar la respiración lo calma (no en estrés extremo)
+	var hold := wc.breath_sway_factor() if w.sight == "scope" else 1.0
+	var tremor_rot := Vector3.ZERO
 	var st := wc.player.stress.value
 	if st > 0.001:
 		var busy := 1.6 if wc.state == WeaponController.State.RELOADING or wc.state == WeaponController.State.CLEARING else 1.0
@@ -209,8 +215,20 @@ func _process(delta: float) -> void:
 		# Tope: el arma (y los brazos con ella) se mueve, pero los hombros no viajan;
 		# manipulando, menos todavía (si no, el brazo cruza la pantalla)
 		var busy_now := busy > 1.0
-		pos += dp.limit_length(0.007 if busy_now else 0.014)
-		rot += dr.limit_length(deg_to_rad(1.6 if busy_now else 3.2))
+		var steady := lerpf(1.0, hold, a)
+		pos += dp.limit_length(0.007 if busy_now else 0.014) * steady
+		tremor_rot = dr.limit_length(deg_to_rad(1.6 if busy_now else 3.2)) * steady
+		rot += tremor_rot
+	# Respiración con visor: el rifle se mece lento (y la retícula con él)
+	var breath := Vector3.ZERO
+	if w.sight == "scope" and a > 0.01:
+		var b_amp := deg_to_rad(0.085) * hold * (0.6 if wc.player.stance == Player.Stance.CROUCHING else 1.0)
+		b_amp *= 1.0 + st * 1.2 + wc.player.stress.extreme * 1.5
+		b_amp *= 1.0 + clampf(Vector2(wc.player.velocity.x, wc.player.velocity.z).length() / 3.0, 0.0, 1.5)
+		breath = Vector3(sin(_time * 1.38) + sin(_time * 2.9 + 0.7) * 0.25,
+			sin(_time * 0.69 + 0.5) * 0.6 + sin(_time * 2.3) * 0.2, 0.0) * b_amp * a
+		rot += breath
+	aim_rot = breath + tremor_rot * a
 	rig.position = pos
 	rig.rotation = rot
 	_animate_parts(c, delta)
