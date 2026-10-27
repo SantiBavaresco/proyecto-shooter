@@ -201,3 +201,18 @@
 - **Zona de armas gastadas** más razonable (estado 35 % en vez de 18 %: ~1 falla cada 30 tiros) y las armas de mecanismo tipo AK (AR-74, AR-M, DR-1, PP-B, SK-45) fallan casi la mitad; los cerrojos, algo menos.
 - 96 tests.
 
+## F1.18 — Prueba de arma importada (.glb) (2026-10-26)
+
+### Funciona
+- **Carabina AR-74K** (modelo "AK74U | FREE ANIMATION." de BURNER, CC-BY 4.0) como arma inicial del slot 1: arma, brazos y animaciones del archivo (sacar, quieta, disparo, recarga, recarga vacía con montar, guardar).
+- Soporte general para armas importadas (`entities/weapons/imported_weapon.gd`): la mira, la boca y la ventana se ubican sobre el hueso del arma; al apuntar, la línea de mira se alinea con la cámara cada cuadro (el archivo no trae animación de apuntar).
+- Encima de la animación siguen todas las mecánicas: balanceo, retroceso, estrés (desenfoque, pulso, deriva, temblor), recarga más lenta con estrés y olvido de montar (usa la recarga corta), fallas por desgaste y destrabado (el tramo de montar de la recarga vacía), penetración.
+- El FMR sigue en la armería; los tests de armas básicas lo equipan explícitamente.
+- Se hizo en la rama `f1.18-glb-ak74u`: volver a la 1.17 es descartar la rama.
+- 96 tests.
+
+### Limitaciones de este modelo
+- Con estrés, la recarga es más lenta pero no muestra los intentos fallidos al brocal (la animación es fija).
+- No hay vaina trabada visible al encasquillarse (el aviso sí).
+- Los brazos tienen piel y buzo gris (no los guantes del resto).
+

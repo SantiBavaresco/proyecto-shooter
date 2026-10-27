@@ -30,6 +30,8 @@ static var _mats: Dictionary = {}
 
 static func build(data: WeaponData) -> Node3D:
 	var shape: String = data.model_params.get("shape", data.id)
+	if shape == "imported":
+		return ImportedWeapon.build(data)
 	var root: Node3D
 	match shape:
 		"pistol":

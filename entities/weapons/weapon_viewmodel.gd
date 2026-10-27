@@ -53,6 +53,10 @@ var _reload_roll: float = 0.0
 ## Cargador fuera de la vista (se "cambia" por uno nuevo mientras no se ve).
 var _mag_hidden: bool = false
 var _rng := RandomNumberGenerator.new()
+# Modelos importados: animación en curso, último estado y disparo pendiente
+var _anim_key := ""
+var _last_state: int = -1
+var _shot_new: bool = false
 
 
 func _ready() -> void:
@@ -83,10 +87,78 @@ func kick(w: WeaponData, ads: float, roll_deg: float) -> void:
 	kick_rot.x += deg_to_rad(w.kick_rot) * lerpf(1.0, 0.45, ads)
 	kick_rot.z += deg_to_rad(roll_deg)
 	slide_kick = 1.0
+	_shot_new = true
 
 
 func flash() -> void:
 	flash_time = 0.045
+
+
+## Modelo importado: cadera (el ojo del modelo en la cámara) ↔ apuntado (la mira del
+## hueso del arma alineada con la cámara), y la animación según el estado.
+func _pose_imported(c: WeaponController.WeaponSlot, a: float) -> void:
+	var inst := c.model.get_node("Inst") as Node3D
+	var p := c.data.model_params
+	var eye := ImportedWeapon._v(p.get("eye", [0.0, 1.6, 0.0]))
+	var m_hip := Transform3D(Basis.IDENTITY, -eye)
+	var s := ImportedWeapon.sight_in_inst(c.model)
+	var m_ads := Transform3D(Basis.IDENTITY, Vector3(0, 0, -wc.eye_relief_for(c))) * s.affine_inverse()
+	var q := m_hip.basis.get_rotation_quaternion().slerp(m_ads.basis.get_rotation_quaternion(), a)
+	inst.transform = Transform3D(Basis(q), m_hip.origin.lerp(m_ads.origin, a))
+	ImportedWeapon.sync_markers(c.model)
+	_drive_anims(c)
+
+
+func _drive_anims(c: WeaponController.WeaponSlot) -> void:
+	var ap := c.model.get_meta("ap") as AnimationPlayer
+	if ap == null:
+		return
+	var d := c.data
+	var idle := ImportedWeapon.anim_name(d, "idle")
+	var shoot := ImportedWeapon.anim_name(d, "shoot")
+	var idle_from := float((d.model_params.get("anims", {}) as Dictionary).get("idle_from", 0.0))
+	var want := idle
+	var speed := 1.0
+	var from := -1.0
+	var st := int(wc.state)
+	var entered := st != _last_state
+	_last_state = st
+	var restart := false
+	match wc.state:
+		WeaponController.State.DRAW:
+			want = ImportedWeapon.anim_name(d, "draw")
+			speed = ImportedWeapon.anim_length(c.model, d, "draw") / maxf(wc.state_duration, 0.05)
+			restart = entered
+		WeaponController.State.HOLSTER:
+			want = ImportedWeapon.anim_name(d, "holster")
+			speed = ImportedWeapon.anim_length(c.model, d, "holster") / maxf(wc.state_duration, 0.05)
+			restart = entered
+		WeaponController.State.RELOADING:
+			var key := "reload_empty" if wc._reload_empty and not wc.imported_forgot else "reload"
+			want = ImportedWeapon.anim_name(d, key)
+			speed = ImportedWeapon.anim_length(c.model, d, key) / maxf(wc.state_duration, 0.05)
+			restart = entered
+		WeaponController.State.CLEARING:
+			want = ImportedWeapon.anim_name(d, "reload_empty")
+			from = float(d.model_params.get("rack_from", 0.0))
+			speed = ImportedWeapon.rack_time(c.model, d) / maxf(wc.state_duration, 0.05)
+			restart = entered
+		_:
+			if _shot_new:
+				want = shoot
+				restart = true
+			elif ap.current_animation == shoot and ap.is_playing():
+				want = shoot
+	_shot_new = false
+	var key_now := "%s@%d" % [want, c.model.get_instance_id()]
+	if key_now != _anim_key or restart:
+		ap.play(want, 0.02 if want == shoot else 0.12)
+		ap.seek(from if from >= 0.0 else (idle_from if want == idle else 0.0), true)
+		_anim_key = key_now
+	ap.speed_scale = speed
+	# La animación quieta no está en bucle: vuelve al principio útil
+	if want == idle and ap.current_animation == idle and ap.current_animation_position >= ap.current_animation_length - 0.05:
+		ap.seek(idle_from, true)
 
 
 static func smooth(x: float) -> float:
@@ -105,10 +177,17 @@ func _process(delta: float) -> void:
 	var a := smooth(wc.ads_amount)
 
 	# Pose base: cadera ↔ mira alineada con el centro de la pantalla
-	var sight := (c.model.get_node("Sight") as Node3D).position
-	var hip: Vector3 = HIP_POSE.get(w.model, Vector3(0.13, -0.14, -0.26))
-	var ads := Vector3(-sight.x, -sight.y, -wc.eye_relief_for(c) - sight.z)
-	var pos := hip.lerp(ads, a)
+	var imported := c.model.has_meta("imported")
+	var pos := Vector3.ZERO
+	if imported:
+		# Modelo importado: su animación manda; la pose de cadera/apuntado va en el
+		# modelo y acá solo se suman balanceo, retroceso y estrés
+		_pose_imported(c, a)
+	else:
+		var sight := (c.model.get_node("Sight") as Node3D).position
+		var hip: Vector3 = HIP_POSE.get(w.model, Vector3(0.13, -0.14, -0.26))
+		var ads := Vector3(-sight.x, -sight.y, -wc.eye_relief_for(c) - sight.z)
+		pos = hip.lerp(ads, a)
 	var rot := Vector3.ZERO
 
 	# Correr: arma baja y girada
@@ -143,7 +222,8 @@ func _process(delta: float) -> void:
 
 	# Animaciones de estado
 	_reload_roll = 0.0
-	match wc.state:
+	var vis_state: int = -1 if imported else int(wc.state)
+	match vis_state:
 		WeaponController.State.HOLSTER:
 			var t := smooth(clampf(wc.state_time / wc.state_duration, 0.0, 1.0))
 			pos.y -= 0.28 * t
@@ -231,7 +311,8 @@ func _process(delta: float) -> void:
 	aim_rot = breath + tremor_rot * a
 	rig.position = pos
 	rig.rotation = rot
-	_animate_parts(c, delta)
+	if not imported:
+		_animate_parts(c, delta)
 
 	vm_camera.fov = lerpf(VM_FOV_HIP, VM_FOV_ADS, a)
 	_update_scope(c, a)

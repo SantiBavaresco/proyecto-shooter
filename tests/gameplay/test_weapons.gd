@@ -22,6 +22,9 @@ func before_each() -> void:
 	await physics_frames(5)
 	CombatWorld.get_for(player).hitstop_enabled = false
 	CombatWorld.get_for(player).rng.seed = 99
+	# Estas pruebas usan el Fusil FMR (el slot 1 inicial ahora es la carabina importada)
+	weapons.equip_weapon(load("res://data/weapons/rifle.tres") as WeaponData, 1)
+	await physics_frames(40)
 
 
 func after_each() -> void:

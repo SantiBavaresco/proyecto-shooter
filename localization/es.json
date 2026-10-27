@@ -150,5 +150,6 @@
 	"stress.extreme": "ESTRÉS EXTREMO",
 	"greybox.penetration": "PENETRACIÓN",
 	"breath.hold": "AGUANTANDO LA RESPIRACIÓN %d s",
-	"breath.out": "SIN AIRE"
+	"breath.out": "SIN AIRE",
+	"weapon.ak74u": "Carabina AR-74K"
 }

@@ -7,7 +7,7 @@ extends Node
 enum State { READY, RELOADING, HOLSTER, DRAW, CYCLING, CLEARING }
 
 const WEAPON_FILES: Dictionary = {
-	1: "res://data/weapons/rifle.tres",
+	1: "res://data/weapons/ak74u.tres",
 	2: "res://data/weapons/shotgun.tres",
 	3: "res://data/weapons/pistol.tres",
 }
@@ -79,6 +79,9 @@ var _clip_load: bool = false
 ## Escopetas con estrés: veces que los cartuchos pegan en el borde de la recámara antes
 ## de entrar, y cuánto alarga eso la recarga (en fracciones de la recarga normal).
 var break_fumbles: int = 0
+## Arma importada: en esta recarga vacía se olvidó de montar (usa la recarga corta).
+var imported_forgot: bool = false
+var _clear_eject_done: bool = false
 var break_extra: float = 0.0
 ## Aguantar la respiración (Shift con visor): cuánto lo está haciendo (0..1), aire que
 ## le queda (s) y castigo por quedarse sin aire (s).
@@ -313,6 +316,14 @@ func _advance_state(delta: float) -> void:
 	var c := current()
 	if (state == State.RELOADING or state == State.CLEARING) and _plan != null:
 		_run_plan_events(c)
+	if state == State.CLEARING and _plan == null and not _clear_eject_done and state_time >= state_duration * 0.45:
+		# Arma importada: al tirar de la manija sale el cartucho o la vaina
+		_clear_eject_done = true
+		c.case_stuck = false
+		if _clear_action in ["misfire", "stovepipe", "double_feed"]:
+			var ej := c.model.get_node_or_null("Ejection") as Node3D
+			_eject_shell(c, false, 0, ej.global_position if ej != null else Vector3.INF)
+		_play_mech(SynthSfx.click("rack_back", 0.8, 0.06), -6.0)
 	if state == State.CLEARING and state_time >= state_duration:
 		_finish_clear(c)
 		return
@@ -384,8 +395,17 @@ func _start_reload() -> void:
 	_reload_fx_done = false
 	_break_spent = c.data.mag_size - c.mag
 	_plan = null
+	imported_forgot = false
 	var dur := reload_duration(c)
-	if c.data.reload_type == "magazine" and c.model.has_node("Mag"):
+	if c.model.has_meta("imported"):
+		# Modelo con animación propia: dura lo que la animación, más lenta con estrés;
+		# vacía y con estrés, a veces no monta (hace la recarga corta)
+		var lv := player.stress.level()
+		if _reload_empty and lv > 0 and _rng.randf() < [0.0, 0.15, 0.35, 0.5][lv]:
+			imported_forgot = true
+			dur = c.data.reload_time
+		dur *= [1.0, 1.15, 1.35, 1.55][lv]
+	elif c.data.reload_type == "magazine" and c.model.has_node("Mag"):
 		_plan = ReloadPlan.make("reload", _plan_geo(c), player.stress.level(), _reload_empty, _rng,
 			c.data.reload_time, c.data.reload_time_empty)
 		dur = _plan.duration
@@ -459,6 +479,14 @@ func _start_clear(c: WeaponSlot) -> void:
 	if c.data.bolt_action:
 		_cycle_fx_done = false
 		_set_state(State.CYCLING, c.data.cycle_time * [1.0, 1.15, 1.4, 1.6][player.stress.level()])
+		_emit_state()
+		return
+	if c.model.has_meta("imported"):
+		# Modelo con animación propia: destrabar = el tramo final de la recarga (montar)
+		_plan = null
+		_clear_eject_done = false
+		_set_state(State.CLEARING, ImportedWeapon.rack_time(c.model, c.data) * [1.0, 1.15, 1.35, 1.55][player.stress.level()])
+		_play_mech(SynthSfx.click("reload_out", 1.1, 0.05), -9.0)
 		_emit_state()
 		return
 	var act := c.malfunction
@@ -568,7 +596,7 @@ func _finish_reload(c: WeaponSlot) -> void:
 		c.mag += take
 		if not DebugTools.infinite_ammo:
 			c.reserve -= take
-	if _plan != null and _plan.forgot_chamber:
+	if (_plan != null and _plan.forgot_chamber) or imported_forgot:
 		# Con el apuro se olvidó de montar: la primera vez el gatillo hace "clic"
 		c.malfunction = "unchambered"
 	_play_mech(SynthSfx.click("reload_in", 0.9, 0.06), -6.0)

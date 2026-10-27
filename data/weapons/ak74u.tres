@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "imported"
+model_params = {
+"shape": "imported",
+"scene": "res://assets/models/ak74u/ak74u.glb",
+"gun_bone": "Bone_043",
+"sight": [0.0, 0.33, -0.0683],
+"muzzle": [0.0, 0.40, -0.0214],
+"ejection": [0.02, 0.05, -0.04],
+"eye": [0.0, 1.62, 0.02],
+"eye_relief": 0.36,
+"rack_from": 1.9,
+"anims": {"draw": "DRAW", "idle": "IDLE", "shoot": "SHOOT", "reload": "RELOAD1", "reload_empty": "RELOAD2", "holster": "OLSER", "idle_from": 1.0}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = "5.45×39"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi", "auto")
+rpm = 720.0
+damage = 31.0
+pellets = 1
+muzzle_velocity = 735.0
+drag = 0.0011
+max_ricochets = 2
+tracer_every = 4
+mag_size = 30
+start_reserve = 120
+spread_hip = 2.6
+spread_ads = 0.2
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 0.8
+recoil_yaw = 0.42
+recoil_recovery = 0.55
+kick_back = 0.03
+kick_rot = 3.0
+recoil_ads_mult = 0.7
+reload_time = 2.2333
+reload_time_empty = 3.4667
+ads_time = 0.22
+draw_time = 0.8
+holster_time = 0.47
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.36
+sfx_body_hz = 92.0
+sfx_volume_db = -1.0
+id = "ak74u"
+name_key = "weapon.ak74u"

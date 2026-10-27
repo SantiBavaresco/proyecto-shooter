@@ -5,7 +5,7 @@ Antes de sumar uno, verificar la licencia (ver prompt maestro, sección 4).
 
 | ID | Archivo | Fuente | Autor | Licencia | Comercial | Notas |
 |---|---|---|---|---|---|---|
-| — | — | — | — | — | — | F0 no usa assets externos: todo es geometría y dibujo por código |
+| `weapon_ak74u` | `assets/models/ak74u/ak74u.glb` | [Sketchfab: "AK74U \| FREE ANIMATION."](https://sketchfab.com/3d-models/ak74u-free-animation-2ab66220c48b465e9501067667965569) | BURNER ([Alexander_Ovelar](https://sketchfab.com/Alexander_Ovelar)) | CC-BY 4.0 | Sí, con atribución | Carabina AR-74K (prueba F1.18): arma, brazos Mixamo y 7 animaciones. ~69 mil triángulos. Crédito obligatorio en los créditos del juego |
 
 ## Placeholders pendientes (`TODO-ASSET` en el código)
 

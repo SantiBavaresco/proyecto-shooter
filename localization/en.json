@@ -150,5 +150,6 @@
 	"stress.extreme": "EXTREME STRESS",
 	"greybox.penetration": "PENETRATION",
 	"breath.hold": "HOLDING BREATH %d s",
-	"breath.out": "OUT OF BREATH"
+	"breath.out": "OUT OF BREATH",
+	"weapon.ak74u": "AR-74K carbine"
 }

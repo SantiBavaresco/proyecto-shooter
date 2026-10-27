@@ -116,6 +116,36 @@ func _ready() -> void:
 		print("FUMBLES ", player.weapons.break_fumbles, " DUR ", player.weapons.state_duration)
 		await _seq("E_escopeta_estres", [0.1, 0.2, 0.3, 0.42, 0.5, 0.58, 0.66, 0.74, 0.82, 0.92])
 
+	if "importada" in only:
+		await _equip("ak74u")
+		player.teleport(Vector3(30, 0.05, 31.5), PI)
+		await _frames(30)
+		_look(dummy)
+		# Ráfaga desde la cadera
+		player.weapons.current().mode_index = 1
+		bot.fire = true
+		for i in 4:
+			await _frames(6)
+			await _shot("I_rafaga_%d" % i)
+		bot.fire = false
+		await _frames(40)
+		# Falla y destrabado (montar con la animación)
+		var c := player.weapons.current()
+		c.malfunction = "stovepipe"
+		player.weapons._emit_state()
+		await _frames(3)
+		bot.press_reload()
+		await _frames(2)
+		await _seq("I_destrabar", [0.2, 0.45, 0.7, 0.9])
+		# Recarga vacía con estrés extremo
+		player.teleport(_zone("stress_extreme"), PI)
+		await _frames(240)
+		_look(dummy)
+		c.mag = 0
+		bot.press_reload()
+		await _frames(2)
+		await _seq("I_recarga_extremo", [0.15, 0.4, 0.65, 0.85])
+
 	if "penetracion" in only:
 		# Estación de penetración: un tiro de fusil y uno de pistola a cada panel
 		for id: String in ["akm", "pistol"]:

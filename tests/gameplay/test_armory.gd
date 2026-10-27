@@ -46,9 +46,9 @@ func _equip(id: String) -> WeaponData:
 	return d
 
 
-func test_catalog_has_25_valid_weapons() -> void:
+func test_catalog_has_26_valid_weapons() -> void:
 	var cat := _catalog()
-	assert_eq(cat.size(), 25)
+	assert_eq(cat.size(), 26)
 	for id: String in cat:
 		var d := _load(id)
 		assert_true(d != null, "%s carga" % id)
@@ -67,6 +67,12 @@ func test_every_model_has_markers() -> void:
 	for id: String in _catalog():
 		var d := _load(id)
 		var m := WeaponModelBuilder.build(d)
+		if m.has_meta("imported"):
+			# Importada: los marcadores salen del hueso del arma (necesita estar en el árbol)
+			add_child(m)
+			await process_frames(2)
+			ImportedWeapon.sync_markers(m)
+			remove_child(m)
 		for marker in ["Sight", "Muzzle", "Ejection"]:
 			assert_true(m.has_node(marker), "%s tiene %s" % [id, marker])
 		if d.sight == "scope":
