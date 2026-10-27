@@ -128,6 +128,34 @@ func test_round_by_round_and_clip_reload() -> void:
 	assert_eq(c.mag, 5)
 
 
+func test_sks_always_loads_a_clip() -> void:
+	var d := await _equip("sks")
+	var c := weapons.current()
+	c.mag = 6
+	assert_near(weapons.reload_duration(c), d.reload_time_empty, 0.001, "SK-45: peine aunque no esté vacía")
+	bot.press_reload()
+	await physics_frames(int(d.reload_time_empty * 60.0) + 10)
+	assert_eq(c.mag, d.mag_size)
+
+
+func test_bolt_misfire_and_stuck_case_clear_with_the_bolt() -> void:
+	await _equip("rem700")
+	var c := weapons.current()
+	c.mag = 4
+	c.malfunction = "misfire"
+	bot.press_reload()
+	await physics_frames(int(c.data.cycle_time * 1.7 * 60.0) + 5)
+	assert_eq(c.malfunction, "")
+	assert_eq(c.mag, 3, "el cartucho que no disparó sale y se descuenta")
+	c.malfunction = "stovepipe"
+	bot.press_fire()
+	await physics_frames(3)
+	assert_eq(c.mag, 3, "vaina trabada: no dispara")
+	bot.press_reload()
+	await physics_frames(int(c.data.cycle_time * 1.7 * 60.0) + 5)
+	assert_eq(c.malfunction, "", "forzar el cerrojo la saca")
+
+
 func test_bolt_rounds_count_up_and_fire_interrupts() -> void:
 	var d := await _equip("rem700")
 	var c := weapons.current()

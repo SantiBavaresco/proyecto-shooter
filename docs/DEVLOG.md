@@ -191,3 +191,13 @@
 - **Quiebre más rápido**: abre seco (~0,1 de la recarga en vez de 0,16) y cierra de golpe; las vainas saltan antes.
 - 94 tests.
 
+## F1.17 — Observaciones de prueba (2026-10-26)
+
+### Funciona
+- **SK-45**: siempre carga con peine (cargador fijo, como la real), aunque le queden cartuchos; la mano empuja una vez en vez de cartucho por cartucho.
+- **Cerrojos**: más daño (R-700 110, Argentino 1909 100: un tiro al torso tumba). Nueva falla de extracción (la vaina no sale y el cerrojo queda trabado; R lo fuerza).
+- **"No disparó"**: el cartucho se descuenta cuando sale al destrabar (antes se descontaba al apretar el gatillo y parecía que no salía nada).
+- **KR-25** color arena con bípode plegado; ya no se confunde con el M-14E negro.
+- **Zona de armas gastadas** más razonable (estado 35 % en vez de 18 %: ~1 falla cada 30 tiros) y las armas de mecanismo tipo AK (AR-74, AR-M, DR-1, PP-B, SK-45) fallan casi la mitad; los cerrojos, algo menos.
+- 96 tests.
+

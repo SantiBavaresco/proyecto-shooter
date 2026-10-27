@@ -26,7 +26,7 @@ const WEAR_PER_SHOT := {"magazine": 1.0 / 4000.0, "rounds": 1.0 / 5000.0, "break
 const BREATH_MAX := 5.0
 const BREATH_PENALTY := 3.0
 ## Estado que simula la zona de armas gastadas.
-const WORN_CONDITION := 0.18
+const WORN_CONDITION := 0.35
 
 
 ## Estado de un arma del jugador.
@@ -339,9 +339,13 @@ func _advance_state(delta: float) -> void:
 			_play_mech(SynthSfx.click("bolt_back", 0.75, 0.07), -7.0)
 		if state_time >= state_duration:
 			_play_mech(SynthSfx.click("bolt_fwd", 1.0, 0.05), -8.0)
-			if c.malfunction == "misfire":
-				# Cerrojo: sale el cartucho que no disparó y entra otro
+			if c.malfunction != "":
+				# Cerrojo: sale el cartucho que no disparó (o la vaina que no se extrajo)
+				# y entra otro
+				if c.malfunction == "misfire" and c.mag > 0 and not DebugTools.infinite_ammo:
+					c.mag -= 1
 				c.malfunction = ""
+				c.case_stuck = false
 			_set_state(State.READY, 0.0)
 			_emit_state()
 
@@ -401,7 +405,9 @@ func _start_reload() -> void:
 	_plan_ev = 0
 	_rounds_done = 0
 	_rounds_stop = false
-	_clip_load = c.data.reload_type == "rounds" and c.mag == 0 and c.data.clip_reload
+	# Peine: el cerrojo de guerra lo usa vacío; la SK-45 (cargador fijo) siempre carga
+	# con peine, aunque le queden cartuchos (entra lo que cabe)
+	_clip_load = c.data.reload_type == "rounds" and c.data.clip_reload and (c.mag == 0 or not c.data.bolt_action)
 	var needed := c.data.mag_size - c.mag
 	_rounds_planned = needed if DebugTools.infinite_ammo else mini(needed, c.reserve)
 	_set_state(State.RELOADING, dur)
@@ -466,8 +472,8 @@ func _start_clear(c: WeaponSlot) -> void:
 
 
 func _finish_clear(c: WeaponSlot) -> void:
-	if _clear_action == "double_feed" and c.mag > 0 and not DebugTools.infinite_ammo:
-		c.mag -= 1  # el cartucho que se trabó se pierde
+	if _clear_action in ["double_feed", "misfire"] and c.mag > 0 and not DebugTools.infinite_ammo:
+		c.mag -= 1  # el cartucho que no disparó (o el que se trabó) sale y se pierde
 	c.malfunction = ""
 	c.case_stuck = false
 	_clear_action = ""
@@ -544,7 +550,7 @@ func reload_duration(c: WeaponSlot) -> float:
 		return state_duration
 	var w := c.data
 	if w.reload_type == "rounds":
-		if c.mag == 0 and w.clip_reload:
+		if w.clip_reload and (c.mag == 0 or not w.bolt_action):
 			return w.reload_time_empty
 		var needed := w.mag_size - c.mag
 		if not DebugTools.infinite_ammo:
@@ -574,11 +580,11 @@ func _fire(c: WeaponSlot) -> void:
 	var w := c.data
 	var cond := effective_condition(c)
 	c.condition = maxf(0.0, c.condition - float(WEAR_PER_SHOT.get(w.reload_type, 1.0 / 4000.0)))
-	var risk := fault_risk(cond)
+	var risk := fault_risk(cond, reliability(w))
 	if _rng.randf() < risk["misfire"]:
 		# No disparó: el cartucho queda en la recámara (con cargador o cerrojo hay que
-		# destrabar; en la escopeta se pasa al otro caño y se saca al recargar)
-		if not DebugTools.infinite_ammo:
+		# destrabar y se descuenta al sacarlo; en la escopeta se pasa al otro caño)
+		if not DebugTools.infinite_ammo and w.reload_type == "break":
 			c.mag -= 1
 		_play_mech(SynthSfx.click("dry", 0.75, 0.05), -4.0)
 		_cooldown = 0.25
@@ -622,8 +628,13 @@ func _fire(c: WeaponSlot) -> void:
 	_audio_shot.pitch_scale = _rng.randf_range(0.96, 1.04)
 	_audio_shot.play()
 	if w.bolt_action:
-		_cycle_fx_done = false
-		_set_state(State.CYCLING, w.cycle_time)
+		if _rng.randf() < risk["stovepipe"]:
+			# El extractor no saca la vaina: el cerrojo queda trabado hasta forzarlo (R)
+			c.malfunction = "stovepipe"
+			_cooldown = 0.3
+		else:
+			_cycle_fx_done = false
+			_set_state(State.CYCLING, w.cycle_time)
 	elif w.reload_type != "break":
 		# Semiautomáticas: la vaina puede quedar trabada en la ventana o entrar dos
 		# cartuchos a la vez (solo si quedaba otro para alimentar)
@@ -681,9 +692,20 @@ func effective_condition(c: WeaponSlot) -> float:
 
 ## Probabilidad de cada falla por disparo según el estado: casi nada en un arma
 ## sana; sube rápido por debajo del 70 %.
-static func fault_risk(condition: float) -> Dictionary:
+static func fault_risk(condition: float, mult := 1.0) -> Dictionary:
 	var k := pow(clampf((0.7 - condition) / 0.7, 0.0, 1.0), 2.0)
-	return {"misfire": 0.0004 + 0.055 * k, "stovepipe": 0.0003 + 0.06 * k, "double_feed": 0.0001 + 0.018 * k}
+	return {"misfire": (0.0004 + 0.055 * k) * mult, "stovepipe": (0.0003 + 0.06 * k) * mult,
+		"double_feed": (0.0001 + 0.018 * k) * mult}
+
+
+## Qué tan propensa a fallar es el arma (1 = normal): las de mecanismo tipo AK
+## aguantan mucho más el desgaste; los cerrojos, algo más.
+static func reliability(w: WeaponData) -> float:
+	if w.id in ["ak74", "akm", "svd", "pp19", "sks"]:
+		return 0.55
+	if w.bolt_action:
+		return 0.8
+	return 1.0
 
 
 ## Multiplicador de dispersión por movimiento, aire y postura.

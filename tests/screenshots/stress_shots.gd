@@ -89,10 +89,10 @@ func _ready() -> void:
 		await _seq("R_akm_estres", [0.15, 0.3, 0.38, 0.44, 0.5, 0.56, 0.62, 0.7, 0.8, 0.9])
 		player.weapons.current().malfunction = ""
 
-	if only.is_empty() or "fallas" in only:
+	if only.is_empty() or "fallas" in only or "sks" in only:
 		player.teleport(Vector3(30, 0.05, 31.5), PI)
 		await _frames(200)  # se calma
-		for spec: Array in [["g3", "stovepipe"], ["g3", "double_feed"], ["akm", "misfire"], ["pistol", "unchambered"], ["mp5", "misfire"]]:
+		for spec: Array in ([["g3", "stovepipe"], ["g3", "double_feed"], ["akm", "misfire"], ["pistol", "unchambered"], ["mp5", "misfire"]] if not "sks" in only else [["sks", "misfire"], ["sks", "stovepipe"]]):
 			await _equip(spec[0])
 			_look(dummy)
 			var c := player.weapons.current()

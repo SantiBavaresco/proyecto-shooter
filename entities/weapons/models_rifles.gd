@@ -136,6 +136,10 @@ static func ar(data: WeaponData) -> Node3D:
 	var hg: float = p.get("hg", 0.3)
 	var heavy := id == "sr25"
 	var carry := id == "ar15"
+	if heavy:
+		# KR-25: tirador con cajón y muebles color arena (no se confunde con el M-14E negro)
+		al = WeaponModelBuilder.mat("tan")
+		poly = WeaponModelBuilder.mat("tan")
 
 	# Receptor superior (con el riel o la manija de transporte)
 	WeaponModelBuilder.section(root, "Upper", [-0.0135, -0.017, 0.0, 0.0135, -0.017, 0.0, 0.0135, 0.011, 0.002, 0.0105, 0.0215, 0.002,
@@ -223,6 +227,14 @@ static func ar(data: WeaponData) -> Node3D:
 				for i in n:
 					WeaponModelBuilder.rbox(root, "MlokSlot", Vector3(0.0012, 0.0062, 0.026), Vector3(s * 0.0252, -0.002, hf + 0.03 + i * 0.045),
 						WeaponModelBuilder.mat("dark"), 0.002)
+
+	if heavy:
+		# Bípode plegado bajo el guardamanos
+		var bpz := hf + 0.03
+		WeaponModelBuilder.rbox(root, "BipodMount", Vector3(0.03, 0.012, 0.03), Vector3(0, -0.031, bpz), steel, 0.003)
+		for sx: float in [-1.0, 1.0]:
+			WeaponModelBuilder.cyl(root, "BipodLeg", 0.0042, 0.16, Vector3(sx * 0.011, -0.036, bpz + 0.085), steel, 10, Vector3.ZERO, 0.0015)
+			WeaponModelBuilder.sphere(root, "BipodFoot", 0.006, Vector3(sx * 0.011, -0.036, bpz + 0.165), WeaponModelBuilder.mat("rubber"), 8)
 
 	# Caño, dispositivo de boca
 	var bz := rf - barrel_len

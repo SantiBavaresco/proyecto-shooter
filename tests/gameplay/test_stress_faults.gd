@@ -66,7 +66,10 @@ func test_fault_risk_grows_with_wear() -> void:
 	var sum_good: float = good["misfire"] + good["stovepipe"] + good["double_feed"]
 	var sum_worn: float = worn["misfire"] + worn["stovepipe"] + worn["double_feed"]
 	assert_lt(sum_good, 0.001, "un arma sana casi no falla")
-	assert_gt(sum_worn, 0.05, "un arma gastada falla seguido")
+	assert_gt(sum_worn, 0.025, "un arma gastada falla seguido")
+	assert_lt(sum_worn, 0.06, "pero no cada dos tiros")
+	var ak := WeaponController.fault_risk(WeaponController.WORN_CONDITION, WeaponController.reliability(load("res://data/weapons/pp19.tres")))
+	assert_lt(float(ak["misfire"]) + float(ak["stovepipe"]) + float(ak["double_feed"]), sum_worn * 0.7, "tipo AK: más confiable")
 
 
 # --- Planes de recarga ----------------------------------------------------------
@@ -137,7 +140,7 @@ func test_zones_set_stress_and_wear() -> void:
 	assert_gt(player.stress.blur_extra(), 0.9, "extremo: desenfoque máximo")
 	player.teleport(_zone_pos("worn"), PI)
 	await physics_frames(5)
-	assert_lt(weapons.effective_condition(weapons.current()), 0.2, "zona de armas gastadas")
+	assert_lt(weapons.effective_condition(weapons.current()), 0.4, "zona de armas gastadas")
 
 
 func test_forgot_to_chamber_needs_rack() -> void:
@@ -183,7 +186,7 @@ func test_worn_weapon_jams_and_r_clears_it() -> void:
 	await physics_frames(10)
 	var c := weapons.current()
 	var fault := ""
-	for i in 120:
+	for i in 300:
 		c.mag = 20
 		bot.press_fire()
 		await physics_frames(8)

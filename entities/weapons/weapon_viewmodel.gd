@@ -189,7 +189,7 @@ func _process(delta: float) -> void:
 			rot += bump[1] * (PI / 180.0)
 			if w.reload_type == "rounds" and wc.state == WeaponController.State.RELOADING:
 				# Empuja cada cartucho: pequeño golpe por ronda
-				var per := 0.7 / maxf(float(wc._rounds_planned), 1.0)
+				var per := 0.7 / maxf(float(1 if wc._clip_load else wc._rounds_planned), 1.0)
 				var k := fmod(t, maxf(per, 0.01)) / maxf(per, 0.01)
 				pos.y -= sin(k * PI) * 0.006 * inn
 		WeaponController.State.CYCLING:
@@ -353,7 +353,7 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 			[0.94, port * 0.4 + Vector3(0.02, -0.02, 0.02)], [1.0, z]])
 		if t > 0.16 and t < 0.86:
 			# Empuja cada cartucho hacia abajo
-			var per := 0.7 / maxf(float(wc._rounds_planned), 1.0)
+			var per := 0.7 / maxf(float(1 if wc._clip_load else wc._rounds_planned), 1.0)
 			var k := fmod(t - 0.16, maxf(per, 0.01)) / maxf(per, 0.01)
 			o += Vector3(0, -0.012 * sin(k * PI), 0.004 * sin(k * TAU))
 		off_r = o
