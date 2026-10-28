@@ -8,6 +8,7 @@ var out_dir := "user://screenshots_armory"
 var ids: PackedStringArray = []
 var with_reload := false
 var no_reload := false
+var flashes := false
 
 
 func _ready() -> void:
@@ -16,6 +17,8 @@ func _ready() -> void:
 			out_dir = arg.trim_prefix("--out=")
 		if arg == "--recarga":
 			with_reload = true
+		if arg == "--fogonazos":
+			flashes = true
 		if arg == "--sin-recarga":
 			no_reload = true
 		if arg.begins_with("--ids="):
@@ -60,6 +63,17 @@ func _ready() -> void:
 		_aim_at(player, dummy.global_position + Vector3(0, 1.2, 0))
 		await _frames(15)
 		await _shot("W_%s_apuntando" % id)
+		if flashes:
+			# Fogonazos: varios disparos seguidos desde la cadera (cada uno distinto)
+			bot.aim = false
+			await _frames(30)
+			DebugTools.infinite_ammo = true
+			for k in 6:
+				bot.press_fire()
+				await _frames(1)
+				await _shot("F_%s_%d" % [id, k])
+				await _frames(int((d.cycle_time if d.bolt_action else 60.0 / maxf(d.rpm, 60.0)) * 60.0) + 8)
+			DebugTools.infinite_ammo = false
 		# Secuencia de recarga (escopetas siempre; el resto con --recarga)
 		if (d.reload_type == "break" and not no_reload) or with_reload:
 			bot.aim = false

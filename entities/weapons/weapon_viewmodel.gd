@@ -43,6 +43,12 @@ var aim_rot: Vector3 = Vector3.ZERO
 var _vm_layer: CanvasLayer
 var _vm_light: DirectionalLight3D
 var _flash: MeshInstance3D
+## Fogonazo: variantes de la estrella frontal y la llama a lo largo del caño.
+var _flash_mats: Array[StandardMaterial3D] = []
+var _flame: MeshInstance3D
+var _flame_mat: StandardMaterial3D
+## Forma elegida para el disparo en curso: [variante, escala, largo de llama, ancho, giro, color].
+var _flash_shot: Array = []
 var _scope_vp: SubViewport
 var _sway: Vector3 = Vector3.ZERO
 var _bob_t: float = 0.0
@@ -96,6 +102,11 @@ func kick(w: WeaponData, ads: float, roll_deg: float) -> void:
 
 func flash() -> void:
 	flash_time = 0.045
+	# Cada disparo con otra forma: estrella, tamaño, llama hacia adelante y color
+	var warm := _rng.randf()
+	_flash_shot = [_rng.randi() % maxi(_flash_mats.size(), 1), _rng.randf_range(0.75, 1.3),
+		_rng.randf_range(0.0, 1.0) if _rng.randf() > 0.2 else 0.0, _rng.randf_range(0.7, 1.3), _rng.randf() * TAU,
+		Color(1.0, lerpf(0.62, 0.85, warm), lerpf(0.3, 0.55, warm))]
 
 
 ## Modelo importado: cadera (el ojo del modelo en la cámara) ↔ apuntado (la mira del
@@ -659,13 +670,35 @@ func _update_flash(c: WeaponController.WeaponSlot, delta: float) -> void:
 	if flash_time > 0.0:
 		flash_time -= delta
 		var muzzle := c.model.get_node("Muzzle") as Node3D
+		if _flash_shot.is_empty():
+			flash()
+		var big := 1.6 if c.data.reload_type == "break" else (0.75 if c.data.model == "pistol" else 1.0)
+		var life := clampf(flash_time / 0.045, 0.0, 1.0)  # se achica en los 2-3 cuadros que dura
+		var mat := _flash_mats[int(_flash_shot[0])]
+		mat.albedo_color = _flash_shot[5]
+		_flash.material_override = mat
 		_flash.visible = true
-		_flash.global_position = muzzle.global_position
-		_flash.rotation = Vector3(0, 0, _rng.randf() * TAU)
-		var sc := _rng.randf_range(0.8, 1.25) * (1.6 if c.data.reload_type == "break" else 1.0)
+		var fwd0 := -muzzle.global_basis.z.normalized()
+		# Un poco por delante de la boca, para que el arma no lo tape
+		_flash.global_position = muzzle.global_position + fwd0 * 0.025
+		var sc := float(_flash_shot[1]) * big * lerpf(0.7, 1.0, life) * _rng.randf_range(0.92, 1.08)
 		_flash.scale = Vector3(sc, sc, sc)
+		# Llama hacia adelante (dos planos cruzados a lo largo del caño), de largo variable
+		var ln := float(_flash_shot[2])
+		_flame.visible = ln > 0.05
+		if _flame.visible:
+			_flame_mat.albedo_color = _flash_shot[5]
+			var fwd := -muzzle.global_basis.z.normalized()
+			var b := Basis.looking_at(fwd, Vector3.UP if absf(fwd.y) < 0.95 else Vector3.BACK)
+			b = b * Basis(Vector3.BACK, float(_flash_shot[4]))
+			var wdt := 0.075 * float(_flash_shot[3]) * big
+			_flame.global_transform = Transform3D(b.scaled_local(Vector3(wdt, wdt, lerpf(0.1, 0.3, ln) * big * lerpf(0.75, 1.0, life))),
+				muzzle.global_position)
 	else:
 		_flash.visible = false
+		if _flame != null:
+			_flame.visible = false
+		_flash_shot = []
 
 
 ## Copia la dirección del sol del mundo a la luz del arma (en espacio de cámara).
@@ -787,24 +820,50 @@ func _build_viewmodel() -> void:
 
 	_flash = MeshInstance3D.new()
 	var q := QuadMesh.new()
-	q.size = Vector2(0.14, 0.14)
+	q.size = Vector2(0.2, 0.2)
 	_flash.mesh = q
 	var fm := StandardMaterial3D.new()
 	fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	fm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	fm.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
-	fm.albedo_texture = _make_flash_texture()
+	fm.billboard_keep_scale = true
 	fm.albedo_color = Color(1.0, 0.75, 0.45)
-	_flash.material_override = fm
+	for i in 6:
+		var m := fm.duplicate() as StandardMaterial3D
+		m.albedo_texture = _make_flash_texture(i)
+		_flash_mats.append(m)
+	_flash.material_override = _flash_mats[0]
 	_flash.visible = false
 	vm_viewport.add_child(_flash)
+	# Llama: dos planos cruzados a lo largo del eje (−Z), de la boca hacia adelante
+	_flame = MeshInstance3D.new()
+	_flame.mesh = _make_flame_mesh()
+	_flame_mat = StandardMaterial3D.new()
+	_flame_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flame_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flame_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_flame_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_flame_mat.albedo_texture = _make_flame_texture()
+	_flame.material_override = _flame_mat
+	_flame.visible = false
+	vm_viewport.add_child(_flame)
 
 
 
-## Estrella de destello generada por código. TODO-ASSET: vfx_muzzle_flash
-static func _make_flash_texture() -> ImageTexture:
-	var n := 64
+## Estrella de destello generada por código, con otra forma por variante (cantidad,
+## largo y ancho de las puntas, núcleo irregular). TODO-ASSET: vfx_muzzle_flash
+static func _make_flash_texture(seed_i: int = 0) -> ImageTexture:
+	var n := 96
+	var r := RandomNumberGenerator.new()
+	r.seed = 7919 * (seed_i + 1)
+	var rays := r.randi_range(4, 7)
+	var off := r.randf() * TAU
+	var lens: Array[float] = []
+	var widths: Array[float] = []
+	for k in rays:
+		lens.append(r.randf_range(0.55, 1.0))
+		widths.append(r.randf_range(0.12, 0.3))
 	var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
 	var c := Vector2(n, n) * 0.5
 	for y in n:
@@ -812,8 +871,48 @@ static func _make_flash_texture() -> ImageTexture:
 			var v := Vector2(x, y) - c
 			var d := v.length() / (n * 0.5)
 			var ang := atan2(v.y, v.x)
-			var rays := pow(absf(cos(ang * 3.0)), 8.0) * (1.0 - d)
-			var core := clampf(1.0 - d * 2.2, 0.0, 1.0)
-			var a := clampf(core + rays * 1.2, 0.0, 1.0)
+			var a := 0.0
+			for k in rays:
+				var ra := off + TAU * float(k) / rays + sin(float(k) * 2.3) * 0.25
+				var da := absf(wrapf(ang - ra, -PI, PI))
+				var wk := widths[k] * (1.0 - d / lens[k])
+				if wk > 0.0 and da < wk:
+					a = maxf(a, (1.0 - da / wk) * (1.0 - d / lens[k]) * 1.3)
+			# Núcleo con borde irregular
+			var core_r := 0.32 + 0.06 * sin(ang * 5.0 + off) + 0.04 * sin(ang * 9.0 - off)
+			a = maxf(a, clampf((core_r - d) / core_r * 1.8, 0.0, 1.0))
+			img.set_pixel(x, y, Color(1, 1, 1, clampf(a, 0.0, 1.0)))
+	return ImageTexture.create_from_image(img)
+
+
+## Textura de la llama: base ancha y brillante en la boca, se afina y se apaga hacia la
+## punta, con lenguas irregulares.
+static func _make_flame_texture() -> ImageTexture:
+	var w := 32
+	var h := 96
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	for y in h:
+		var u := float(y) / (h - 1)  # 0 en la boca, 1 en la punta
+		var half := (1.0 - u) * (0.55 + 0.15 * sin(u * 17.0)) + 0.05
+		for x in w:
+			var vx := absf(float(x) / (w - 1) * 2.0 - 1.0)
+			var a := clampf((half - vx) / maxf(half, 0.01), 0.0, 1.0) * pow(1.0 - u, 1.3)
 			img.set_pixel(x, y, Color(1, 1, 1, a))
 	return ImageTexture.create_from_image(img)
+
+
+## Dos planos cruzados de 1×1 a lo largo de −Z (de 0 a −1), centrados en el eje.
+static func _make_flame_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for plane in 2:
+		var side := Vector3(0.5, 0, 0) if plane == 0 else Vector3(0, 0.5, 0)
+		var p0 := -side
+		var p1 := side
+		var p2 := side + Vector3(0, 0, -1)
+		var p3 := -side + Vector3(0, 0, -1)
+		for tri: Array in [[p0, p1, p2, Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)], [p0, p2, p3, Vector2(0, 0), Vector2(1, 1), Vector2(0, 1)]]:
+			for k in 3:
+				st.set_uv(tri[3 + k])
+				st.add_vertex(tri[k])
+	return st.commit()

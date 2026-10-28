@@ -182,6 +182,12 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 2. AR-74K apuntando: el blanco se ve arriba del guion y la bala pega en la punta del guion.
 3. Disparos: probá una de cada calibre (pistola, AK, fusil 7,62, escopeta, .22). Ráfagas: las colas se encadenan.
 
+## F1.21 — Sonido y fogonazos
+1. Pistolas, .22 y escopeta: sin sonido de pandereta ni eco largo.
+2. Rifles de cerrojo (R-700, Mauser) y fusiles largos: retumbe más largo.
+3. Tirando a una placa de acero: ya no hay zumbido de rebote.
+4. En automático cada fogonazo es distinto (forma, largo, color).
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

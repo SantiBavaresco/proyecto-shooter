@@ -242,3 +242,16 @@
 - **Disparos por calibre**: 11 calibres (.22 LR, 9×18, 9×19, .45 ACP, 5,45×39, 5,56×45, 7,62×39, 7,62×51/.308, 7,62×54R, 7,65×53, 12/70), 3 variantes cada uno, generados con `tools/audio/gen_gunshots.py`: onda de presión, ráfaga de gases, cuerpo grave, crack supersónico en los de fusil, saturación suave, rebote en el suelo, cola de reverberación que se oscurece y ecos lejanos. Cada disparo elige una variante con un poco de variación de tono y volumen; las colas se superponen al tirar en ráfaga.
 - `tests/screenshots/hands_probe.gd`: vistas laterales de la toma de las manos (calibración).
 - 97 tests (el de la armería ahora verifica que cada arma tenga el sonido de su calibre).
+
+## F1.21 — Disparos menos "pandereta", sin zumbido de rebote, fogonazos variados (2026-10-28)
+
+### Funciona
+- **Disparos rehechos** (`tools/audio/gen_gunshots.py`): sin rebote en el suelo ni ecos que repetían el golpe (daban el sonido metálico de pandereta y demasiado eco); cola de ambiente corta y oscura.
+  - Pistolas y .22: golpe seco de medios ("pop"), sin siseo agudo; el .22 corto y seco.
+  - Fusiles largos: retumbe grave que rueda y se apaga lento; más largo en los de cerrojo (.308 propio para el R-700, 7,65×53, 7,62×54R).
+- Se sacó el zumbido de los rebotes (sigue rebotando la bala; el sonido del impacto en acero suena más corto).
+- **Fogonazos**: 6 estrellas distintas (cantidad y largo de puntas, núcleo irregular), más una llama hacia adelante de largo variable (a veces no aparece), tamaño, color y brillo distintos en cada disparo; se achica en los cuadros que dura.
+- `armory_shots --fogonazos`: capturas de varios disparos seguidos.
+
+### Pendiente
+- Sonidos grabados reales: el entorno no puede descargar de opengameart/freesound. La biblioteca CC0 "The Free Firearm Sound Library" es candidata si se adjuntan los archivos.

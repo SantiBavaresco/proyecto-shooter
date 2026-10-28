@@ -277,7 +277,9 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 		p.ricochets += 1
 		stats_ricochets += 1
 		p.damage *= 0.7
-		play_sound_at(SynthSfx.ricochet(), pos, -6.0, rng.randf_range(0.85, 1.2))
+		# (sin zumbido de rebote; se consume el mismo azar que antes para no cambiar la
+		# secuencia de rebotes)
+		rng.randf()
 		return pos + normal * 0.01
 	# ¿Lo atraviesa? (chapa, madera: según el espesor que encuentra en su recorrido)
 	if target == null and space != null and p.penetrations < MAX_PENETRATIONS:

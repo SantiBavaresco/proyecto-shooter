@@ -15,7 +15,7 @@ static var _cache: Dictionary = {}
 const CALIBER_FILES := {
 	".22 LR": "22lr", "9×19": "9x19", "9×18": "9x18", ".45 ACP": "45acp",
 	"5.45×39": "545x39", "5.56×45": "556x45", "7.62×39": "762x39", "7.62×51": "762x51",
-	".308": "762x51", "7.62×54R": "762x54r", "7.65×53": "765x53", "12/70": "12g",
+	".308": "308", "7.62×54R": "762x54r", "7.65×53": "765x53", "12/70": "12g",
 }
 const SHOT_VARIANTS := 3
 
@@ -109,7 +109,7 @@ static func impact(surface: String) -> AudioStreamWAV:
 	match surface:
 		"metal":
 			ring_hz = 1850.0
-			decay = 14.0
+			decay = 28.0
 			smooth = 0.9
 		"wood":
 			ring_hz = 340.0
