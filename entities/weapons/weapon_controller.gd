@@ -678,9 +678,12 @@ func _fire(c: WeaponSlot) -> void:
 
 	view.flash()
 	combat.muzzle_flash_light(muzzle_world)
-	_audio_shot.stream = SynthSfx.gunshot(w.id, w.sfx_body_hz, w.sfx_tail)
-	_audio_shot.volume_db = w.sfx_volume_db
-	_audio_shot.pitch_scale = _rng.randf_range(0.96, 1.04)
+	var shot_stream := SynthSfx.weapon_shot(w)
+	if _audio_shot.stream != shot_stream:
+		_audio_shot.stream = shot_stream
+	# Los archivos vienen normalizados: el volumen de cada arma se aplica encima
+	_audio_shot.volume_db = w.sfx_volume_db - 2.0
+	_audio_shot.pitch_scale = _rng.randf_range(0.98, 1.02)
 	_audio_shot.play()
 	if w.bolt_action:
 		if _rng.randf() < risk["stovepipe"]:

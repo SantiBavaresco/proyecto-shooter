@@ -31,6 +31,16 @@ const AK_GRIP_AXIS := Vector3(0.0, -0.058, 0.015)
 const AK_GRIP_R := 0.012
 const AK_FOREND := Vector3(0.0, 0.012, -0.245)
 const AK_FOREND_R := 0.022
+## Índice derecho: cuánto se cierra hacia la pose del mayor para apoyarse en la cola
+## del disparador (en el modelo está estirado, fuera del guardamanos del gatillo).
+const INDEX_CURL := 0.45
+## Ajuste de la toma derecha sobre la empuñadura (a lo largo de ella y en el arma).
+const GRIP_DROP := 0.03
+## Inclinación máxima de la mano respecto de la vertical (grados).
+const GRIP_MAX_TILT := 38.0
+const GRIP_SHIFT := Vector3(0.0, 0.0, 0.0)
+## Dónde apoya la yema respecto de la cola del disparador (marco del arma).
+const TRIGGER_PAD := Vector3(0.0, -0.002, 0.004)
 ## Hacia dónde cae cada codo (espacio de la cámara): abajo y afuera.
 const POLE := {1: Vector3(0.7, -1.0, 0.1), -1: Vector3(-0.7, -1.0, 0.05)}
 ## Segundos para pasar de una toma a otra (empuñadura → manija, etc.).
@@ -42,6 +52,15 @@ var _chain := {}  # lado → [brazo, antebrazo, mano]
 var _idle := {}  # hueso → pose local de la animación quieta
 var _rel_grip: Transform3D
 var _rel_forend: Transform3D
+## Yema del índice derecho en el espacio del hueso de la mano.
+var _tip_local: Vector3
+## Yema del índice en el espacio de su primera falange.
+var _tip_i1: Vector3
+var _index1: int = -1
+## Base del índice en el espacio del hueso de la mano.
+var _i1_local: Vector3
+## Cola del disparador del arma actual (espacio de este nodo), o null.
+var _trigger_at: Variant = null
 var _len := {}  # lado → [brazo, antebrazo]
 var _idle_g := {}  # lado → [hombro, codo, muñeca, base brazo, base antebrazo]
 var _src := {}
@@ -71,6 +90,7 @@ func _ready() -> void:
 	ap.advance(0.0)
 	ap.active = false
 	sk.force_update_all_bone_transforms()
+	_curl_index()
 	for b in sk.get_bone_count():
 		_idle[b] = sk.get_bone_pose(b)
 	for side: int in [1, -1]:
@@ -93,7 +113,31 @@ func _ready() -> void:
 	var gi := gun.affine_inverse()
 	_rel_grip = _grip_frame(AK_GRIP_TOP, AK_GRIP_AXIS.normalized(), 0.0).affine_inverse() * gi * _g(_chain[1][2])
 	_rel_forend = Transform3D(Basis.IDENTITY, AK_FOREND).affine_inverse() * gi * _g(_chain[-1][2])
+	var i2 := _bone("RightHandIndex2_")
+	var i3 := _bone("RightHandIndex3_")
+	if i2 >= 0 and i3 >= 0:
+		# Yema: a mitad de la última falange (el modelo no trae hueso de la punta)
+		var g3 := _g(i3)
+		var l3 := _g(i2).origin.distance_to(g3.origin) * 0.8
+		var tip := g3.origin + g3.basis.y.normalized() * l3 * 0.55
+		_tip_local = _g(_chain[1][2]).affine_inverse() * tip
+		_index1 = _bone("RightHandIndex1_")
+		_tip_i1 = _g(_index1).affine_inverse() * tip
+		_i1_local = _g(_chain[1][2]).affine_inverse() * _g(_index1).origin
 	ok = true
+
+
+## Cierra el índice derecho hacia la pose del mayor (sin tocar el resto de la mano).
+func _curl_index() -> void:
+	for j in 3:
+		var bi := _bone("RightHandIndex%d_" % (j + 1))
+		var bm := _bone("RightHandMiddle%d_" % (j + 1))
+		if bi < 0 or bm < 0:
+			continue
+		var qi := sk.get_bone_pose_rotation(bi)
+		var qm := sk.get_bone_pose_rotation(bm)
+		sk.set_bone_pose_rotation(bi, qi.slerp(qm, INDEX_CURL if j > 0 else INDEX_CURL * 0.6))
+	sk.force_update_all_bone_transforms()
 
 
 func _bone(part: String) -> int:
@@ -142,6 +186,11 @@ func update(model: Node3D, delta: float) -> void:
 		if src == null:
 			continue
 		var tgt := global_transform.affine_inverse() * src.global_transform * _grip_of(src)
+		if side > 0:
+			_trigger_at = null
+			if src.has_meta("trigger") and String(src.get_meta("kind", "")) == "grip":
+				_trigger_at = global_transform.affine_inverse() * src.global_transform \
+					* ((src.get_meta("trigger") as Vector3) + TRIGGER_PAD)
 		if _src.get(side) != src:
 			if _src.has(side) and _last.has(side):
 				_from[side] = _last[side]
@@ -155,6 +204,8 @@ func update(model: Node3D, delta: float) -> void:
 				_blend_t.erase(side)
 		_last[side] = tgt
 		_solve(side, tgt)
+		if side > 0:
+			_aim_index()
 
 
 ## Mano procedural que manda en cada lado (la visible; si no hay, la de reposo, que
@@ -179,12 +230,26 @@ func _grip_of(src: Node3D) -> Transform3D:
 	match String(src.get_meta("kind", "")):
 		"grip":
 			var a: Vector3 = src.get_meta("grip_axis")
-			var dx := float(src.get_meta("grip_r")) - AK_GRIP_R
-			var f := _grip_frame(src.get_meta("grip_top"), a, dx)
-			if bool(src.get_meta("pistol", false)):
-				# La corredera es baja: la mano baja por la empuñadura para no taparla
-				f.origin += a * 0.024 + Vector3(0.006, 0, 0)
-			return f * _rel_grip
+			# Culatas de garganta (SKS, Mauser, escopetas): la empuñadura casi acostada;
+			# la mano no se acuesta tanto
+			var tilt := a.angle_to(Vector3.DOWN)
+			# (cuánto más acostada que el tope: la mano sube para abrazar la garganta)
+			var flat := clampf((tilt - deg_to_rad(GRIP_MAX_TILT)) / deg_to_rad(30.0), 0.0, 1.0)
+			if tilt > deg_to_rad(GRIP_MAX_TILT):
+				a = Vector3.DOWN.slerp(a, deg_to_rad(GRIP_MAX_TILT) / tilt).normalized()
+			var dx := (float(src.get_meta("grip_r")) - AK_GRIP_R) * 1.5
+			var g := _grip_frame(src.get_meta("grip_top"), a, dx) * _rel_grip
+			# La mano abraza la empuñadura (más abajo que en la medición del modelo)
+			g.origin += a * GRIP_DROP * (1.0 - flat * 0.6) + GRIP_SHIFT + Vector3(0, 0.016 * flat, 0)
+			if src.has_meta("trigger") and _index1 >= 0:
+				# Si el índice no llega a la cola del disparador, la mano se acerca
+				var tr: Vector3 = (src.get_meta("trigger") as Vector3) + TRIGGER_PAD
+				var i1 := g * _i1_local
+				var reach := _tip_i1.length() * 0.8
+				var dv := tr - i1
+				if dv.length() > reach:
+					g.origin += dv.normalized() * (dv.length() - reach)
+			return g
 		"forend":
 			var c: Vector3 = src.get_meta("palm", z)
 			var r := _rel_forend
@@ -258,3 +323,25 @@ static func _frame(v: Vector3, n: Vector3) -> Basis:
 	var y := v.normalized()
 	var x := (n - y * n.dot(y)).normalized()
 	return Basis(x, y, x.cross(y))
+
+
+## Índice derecho: gira la primera falange para que la yema caiga en la cola del
+## disparador (con la mano en otra toma, queda como está).
+func _aim_index() -> void:
+	if _index1 < 0:
+		return
+	sk.set_bone_pose(_index1, _idle[_index1])
+	if _trigger_at == null:
+		return
+	var g1 := _g(_index1)
+	var tip := g1 * _tip_i1
+	var from := (tip - g1.origin).normalized()
+	var to := ((_trigger_at as Vector3) - g1.origin).normalized()
+	if from.dot(to) < cos(deg_to_rad(60.0)):
+		return
+	var axis := from.cross(to)
+	if axis.length() < 1e-5:
+		return
+	var rot := Basis(axis.normalized(), from.angle_to(to))
+	var to_skel := sk.global_transform.affine_inverse() * global_transform
+	sk.set_bone_global_pose(_index1, to_skel * Transform3D(rot * g1.basis, g1.origin))

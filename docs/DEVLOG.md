@@ -232,3 +232,13 @@
 - Los dedos no se cierran distinto según lo que agarran (misma pose de agarre en todas las tomas).
 - La mano con el cargador lo lleva al costado de la palma, no entre los dedos.
 - Los brazos son de piel con buzo gris para todas las armas.
+
+## F1.20 — Mano derecha, mira del AR-74K y disparos por calibre (2026-10-28)
+
+### Funciona
+- **Mano derecha**: el índice se cierra y se apoya en la cola del disparador (en el modelo estaba estirado por arriba del guardamanos del gatillo). La mano baja y abraza la empuñadura en vez del cajón; si el índice no llega al gatillo, la mano se acerca. En culatas de garganta (SKS, Mauser, escopetas, cerrojos) la mano no se acuesta del todo y sube a abrazar la garganta. Más corrida a la derecha en empuñaduras gruesas, para que el pulgar no las atraviese.
+- Pistolas: se sacó el corrimiento a la derecha que tenía la mano.
+- **Mira del AR-74K**: la línea de mira pasa por el alza y la punta del guion (el alza es más alta que el guion: antes tapaba el punto de impacto). La bala va a la punta del guion.
+- **Disparos por calibre**: 11 calibres (.22 LR, 9×18, 9×19, .45 ACP, 5,45×39, 5,56×45, 7,62×39, 7,62×51/.308, 7,62×54R, 7,65×53, 12/70), 3 variantes cada uno, generados con `tools/audio/gen_gunshots.py`: onda de presión, ráfaga de gases, cuerpo grave, crack supersónico en los de fusil, saturación suave, rebote en el suelo, cola de reverberación que se oscurece y ecos lejanos. Cada disparo elige una variante con un poco de variación de tono y volumen; las colas se superponen al tirar en ráfaga.
+- `tests/screenshots/hands_probe.gd`: vistas laterales de la toma de las manos (calibración).
+- 97 tests (el de la armería ahora verifica que cada arma tenga el sonido de su calibre).

@@ -177,6 +177,11 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 1. Recorré la armería con varias armas (pistola, AK, escopeta, cerrojo): todas usan ahora los brazos del AR-74K. Mirá las manos en cadera, apuntando y en cada recarga (sacar y poner cargador, montar, cartuchos en la escopeta, cerrojo).
 2. Con la AR-74K parate en ESTRÉS ALTO o EXTREMO y recargá varias veces: a veces el cargador pega en el brocal y reintenta (golpe y sonido), hasta 2 veces en alto y 3 en extremo.
 
+## F1.20 — Manos, mira y sonido
+1. Con varias armas (AK, pistola, SKS, cerrojo) mirá la mano derecha: el índice en el gatillo y la mano sobre la empuñadura, sin atravesar el arma.
+2. AR-74K apuntando: el blanco se ve arriba del guion y la bala pega en la punta del guion.
+3. Disparos: probá una de cada calibre (pistola, AK, fusil 7,62, escopeta, .22). Ráfagas: las colas se encadenan.
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

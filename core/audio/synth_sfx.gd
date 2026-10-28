@@ -10,6 +10,37 @@ const RATE := 22050
 static var _cache: Dictionary = {}
 
 
+## Archivo de disparo por calibre (assets/audio/weapons, generados con
+## tools/audio/gen_gunshots.py).
+const CALIBER_FILES := {
+	".22 LR": "22lr", "9×19": "9x19", "9×18": "9x18", ".45 ACP": "45acp",
+	"5.45×39": "545x39", "5.56×45": "556x45", "7.62×39": "762x39", "7.62×51": "762x51",
+	".308": "762x51", "7.62×54R": "762x54r", "7.65×53": "765x53", "12/70": "12g",
+}
+const SHOT_VARIANTS := 3
+
+
+## Disparo de un arma: el sonido de su calibre (3 variantes al azar); si no hay
+## archivo para ese calibre, el sintético de antes.
+static func weapon_shot(w: WeaponData) -> AudioStream:
+	var key := String(CALIBER_FILES.get(w.caliber, ""))
+	var ck := "file_%s" % key
+	if key != "":
+		if _cache.has(ck):
+			return _cache[ck]
+		var r := AudioStreamRandomizer.new()
+		r.random_pitch = 1.04
+		r.random_volume_offset_db = 1.0
+		for i in SHOT_VARIANTS:
+			var path := "res://assets/audio/weapons/shot_%s_%d.wav" % [key, i + 1]
+			if ResourceLoader.exists(path):
+				r.add_stream(-1, load(path) as AudioStream)
+		if r.streams_count > 0:
+			_cache[ck] = r
+			return r
+	return gunshot(w.id, w.sfx_body_hz, w.sfx_tail)
+
+
 ## Disparo: golpe grave + ruido con caída exponencial y una cola.
 static func gunshot(key: String, body_hz: float, tail: float) -> AudioStreamWAV:
 	var ck := "shot_%s" % key

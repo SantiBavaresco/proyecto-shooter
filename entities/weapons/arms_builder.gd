@@ -154,6 +154,7 @@ static func _right_hand(root: Node3D, p: Dictionary, pistol: bool) -> void:
 	g.set_meta("grip_axis", a)
 	g.set_meta("grip_r", r)
 	g.set_meta("pistol", pistol)
+	g.set_meta("trigger", trig)
 
 
 # --- Mano izquierda: guardamanos --------------------------------------------

@@ -57,6 +57,8 @@ func test_catalog_has_26_valid_weapons() -> void:
 		assert_eq(d.id, id)
 		assert_true(tr(d.name_key) != d.name_key, "%s tiene nombre" % id)
 		assert_true(d.caliber != "", "%s tiene calibre" % id)
+		assert_true(SynthSfx.CALIBER_FILES.has(d.caliber), "%s: hay disparo para su calibre" % id)
+		assert_true(SynthSfx.weapon_shot(d) is AudioStreamRandomizer, "%s: usa el archivo del calibre" % id)
 		assert_lt(d.spread_ads, d.spread_hip, "%s: apuntar es más preciso" % id)
 		assert_true(d.reload_type in ["magazine", "break", "rounds"], "%s: tipo de recarga válido" % id)
 		if d.sight == "scope":

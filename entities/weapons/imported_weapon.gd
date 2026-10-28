@@ -11,6 +11,8 @@ extends RefCounted
 ##  - scene: ruta del .glb. gun_bone: hueso del arma (su +Y apunta adelante, −Z arriba).
 ##  - sight / muzzle / ejection: puntos en el espacio de ese hueso.
 ##  - eye: dónde estaría el ojo en el modelo, para la pose de cadera.
+##  - sight_pitch_deg: inclinación de la línea alza-guion respecto del caño (la mira
+##    va sobre la punta del guion; si el alza es más alta, la línea baja un poco).
 ##  - anims: nombres de las animaciones {draw, idle, shoot, reload, reload_empty, holster}
 ##    y rack_from: segundo de reload_empty desde el que monta (para destrabar).
 
@@ -37,7 +39,11 @@ static func build(data: WeaponData) -> Node3D:
 	for n: String in ["sight", "muzzle", "ejection"]:
 		var mk := Marker3D.new()
 		mk.name = "Gun_" + n
-		mk.transform = Transform3D(MARKER_BASIS, _v(p.get(n, [0, 0, 0])))
+		var b := MARKER_BASIS
+		if n == "sight":
+			# Línea de mira: del alza al guion (apenas baja respecto del caño)
+			b = b * Basis(Vector3.RIGHT, deg_to_rad(float(p.get("sight_pitch_deg", 0.0))))
+		mk.transform = Transform3D(b, _v(p.get(n, [0, 0, 0])))
 		mount.add_child(mk)
 		# Copia en la raíz (la vista la actualiza cada cuadro): el resto del juego
 		# sigue leyendo "Sight", "Muzzle" y "Ejection" como en los modelos por código
