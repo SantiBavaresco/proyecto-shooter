@@ -6,8 +6,7 @@ Síntesis "física" aproximada, sin muestras externas:
   3. Cuerpo: ruido grave + tono que cae (el "boom" que se siente en el pecho).
   4. Crack supersónico (calibres de fusil): ruido agudo de menos de un milisegundo.
   5. Saturación suave (como un micrófono que se pasa con un disparo).
-  6. Retumbe grave que rueda (fusiles largos, más en los de cerrojo) y una cola de
-     ambiente oscura y corta (sin ecos: repetían el golpe y sonaba a pandereta).
+  6. Rebote en el suelo, cola de reverberación que se oscurece y ecos lejanos.
 Cada calibre sale con 3 variantes (semillas y parámetros apenas distintos).
 
 Uso: python3 tools/audio/gen_gunshots.py  (escribe en assets/audio/weapons/)
@@ -22,22 +21,19 @@ from scipy.signal import butter, sosfilt
 SR = 44100
 OUT = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "audio", "weapons")
 
-# energía (0..1), cuerpo (Hz), crack supersónico (0..1), brillo (Hz, techo del estampido),
-# pop (0..1, golpe seco de medios de las pistolas), retumbe (s, la cola grave que rueda
-# a lo lejos: fusiles largos y más los de cerrojo), cola (s, ambiente oscuro)
+# energía (0..1), cuerpo (Hz), crack supersónico (0..1), brillo (Hz), cola (s), golpe (0..1)
 CALIBERS = {
-    "22lr":    dict(energy=0.2, body=260.0, crack=0.15, bright=3800.0, pop=1.0, roll=0.0, tail=0.35),
-    "9x19":    dict(energy=0.5, body=150.0, crack=0.1, bright=4200.0, pop=1.0, roll=0.06, tail=0.55),
-    "9x18":    dict(energy=0.45, body=160.0, crack=0.08, bright=4000.0, pop=1.0, roll=0.05, tail=0.5),
-    "45acp":   dict(energy=0.6, body=110.0, crack=0.0, bright=3400.0, pop=0.9, roll=0.08, tail=0.6),
-    "545x39":  dict(energy=0.75, body=118.0, crack=0.8, bright=7000.0, pop=0.4, roll=0.22, tail=0.9),
-    "556x45":  dict(energy=0.78, body=122.0, crack=0.85, bright=7500.0, pop=0.4, roll=0.22, tail=0.9),
-    "762x39":  dict(energy=0.85, body=95.0, crack=0.7, bright=6000.0, pop=0.5, roll=0.3, tail=1.0),
-    "762x51":  dict(energy=1.0, body=78.0, crack=0.9, bright=6500.0, pop=0.5, roll=0.45, tail=1.2),
-    "308":     dict(energy=1.0, body=74.0, crack=0.9, bright=6500.0, pop=0.5, roll=0.75, tail=1.5),
-    "762x54r": dict(energy=1.0, body=72.0, crack=0.9, bright=6300.0, pop=0.5, roll=0.6, tail=1.4),
-    "765x53":  dict(energy=1.0, body=72.0, crack=0.9, bright=6300.0, pop=0.5, roll=0.8, tail=1.6),
-    "12g":     dict(energy=1.0, body=58.0, crack=0.0, bright=3000.0, pop=0.6, roll=0.5, tail=1.3),
+    "22lr":    dict(energy=0.18, body=230.0, crack=0.35, bright=7000.0, tail=0.7, punch=0.5),
+    "9x19":    dict(energy=0.48, body=140.0, crack=0.25, bright=5200.0, tail=1.1, punch=0.8),
+    "9x18":    dict(energy=0.42, body=150.0, crack=0.2, bright=5000.0, tail=1.0, punch=0.8),
+    "45acp":   dict(energy=0.55, body=105.0, crack=0.08, bright=3600.0, tail=1.1, punch=1.0),
+    "545x39":  dict(energy=0.75, body=118.0, crack=1.0, bright=8000.0, tail=1.5, punch=0.8),
+    "556x45":  dict(energy=0.78, body=122.0, crack=1.0, bright=8500.0, tail=1.5, punch=0.8),
+    "762x39":  dict(energy=0.85, body=92.0, crack=0.8, bright=6200.0, tail=1.6, punch=0.95),
+    "762x51":  dict(energy=1.0, body=76.0, crack=1.0, bright=6800.0, tail=1.9, punch=1.0),
+    "762x54r": dict(energy=1.0, body=72.0, crack=1.0, bright=6500.0, tail=1.9, punch=1.0),
+    "765x53":  dict(energy=0.98, body=74.0, crack=1.0, bright=6500.0, tail=1.9, punch=1.0),
+    "12g":     dict(energy=1.0, body=58.0, crack=0.0, bright=3000.0, tail=2.1, punch=1.15),
 }
 VARIANTS = 3
 
@@ -55,55 +51,59 @@ def hp(x, f, order=2):
     return sosfilt(butter(order, f, btype="high", fs=SR, output="sos"), x)
 
 
+def delay(x, sec, gain):
+    d = int(sec * SR)
+    y = np.zeros_like(x)
+    if d < len(x):
+        y[d:] = x[: len(x) - d] * gain
+    return y
+
+
 def shot(p, rng):
     e = p["energy"]
     tail = p["tail"]
-    roll = p["roll"]
-    n = int(SR * (max(tail, roll * 3.0) + 0.3))
+    n = int(SR * (tail + 0.45))
     t = np.arange(n) / SR
-    # 1) Onda de presión (Friedlander): el golpe principal
-    T = 0.0006 + 0.0014 * e
+    # 1) Onda de presión (Friedlander): más larga cuanto más energía
+    T = 0.0005 + 0.0013 * e
     fr = (1.0 - t / T) * np.exp(-1.6 * t / T)
     fr[t > 14 * T] = 0.0
-    blast = lp(fr, p["bright"], 2) * 1.4
-    # 2) Gases: ruido corto, sin agudos sueltos (eso sonaba a pandereta)
-    tau_b = 0.003 + 0.008 * e
-    env_b = (1.0 - np.exp(-t / 0.0002)) * np.exp(-t / tau_b)
-    burst = bp(rng.standard_normal(n), 150.0, p["bright"], 3) * env_b * 1.1
-    # 3) Pop: golpe seco de medios (300-1800 Hz), lo que da "cuerpo" a una pistola
-    env_p = (1.0 - np.exp(-t / 0.0003)) * np.exp(-t / 0.006)
-    pop = bp(rng.standard_normal(n), 300.0, 1800.0, 2) * env_p * 2.0 * p["pop"]
-    # 4) Cuerpo grave: ruido grave + tono que cae
-    tau_c = 0.018 + 0.04 * e
-    env_c = (1.0 - np.exp(-t / 0.0008)) * np.exp(-t / tau_c)
-    body_noise = lp(rng.standard_normal(n), p["body"] * 3.0, 4) * env_c * 2.4
+    blast = lp(fr, 9000.0) * 1.2
+    # 2) Ráfaga de gases de banda ancha (muy corta)
+    tau_b = 0.004 + 0.012 * e
+    env_b = (1.0 - np.exp(-t / 0.00015)) * np.exp(-t / tau_b)
+    burst = bp(rng.standard_normal(n), 120.0, p["bright"]) * env_b * 1.6
+    # 3) Cuerpo grave: ruido grave + tono que cae
+    tau_c = 0.015 + 0.04 * e
+    env_c = (1.0 - np.exp(-t / 0.0006)) * np.exp(-t / tau_c)
+    body_noise = lp(rng.standard_normal(n), p["body"] * 3.5, 4) * env_c * 2.4
     f = p["body"] * (0.65 + 0.35 * np.exp(-t / 0.04))
     phase = 2 * np.pi * np.cumsum(f) / SR
-    body_tone = np.sin(phase) * np.exp(-t / (0.012 + 0.035 * e)) * 0.55 * e
-    # 5) Crack supersónico (muy corto)
-    crack = hp(rng.standard_normal(n), 3000.0, 2) * np.exp(-t / 0.0005) * 1.6 * p["crack"]
-    dry = blast + burst + pop + body_noise + body_tone + crack
+    body_tone = np.sin(phase) * np.exp(-t / (0.02 + 0.03 * e)) * 0.6 * p["punch"]
+    # 4) Crack supersónico
+    crack = hp(rng.standard_normal(n), 2500.0, 2) * np.exp(-t / 0.0007) * 2.2 * p["crack"]
+    dry = blast + burst + body_noise * p["punch"] + body_tone + crack
     dry /= np.max(np.abs(dry)) + 1e-9
-    drive = 1.4 + 1.4 * e
+    # 5) Saturación suave: más energía, más "aplastado"
+    drive = 1.4 + 1.6 * e
     dry = np.tanh(dry * drive) / np.tanh(drive)
+    # 6) Rebote en el suelo (pocos ms) y ambiente
+    ground = lp(delay(dry, 0.0035 + rng.uniform(0, 0.0015), 0.45), 2500.0)
+    near = dry + ground
     out = []
     for ch in range(2):
         r = np.random.default_rng(rng.integers(1 << 30))
-        y = dry.copy()
-        # 6) Retumbe: grave que rueda (sube un poco y se apaga lento, con vaivén)
-        if roll > 0:
-            wob = 1.0 + 0.35 * lp(r.standard_normal(n), 6.0, 2) / 0.05
-            wob = np.clip(wob, 0.3, 1.8)
-            env_r = (1.0 - np.exp(-t / 0.03)) * np.exp(-t / roll)
-            rum = lp(r.standard_normal(n), 220.0, 4) * env_r * wob
-            rum = rum / (np.max(np.abs(rum)) + 1e-9) * (0.16 + 0.12 * e)
-            y += rum
-        # 7) Ambiente: cola oscura y corta, sin ecos que repitan el golpe
-        onset = 1.0 - np.exp(-np.maximum(t - 0.008, 0) / 0.025)
-        dark = lp(r.standard_normal(n), 520.0, 2) * np.exp(-t * 6.9 / tail) * onset
-        y += dark * (0.035 + 0.03 * e)
-        out.append(y)
+        # Cola: dos bandas, la aguda muere antes (el sonido se oscurece al apagarse)
+        onset = 1.0 - np.exp(-np.maximum(t - 0.006, 0) / 0.02)
+        dark = lp(r.standard_normal(n), 700.0, 2) * np.exp(-t * 6.9 / tail)
+        brite = bp(r.standard_normal(n), 900.0, 5000.0) * np.exp(-t * 6.9 / (tail * 0.35))
+        rev = (dark * 1.5 + brite * 0.5) * onset * (0.09 + 0.07 * e)
+        # Ecos de edificios / árboles lejanos
+        e1 = lp(delay(near, rng.uniform(0.16, 0.24) + ch * 0.011, 0.16), 1600.0)
+        e2 = lp(delay(near, rng.uniform(0.36, 0.5) - ch * 0.017, 0.07), 1000.0)
+        out.append(near + rev + e1 + e2)
     y = np.stack(out, axis=1)
+    # Fundido final y normalización a −1 dBFS
     fade = int(0.08 * SR)
     y[-fade:] *= np.linspace(1.0, 0.0, fade)[:, None]
     y /= np.max(np.abs(y)) + 1e-9

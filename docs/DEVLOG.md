@@ -255,3 +255,6 @@
 
 ### Pendiente
 - Sonidos grabados reales: el entorno no puede descargar de opengameart/freesound. La biblioteca CC0 "The Free Firearm Sound Library" es candidata si se adjuntan los archivos.
+
+## F1.22 — Vuelven los disparos de la F1.20 (2026-10-28)
+- Los disparos rehechos en la F1.21 no gustaron: vuelven los de la F1.20 (`gen_gunshots.py` y los WAV de esa versión). Se mantienen sin zumbido de rebote y los fogonazos variados.
