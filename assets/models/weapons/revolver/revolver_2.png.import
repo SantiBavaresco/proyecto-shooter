@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://calg2iti3ww8h"
-path="res://.godot/imported/revolver_2.png-aef3c20eecf5aead320e7ca58861d42d.ctex"
+path.s3tc="res://.godot/imported/revolver_2.png-aef3c20eecf5aead320e7ca58861d42d.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "ce409f895986c144a525670792c410b2"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/revolver/revolver_2.png"
-dest_files=["res://.godot/imported/revolver_2.png-aef3c20eecf5aead320e7ca58861d42d.ctex"]
+dest_files=["res://.godot/imported/revolver_2.png-aef3c20eecf5aead320e7ca58861d42d.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

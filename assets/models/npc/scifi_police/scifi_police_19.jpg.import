@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bco5jrl31ek81"
-path="res://.godot/imported/scifi_police_19.jpg-ab9b4c283f8e5f129bb344b0c8ceebc4.ctex"
+path.s3tc="res://.godot/imported/scifi_police_19.jpg-ab9b4c283f8e5f129bb344b0c8ceebc4.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "63f0acf5d716a1ff298d4f8f70b57376"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/npc/scifi_police/scifi_police_19.jpg"
-dest_files=["res://.godot/imported/scifi_police_19.jpg-ab9b4c283f8e5f129bb344b0c8ceebc4.ctex"]
+dest_files=["res://.godot/imported/scifi_police_19.jpg-ab9b4c283f8e5f129bb344b0c8ceebc4.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

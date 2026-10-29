@@ -277,3 +277,8 @@
 - FAL ("Parafal"): 703 triángulos y textura de 256 px, se ve peor que el FMR por código.
 - PMC ("BPRE Rifleman"): el archivo viene roto (el esqueleto no coincide con la malla; también en los datos originales).
 - El SWAT "Special Remaster" tiene el visor nocturno pegado a la malla del casco: no se puede sacar sin editar el modelo.
+
+## F1.24 — Vuelven de verdad los disparos de la F1.20 (2026-10-29)
+- Bug: al volver a los WAV de la F1.20 (F1.22) se sacaron de git como punteros de Git LFS (texto de 130 bytes) porque el repositorio no tenía los filtros de LFS instalados; el juego no los podía cargar y usaba el disparo sintético viejo. Se restauraron los archivos reales (iguales al demo de la F1.20, comprobado muestra por muestra) y se instaló LFS en el repo (`git lfs install --local`).
+- El test de la armería ahora verifica que cada variante de disparo sea audio de verdad (no un puntero).
+- Texturas de los modelos .glb comprimidas para la placa de video (S3TC): antes iban sin comprimir (≈4 MB de memoria de video cada una de 1024 px).

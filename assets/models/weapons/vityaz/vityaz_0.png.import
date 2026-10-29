@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dot288oovi04q"
-path="res://.godot/imported/vityaz_0.png-084489e393acd3a17ae47d18732701d9.ctex"
+path.s3tc="res://.godot/imported/vityaz_0.png-084489e393acd3a17ae47d18732701d9.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d4a1b0120646c3ddcc9b9a6010e840e1"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/vityaz/vityaz_0.png"
-dest_files=["res://.godot/imported/vityaz_0.png-084489e393acd3a17ae47d18732701d9.ctex"]
+dest_files=["res://.godot/imported/vityaz_0.png-084489e393acd3a17ae47d18732701d9.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

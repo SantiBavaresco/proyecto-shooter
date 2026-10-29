@@ -58,7 +58,15 @@ func test_catalog_has_26_valid_weapons() -> void:
 		assert_true(tr(d.name_key) != d.name_key, "%s tiene nombre" % id)
 		assert_true(d.caliber != "", "%s tiene calibre" % id)
 		assert_true(SynthSfx.CALIBER_FILES.has(d.caliber), "%s: hay disparo para su calibre" % id)
-		assert_true(SynthSfx.weapon_shot(d) is AudioStreamRandomizer, "%s: usa el archivo del calibre" % id)
+		var shot := SynthSfx.weapon_shot(d)
+		assert_true(shot is AudioStreamRandomizer, "%s: usa el archivo del calibre" % id)
+		if shot is AudioStreamRandomizer:
+			var r := shot as AudioStreamRandomizer
+			assert_eq(r.streams_count, 3, "%s: 3 variantes" % id)
+			for i in r.streams_count:
+				var st := r.get_stream(i)
+				# (un archivo LFS sin bajar es un texto de 130 bytes: no carga como audio)
+				assert_true(st != null and st.get_length() > 0.2, "%s: variante %d es audio de verdad" % [id, i])
 		assert_lt(d.spread_ads, d.spread_hip, "%s: apuntar es más preciso" % id)
 		assert_true(d.reload_type in ["magazine", "break", "rounds", "cylinder"], "%s: tipo de recarga válido" % id)
 		if d.sight == "scope":

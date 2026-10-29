@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dcu3gl2rfwqlj"
-path="res://.godot/imported/sten_0.png-fc97ce10d1a1aa03e563353ab5647ede.ctex"
+path.s3tc="res://.godot/imported/sten_0.png-fc97ce10d1a1aa03e563353ab5647ede.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "90647988d9eb28aec675aaf63a052362"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/sten/sten_0.png"
-dest_files=["res://.godot/imported/sten_0.png-fc97ce10d1a1aa03e563353ab5647ede.ctex"]
+dest_files=["res://.godot/imported/sten_0.png-fc97ce10d1a1aa03e563353ab5647ede.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

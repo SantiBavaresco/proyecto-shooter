@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://jnven3gvm3fj"
-path="res://.godot/imported/andrews_4.png-346fd9e0c0c0e7372ea3e3236e6f6d1e.ctex"
+path.s3tc="res://.godot/imported/andrews_4.png-346fd9e0c0c0e7372ea3e3236e6f6d1e.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "368fea632f14f8e6b3468ac556b622c4"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/andrews/andrews_4.png"
-dest_files=["res://.godot/imported/andrews_4.png-346fd9e0c0c0e7372ea3e3236e6f6d1e.ctex"]
+dest_files=["res://.godot/imported/andrews_4.png-346fd9e0c0c0e7372ea3e3236e6f6d1e.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

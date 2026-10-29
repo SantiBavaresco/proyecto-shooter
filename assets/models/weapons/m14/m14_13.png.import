@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://brhebj4ev7cdd"
-path="res://.godot/imported/m14_13.png-0b00ea60d193d1ed1b465be91e2fc801.ctex"
+path.s3tc="res://.godot/imported/m14_13.png-0b00ea60d193d1ed1b465be91e2fc801.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7711aaadcf66c252a85d51c64767f12a"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/m14/m14_13.png"
-dest_files=["res://.godot/imported/m14_13.png-0b00ea60d193d1ed1b465be91e2fc801.ctex"]
+dest_files=["res://.godot/imported/m14_13.png-0b00ea60d193d1ed1b465be91e2fc801.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

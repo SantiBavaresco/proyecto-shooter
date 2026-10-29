@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://rlqglv76423t"
-path="res://.godot/imported/fsb_24.png-b43ca7f889128e33d27e2095e97d297c.ctex"
+path.s3tc="res://.godot/imported/fsb_24.png-b43ca7f889128e33d27e2095e97d297c.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "e6564a3d696fd1980de6a289c9220401"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/npc/fsb/fsb_24.png"
-dest_files=["res://.godot/imported/fsb_24.png-b43ca7f889128e33d27e2095e97d297c.ctex"]
+dest_files=["res://.godot/imported/fsb_24.png-b43ca7f889128e33d27e2095e97d297c.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

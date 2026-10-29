@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bjxl7pqrs4ko8"
-path="res://.godot/imported/crates_barrels_2.png-63463f8f30217eb97045fb5889d07197.ctex"
+path.s3tc="res://.godot/imported/crates_barrels_2.png-63463f8f30217eb97045fb5889d07197.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "9a89e4a892f4872562c8f05eea8a389e"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/props/crates_barrels/crates_barrels_2.png"
-dest_files=["res://.godot/imported/crates_barrels_2.png-63463f8f30217eb97045fb5889d07197.ctex"]
+dest_files=["res://.godot/imported/crates_barrels_2.png-63463f8f30217eb97045fb5889d07197.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

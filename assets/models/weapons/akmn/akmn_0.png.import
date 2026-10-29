@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b46nwic6ug5cb"
-path="res://.godot/imported/akmn_0.png-3453d1e98c785e84f4441d12a1fda5ff.ctex"
+path.s3tc="res://.godot/imported/akmn_0.png-3453d1e98c785e84f4441d12a1fda5ff.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "7bc72967b5650444ee8bdd46b2599ca5"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/weapons/akmn/akmn_0.png"
-dest_files=["res://.godot/imported/akmn_0.png-3453d1e98c785e84f4441d12a1fda5ff.ctex"]
+dest_files=["res://.godot/imported/akmn_0.png-3453d1e98c785e84f4441d12a1fda5ff.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0

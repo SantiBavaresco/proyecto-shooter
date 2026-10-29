@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cyjsc3xp62dap"
-path="res://.godot/imported/swat_special_7.png-5589dde09e4791f8f7175917383c969c.ctex"
+path.s3tc="res://.godot/imported/swat_special_7.png-5589dde09e4791f8f7175917383c969c.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "f0dd390a9d39a1d98b89995dc512bd9e"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/models/npc/swat_special/swat_special_7.png"
-dest_files=["res://.godot/imported/swat_special_7.png-5589dde09e4791f8f7175917383c969c.ctex"]
+dest_files=["res://.godot/imported/swat_special_7.png-5589dde09e4791f8f7175917383c969c.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
