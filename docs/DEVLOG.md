@@ -258,3 +258,22 @@
 
 ## F1.22 — Vuelven los disparos de la F1.20 (2026-10-28)
 - Los disparos rehechos en la F1.21 no gustaron: vuelven los de la F1.20 (`gen_gunshots.py` y los WAV de esa versión). Se mantienen sin zumbido de rebote y los fogonazos variados.
+
+## F1.23 — Modelos .glb de armas, personajes de prueba y props (2026-10-29)
+
+### Funciona
+- **Armas con modelo .glb** (`entities/weapons/glb_weapon.gd`): el modelo reemplaza la geometría por código pero conserva todo lo demás (piezas Mag/Charging/Bolt/Crane, marcadores, manos con esqueleto, recargas, fallas). Las armas que traen huesos por pieza (M14, XM2010) se pasan a mallas fijas por hueso al cargar. Calibración con `tests/screenshots/_calib.gd` (vistas ortográficas con grilla).
+  - Reemplazos: Fusil AR-M (modelo AKMN), Fusil M-14E (modelo M14, con el visor montado sobre el riel).
+  - Nuevas: Fusil AR-47 (AK-47), Subfusil VK-19 (Vityaz, con holográfico), Subfusil ST-2 (STEN, cargador al costado), Subfusil PT-91 (Pleter 91), Subfusil casero AC-9 (Andrews, cargador al costado), Rifle R-700 SR (XM2010, variante del R-700) y Revólver RS-6 .45.
+  - Revólver: recarga propia: el tambor sale a la izquierda, la varilla expulsa las 6 vainas, la mano trae los cartuchos todos juntos y cierra. Con estrés los cartuchos pegan en el borde y reintenta (igual que la escopeta). Si no dispara, se gatilla de nuevo.
+  - Cargadores al costado (STEN, AC-9): la recarga los saca hacia la izquierda.
+  - Armería con 33 armas (6 columnas).
+- **Personajes de prueba** (`world/props/npc_dummy.gd`): FSB, SWAT (3 versiones) y policía sci-fi en fila a 18 m. Zonas por hueso (cabeza con núcleo letal, torso, extremidades), número de daño, y al morir caen tiesos como una tabla hacia donde los empujó el tiro (rebotan apenas contra el piso); a los 4 s se paran. Sin visores nocturnos donde el visor es una pieza aparte (FSB, SWAT).
+- **Cajas y barriles** (.glb) con colisión exacta cerca de la línea de tiro.
+- .22 más agudo (solo se regeneró ese calibre).
+- Las escenas .glb se cargan una vez y quedan en memoria (cada arma o personaje nuevo no relee el disco).
+
+### No se usó
+- FAL ("Parafal"): 703 triángulos y textura de 256 px, se ve peor que el FMR por código.
+- PMC ("BPRE Rifleman"): el archivo viene roto (el esqueleto no coincide con la malla; también en los datos originales).
+- El SWAT "Special Remaster" tiene el visor nocturno pegado a la malla del casco: no se puede sacar sin editar el modelo.

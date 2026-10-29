@@ -23,7 +23,7 @@ OUT = os.path.join(os.path.dirname(__file__), "..", "..", "assets", "audio", "we
 
 # energía (0..1), cuerpo (Hz), crack supersónico (0..1), brillo (Hz), cola (s), golpe (0..1)
 CALIBERS = {
-    "22lr":    dict(energy=0.18, body=230.0, crack=0.35, bright=7000.0, tail=0.7, punch=0.5),
+    "22lr":    dict(energy=0.16, body=420.0, crack=0.6, bright=9500.0, tail=0.45, punch=0.35),
     "9x19":    dict(energy=0.48, body=140.0, crack=0.25, bright=5200.0, tail=1.1, punch=0.8),
     "9x18":    dict(energy=0.42, body=150.0, crack=0.2, bright=5000.0, tail=1.0, punch=0.8),
     "45acp":   dict(energy=0.55, body=105.0, crack=0.08, bright=3600.0, tail=1.1, punch=1.0),
@@ -121,7 +121,10 @@ def write_wav(path, y):
 
 def main():
     os.makedirs(OUT, exist_ok=True)
+    only = sys.argv[1:]  # calibres a regenerar (vacío = todos)
     for key, p in CALIBERS.items():
+        if only and key not in only:
+            continue
         for v in range(VARIANTS):
             rng = np.random.default_rng(1000 + v * 7919 + sum(map(ord, key)))
             q = dict(p)

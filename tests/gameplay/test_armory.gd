@@ -48,7 +48,7 @@ func _equip(id: String) -> WeaponData:
 
 func test_catalog_has_26_valid_weapons() -> void:
 	var cat := _catalog()
-	assert_eq(cat.size(), 26)
+	assert_eq(cat.size(), 33)
 	for id: String in cat:
 		var d := _load(id)
 		assert_true(d != null, "%s carga" % id)
@@ -60,7 +60,7 @@ func test_catalog_has_26_valid_weapons() -> void:
 		assert_true(SynthSfx.CALIBER_FILES.has(d.caliber), "%s: hay disparo para su calibre" % id)
 		assert_true(SynthSfx.weapon_shot(d) is AudioStreamRandomizer, "%s: usa el archivo del calibre" % id)
 		assert_lt(d.spread_ads, d.spread_hip, "%s: apuntar es más preciso" % id)
-		assert_true(d.reload_type in ["magazine", "break", "rounds"], "%s: tipo de recarga válido" % id)
+		assert_true(d.reload_type in ["magazine", "break", "rounds", "cylinder"], "%s: tipo de recarga válido" % id)
 		if d.sight == "scope":
 			assert_gt(d.scope_mag, 1.0, "%s: visor con aumento" % id)
 
@@ -306,3 +306,56 @@ func test_variable_scope_zoom_with_wheel() -> void:
 	await physics_frames(3)
 	assert_near(weapons.scope_mag(weapons.current()), 4.0, 0.01)
 	bot.aim = false
+
+
+# --- Modelos .glb (F1.23) --------------------------------------------------------
+
+func test_glb_models_have_parts_and_hands() -> void:
+	for id: String in _catalog():
+		var d := _load(id)
+		if String(d.model_params.get("shape", "")) != "glb":
+			continue
+		var m := WeaponModelBuilder.build(d)
+		for n in ["Sight", "Muzzle", "Ejection", "HandR"]:
+			assert_true(m.has_node(n), "%s: tiene %s" % [id, n])
+		assert_true((m.get_node("HandR") as Node3D).has_meta("trigger"), "%s: mano con gatillo" % id)
+		if d.reload_type == "magazine":
+			assert_true(m.has_node("Mag"), "%s: cargador aparte" % id)
+			assert_gt(float((m.get_node("Mag") as Node3D).get_child_count()), 0.0, "%s: el cargador tiene malla" % id)
+		if d.sight == "scope":
+			assert_true(m.has_node("ScopeLens"), "%s: ocular del visor" % id)
+		var meshes := m.find_children("*", "MeshInstance3D", true, false)
+		assert_gt(float(meshes.size()), 1.0, "%s: tiene mallas" % id)
+		m.free()
+
+
+func test_revolver_reloads_all_at_once() -> void:
+	var d := await _equip("revolver45")
+	var c := weapons.current()
+	c.mag = 1
+	c.reserve = 20
+	bot.press_reload()
+	await physics_frames(2)
+	assert_eq(int(weapons.state), int(WeaponController.State.RELOADING))
+	var dur := weapons.state_duration
+	await physics_frames(int(dur * 60.0 * 0.5))
+	assert_eq(c.mag, 1, "a mitad de la recarga todavía no entraron")
+	await physics_frames(int(dur * 60.0 * 0.5) + 10)
+	assert_eq(c.mag, d.mag_size, "entran todos juntos")
+	assert_eq(c.reserve, 15)
+
+
+func test_npc_falls_stiff_and_gets_up() -> void:
+	var npc := level.find_child("Npc_fsb", true, false) as NpcDummy
+	assert_true(npc != null, "hay personajes de prueba")
+	var info := HitInfo.new()
+	info.damage = 150.0
+	info.zone = "torso"
+	info.direction = Vector3(0, 0, 1)
+	info.position = npc.global_position + Vector3(0, 1.3, 0)
+	assert_true(npc.apply_hit(info), "muere")
+	await process_frames(90)
+	assert_gt(npc._ang, 1.4, "queda en el piso (como una tabla)")
+	await get_tree().create_timer(NpcDummy.RESPAWN_TIME + 1.5).timeout
+	assert_lt(npc._ang, 0.05, "se vuelve a parar")
+	assert_false(npc.down)

@@ -32,6 +32,10 @@ static func build(data: WeaponData) -> Node3D:
 	var shape: String = data.model_params.get("shape", data.id)
 	if shape == "imported":
 		return ImportedWeapon.build(data)
+	if shape == "glb":
+		var g := GlbWeapon.build(data)
+		ArmsBuilder.add_arms(g, data)
+		return g
 	var root: Node3D
 	match shape:
 		"pistol":

@@ -1,0 +1,140 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "rifle_ak"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/ak47/ak47.glb",
+"rot": [
+0,
+0,
+0
+],
+"scale": 0.1,
+"offset": [
+0,
+-0.047,
+-0.12
+],
+"parts": {
+"Mag": [
+"object_8"
+],
+"Charging": [
+"__ninguna__"
+]
+},
+"pivots": {
+"Mag": [
+0,
+-0.03,
+-0.14
+],
+"Charging": [
+0.024,
+0.0475,
+-0.177
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0.006,
+0,
+0
+]
+}
+},
+"sight": [
+0,
+0.0505,
+-0.562
+],
+"eye_relief": 0.67,
+"muzzle": [
+0,
+0,
+-0.586
+],
+"ejection": [
+0.016,
+0.028,
+-0.2
+],
+"pose": {
+"top": [
+0,
+-0.044,
+0.031
+],
+"bottom": [
+0,
+-0.142,
+0.055
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.0515,
+-0.019
+],
+"left": "forend",
+"lc": [
+0,
+-0.006,
+-0.286
+],
+"lr": 0.028
+}
+}
+}
+}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = "7.62×39"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi", "auto")
+rpm = 600.0
+damage = 43.0
+pellets = 1
+muzzle_velocity = 715.0
+drag = 0.0011
+max_ricochets = 2
+tracer_every = 4
+mag_size = 30
+start_reserve = 120
+spread_hip = 2.4
+spread_ads = 0.16
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 1.1
+recoil_yaw = 0.5
+recoil_recovery = 0.5
+kick_back = 0.04
+kick_rot = 3.5
+recoil_ads_mult = 0.7
+reload_time = 2.4
+reload_time_empty = 3.0
+ads_time = 0.24
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.42
+sfx_body_hz = 72.0
+sfx_volume_db = 0.0
+id = "ak47"
+name_key = "weapon.ak47"

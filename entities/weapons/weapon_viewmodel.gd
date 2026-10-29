@@ -205,6 +205,8 @@ func _process(delta: float) -> void:
 	else:
 		var sight := (c.model.get_node("Sight") as Node3D).position
 		var hip: Vector3 = HIP_POSE.get(w.model, Vector3(0.13, -0.14, -0.26))
+		if w.model_params.has("hip"):
+			hip = GlbWeapon._v(w.model_params["hip"])  # armas .glb muy chicas o grandes
 		var ads := Vector3(-sight.x, -sight.y, -wc.eye_relief_for(c) - sight.z)
 		pos = hip.lerp(ads, a)
 	var rot := Vector3.ZERO
@@ -266,6 +268,16 @@ func _process(delta: float) -> void:
 				"rounds":
 					rp = Vector3(-0.04, 0.05, 0.03)
 					rr = Vector3(12.0, 0.0, 22.0)
+				"cylinder":
+					# Revólver: arriba y girado, para ver el tambor afuera a la izquierda
+					rp = Vector3(-0.07, 0.1, 0.06)
+					rr = Vector3(22.0, 6.0, -34.0)
+					if wc.state == WeaponController.State.RELOADING:
+						# Al expulsar las vainas, la boca apunta arriba
+						var tb := wc.break_time(t).x
+						var up := smooth(clampf((tb - 0.17) / 0.06, 0.0, 1.0)) * (1.0 - smooth(clampf((tb - 0.31) / 0.06, 0.0, 1.0)))
+						rr += Vector3(38.0, 0.0, 10.0) * up
+						rp += Vector3(0.0, 0.03, 0.0) * up
 				_:
 					if w.model == "pistol" and wc.state == WeaponController.State.CLEARING:
 						# Montar la pistola: más lejos y de costado, para ver la corredera
@@ -274,6 +286,11 @@ func _process(delta: float) -> void:
 					elif w.model == "pistol":
 						rp = Vector3(-0.1, 0.12, 0.1)
 						rr = Vector3(24.0, -8.0, -30.0)
+			var side_mag := c.model.get_node_or_null("Mag")
+			if w.reload_type == "magazine" and side_mag != null and float(side_mag.get_meta("roll", 0.0)) < -45.0:
+				# Cargador al costado izquierdo: el arma no se gira (si no, el cargador sale para arriba)
+				rp = Vector3(-0.03, 0.06, 0.03)
+				rr = Vector3(12.0, -8.0, 6.0)
 			if wc._plan != null and wc._plan.side > 0.0:
 				# Manija a la derecha: el arma gira para mostrar ese lado mientras monta
 				var k := smooth(path(t, wc._plan.roll_w).x)
@@ -389,6 +406,16 @@ func _reload_bumps(w: WeaponData, t: float) -> Array:
 		"magazine":
 			if wc._plan != null:
 				return [path(t, wc._plan.bump_p), path(t, wc._plan.bump_r)]
+		"cylinder":
+			if wc.state != WeaponController.State.RELOADING:
+				return [z, z]
+			# Golpe seco al abrir y al cerrar el tambor
+			var tb2 := wc.break_time(t).x
+			var p2 := path(tb2, [[0.0, z], [0.1, z], [0.13, Vector3(-0.004, 0.0, 0.0)], [0.17, z], [0.64, z],
+				[0.69, Vector3(0.006, 0.004, 0.0)], [0.74, z], [1.0, z]])
+			var r2 := path(tb2, [[0.0, z], [0.1, z], [0.13, Vector3(0, 0, 3)], [0.17, z], [0.64, z],
+				[0.69, Vector3(-2, 0, -5)], [0.74, z], [1.0, z]])
+			return [p2, r2]
 	return [z, z]
 
 
@@ -563,6 +590,52 @@ func _animate_parts(c: WeaponController.WeaponSlot, delta: float) -> void:
 	if m.has_node("Barrels"):
 		var br := m.get_node("Barrels") as Node3D
 		_animate_break(br, t)
+	if m.has_node("Crane"):
+		_animate_cylinder(m, t if wc.state == WeaponController.State.RELOADING else -1.0)
+
+
+## Revólver: el tambor sale a la izquierda con la grúa, la varilla expulsa las vainas,
+## la mano trae los cartuchos nuevos todos juntos (como un cargador rápido) y lo
+## cierra. Con estrés los cartuchos pegan en el borde de las recámaras y reintenta.
+## Tiempo del quiebre normal: abre 0.10-0.18, expulsa 0.20-0.30, cartuchos 0.42-0.56,
+## cierra 0.64-0.70.
+func _animate_cylinder(m: Node3D, t_real: float) -> void:
+	var crane := m.get_node("Crane") as Node3D
+	var rounds := m.get_node_or_null("Rounds") as Node3D
+	var r := t_real >= 0.0
+	var bt := wc.break_time(t_real) if r else Vector2(-1.0, -1.0)
+	var t := bt.x
+	var open := 0.0
+	var dz := 0.0
+	var show := true
+	if r:
+		open = smooth(clampf((t - 0.1) / 0.08, 0.0, 1.0)) * (1.0 - smooth(clampf((t - 0.64) / 0.06, 0.0, 1.0)))
+		if t < 0.3:
+			dz = 0.075 * smooth(clampf((t - 0.2) / 0.08, 0.0, 1.0))
+		elif t < 0.42:
+			show = false
+		elif t < 0.56:
+			dz = 0.09 * (1.0 - smooth(clampf((t - 0.42) / 0.12, 0.0, 1.0)))
+			if bt.y >= 0.0:
+				# Intento fallido: pegan en el borde, se traban y vuelven
+				var k := fmod(bt.y, 1.0)
+				dz = 0.012 + 0.02 * sin(k * PI)
+	# La grúa gira sobre su eje (paralelo al caño) hacia la izquierda
+	var basis := Basis(Vector3.BACK, deg_to_rad(82.0) * open)
+	crane.transform = Transform3D(basis, part_base[crane])
+	if rounds != null:
+		rounds.transform = Transform3D(basis, part_base[rounds]) * Transform3D(Basis.IDENTITY, Vector3(0, 0, dz))
+		rounds.visible = show
+	# La mano izquierda va a los cartuchos (trae los nuevos y los empuja)
+	var hl := m.get_node_or_null("HandL") as Node3D
+	if hl != null and part_base.has(hl) and r:
+		var palm: Vector3 = hl.get_meta("palm", Vector3.ZERO)
+		# Cara trasera del tambor, en el espacio de la grúa (su eje queda abajo a la izquierda)
+		var rear_local := Vector3(0.012, 0.021, 0.06 + dz + 0.02)
+		var at := Transform3D(basis, part_base[crane]) * rear_local + Vector3(-0.015, -0.035, 0.02)
+		var w := smooth(clampf((t - 0.32) / 0.1, 0.0, 1.0)) * (1.0 - smooth(clampf((t - 0.6) / 0.1, 0.0, 1.0)))
+		var away := Vector3(-0.06, -0.25, 0.08) * (smooth(clampf((t - 0.28) / 0.06, 0.0, 1.0)) * (1.0 - smooth(clampf((t - 0.4) / 0.04, 0.0, 1.0))))
+		hl.position = part_base[hl] + (at - palm) * w + away
 
 
 ## Vaina trabada en la ventana ("encasquillada"): se crea la primera vez y se ve
@@ -721,7 +794,7 @@ func _sync_light() -> void:
 
 
 func _remember_parts(model: Node3D) -> void:
-	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Barrels/ShellL", "Barrels/ShellR", "Barrels/HandL", "Barrels/Loader",
+	for path: String in ["Mag", "Charging", "Slide", "Bolt", "Crane", "Rounds", "Barrels/ShellL", "Barrels/ShellR", "Barrels/HandL", "Barrels/Loader",
 			"HandR", "HandL", "HookR", "HookL"]:
 		if model.has_node(path):
 			var n := model.get_node(path) as Node3D

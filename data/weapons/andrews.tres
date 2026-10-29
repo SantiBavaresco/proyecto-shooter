@@ -1,0 +1,198 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "smg"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/andrews/andrews.glb",
+"rot": [
+0,
+90,
+0
+],
+"scale": 1.0,
+"offset": [
+0.089,
+-0.1266,
+0
+],
+"hide": [
+"_001",
+"bullets"
+],
+"parts": {
+"Mag": [
+"magazineshort",
+"magazineholder",
+"magazinepusher",
+"magazinespring"
+],
+"Charging": [
+"andrewsmachinegun_ring/",
+"andrewsmachinegun_ringstick/",
+"andrewsmachinegun_bolt/"
+]
+},
+"pivots": {
+"Mag": [
+-0.031,
+-0.002,
+-0.021
+],
+"Charging": [
+0,
+0.0008,
+0.1766
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0,
+0,
+0.005
+]
+},
+"Mag": {
+"roll": -90.0,
+"grab": [
+-0.06,
+0,
+0
+]
+}
+},
+"sight": [
+0,
+0.048,
+-0.1566
+],
+"eye_relief": 0.45,
+"muzzle": [
+0,
+0,
+-0.2018
+],
+"ejection": [
+0.035,
+0.0008,
+-0.021
+],
+"pose": {
+"top": [
+0,
+-0.0354,
+0.1611
+],
+"bottom": [
+0,
+-0.1232,
+0.1662
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.0483,
+0.1094
+],
+"left": "forend",
+"lc": [
+0,
+0,
+-0.12
+],
+"lr": 0.035
+}
+}
+},
+"sight": [
+0,
+0.0395,
+-0.1566
+],
+"eye_relief": 0.45,
+"muzzle": [
+0,
+0,
+-0.2018
+],
+"ejection": [
+0.035,
+0.0008,
+-0.021
+],
+"pose": {
+"top": [
+0,
+-0.0354,
+0.1611
+],
+"bottom": [
+0,
+-0.1232,
+0.1662
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.0483,
+0.1094
+],
+"left": "forend",
+"lc": [
+0,
+0,
+-0.12
+],
+"lr": 0.035
+}
+}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = "9×19"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("auto")
+rpm = 650.0
+damage = 24.0
+pellets = 1
+muzzle_velocity = 400.0
+drag = 0.0012
+max_ricochets = 2
+tracer_every = 0
+mag_size = 25
+start_reserve = 120
+spread_hip = 3.0
+spread_ads = 0.6
+pellet_spread = 0.0
+spread_move_mult = 1.6
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 0.55
+recoil_yaw = 0.35
+recoil_recovery = 0.65
+kick_back = 0.025
+kick_rot = 2.0
+recoil_ads_mult = 0.7
+reload_time = 2.3
+reload_time_empty = 2.9
+ads_time = 0.2
+draw_time = 0.35
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.22
+sfx_body_hz = 120.0
+sfx_volume_db = -4.0
+id = "andrews"
+name_key = "weapon.andrews"

@@ -9,6 +9,7 @@ var ids: PackedStringArray = []
 var with_reload := false
 var no_reload := false
 var flashes := false
+var npcs := false
 
 
 func _ready() -> void:
@@ -17,6 +18,8 @@ func _ready() -> void:
 			out_dir = arg.trim_prefix("--out=")
 		if arg == "--recarga":
 			with_reload = true
+		if arg == "--npcs":
+			npcs = true
 		if arg == "--fogonazos":
 			flashes = true
 		if arg == "--sin-recarga":
@@ -43,7 +46,42 @@ func _ready() -> void:
 	await _frames(30)
 	await _shot("A1_mesas_cerca")
 
-	if ids.is_empty():
+	if npcs:
+		# Personajes de prueba: la fila y uno que cae al recibir un tiro
+		player.teleport(Vector3(30, 0.05, 36.0), 0.0)
+		await _frames(30)
+		_aim_at(player, Vector3(30, 1.2, 48.0))
+		player.pitch_angle = -0.05
+		await _frames(20)
+		await _shot("N0_fila")
+		var npc := level.find_child("Npc_swat_remaster", true, false) as NpcDummy
+		player.teleport(Vector3(npc.global_position.x - 2.5, 0.05, npc.global_position.z - 6.0), 0.0)
+		await _frames(20)
+		_aim_at(player, npc.global_position + Vector3(0, 1.3, 0))
+		await _frames(10)
+		await _shot("N1_antes")
+		DebugTools.infinite_ammo = true
+		bot.aim = true
+		await _frames(25)
+		_aim_at(player, npc.global_position + Vector3(0, 1.66, 0))
+		await _frames(5)
+		bot.press_fire()
+		await _frames(3)
+		# Remate (el AR-74K no mata de un tiro a la cabeza si no toca el núcleo)
+		if not npc.down:
+			var hi := HitInfo.new()
+			hi.damage = 200.0
+			hi.zone = "torso"
+			hi.direction = (npc.global_position - player.global_position).normalized()
+			hi.position = npc.global_position + Vector3(0, 1.3, 0)
+			npc.apply_hit(hi)
+		bot.aim = false
+		for k in [6, 14, 24, 40]:
+			await _frames(k if k == 6 else 8 if k == 14 else 10 if k == 24 else 16)
+			await _shot("N2_cae_%02d" % k)
+		DebugTools.infinite_ammo = false
+		ids = PackedStringArray()
+	elif ids.is_empty():
 		ids = PackedStringArray(JSON.parse_string(FileAccess.get_file_as_string("res://data/weapons/catalog.json")))
 	var dummy := level.get_node("Geometry/Dummy15m") as Node3D
 	player.teleport(Vector3(30, 0.05, 30), PI)

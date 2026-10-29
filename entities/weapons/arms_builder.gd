@@ -80,6 +80,12 @@ const THUMB_R := [0.0125, 0.0108, 0.0096]
 static func add_arms(root: Node3D, data: WeaponData) -> void:
 	var key := data.id if POSES.has(data.id) else String(FAMILY_POSE.get(data.model, "rifle"))
 	var p: Dictionary = POSES[key]
+	if data.model_params.has("pose"):
+		# Modelos .glb: la pose viene con el arma (vectores como listas)
+		p = {}
+		var src: Dictionary = data.model_params["pose"]
+		for k: String in src:
+			p[k] = GlbWeapon._v(src[k]) if src[k] is Array else src[k]
 	var is_pistol: bool = p["left"] == "pistol"
 	_right_hand(root, p, is_pistol)
 	if is_pistol:

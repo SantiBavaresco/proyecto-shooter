@@ -72,7 +72,7 @@ var _last := {}
 func _ready() -> void:
 	if not ResourceLoader.exists(SCENE):
 		return
-	var inst := (load(SCENE) as PackedScene).instantiate() as Node3D
+	var inst := GlbWeapon.scene(SCENE).instantiate() as Node3D
 	inst.name = "Arms"
 	inst.position = -EYE + SHOULDER_SHIFT
 	add_child(inst)

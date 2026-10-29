@@ -294,3 +294,24 @@ func test_head_core_is_lethal_and_cheek_is_not() -> void:
 		assert_eq(d.hits_received[0].zone, "head_core")
 	assert_true(d.down, "un .22 al centro de la cabeza mata de un tiro")
 	bot.aim = false
+
+
+func test_npc_takes_hits_by_zone() -> void:
+	var npc := level.get_node("Geometry/Npc_swat") as NpcDummy
+	npc.reset()
+	await _ready_at(Vector3(npc.global_position.x, 0.05, LINE_Z + 6.0))
+	bot.aim = true
+	await physics_frames(30)
+	await _look_at(npc.global_position + Vector3(0, 1.25, 0))
+	await _shoot_once()
+	await physics_frames(10)
+	assert_eq(npc.hits_received.size(), 1, "un impacto en el personaje")
+	if npc.hits_received.is_empty():
+		return
+	assert_eq(npc.hits_received[0].zone, "torso")
+	await _look_at(npc.global_position + Vector3(0, 1.68, 0))
+	await _shoot_once()
+	await physics_frames(10)
+	assert_eq(npc.hits_received.size(), 2)
+	if npc.hits_received.size() > 1:
+		assert_true(DamageModel.is_head(npc.hits_received[1].zone), "tiro a la cabeza: %s" % npc.hits_received[1].zone)

@@ -1,0 +1,272 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "smg"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/pleter91/pleter91.glb",
+"rot": [
+0,
+180,
+0
+],
+"scale": 1.0,
+"offset": [
+0,
+-0.0466,
+0
+],
+"parts": {
+"Mag": [
+"ero_magazine"
+],
+"Charging": [
+"pleter_bolt"
+]
+},
+"pivots": {
+"Mag": [
+0,
+-0.01,
+-0.0587
+],
+"Charging": [
+0,
+0.0222,
+-0.0048
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0,
+0.004,
+0
+]
+}
+},
+"sight": [
+0,
+0.0204,
+-0.0964
+],
+"eye_relief": 0.26,
+"muzzle": [
+0,
+0,
+-0.2525
+],
+"ejection": [
+0.012,
+0.0,
+-0.05
+],
+"pose": {
+"top": [
+0,
+-0.0567,
+0.0418
+],
+"bottom": [
+0,
+-0.1106,
+0.0669
+],
+"r": 0.015,
+"trigger": [
+0,
+-0.055,
+0.0023
+],
+"left": "forend",
+"lc": [
+0,
+-0.03,
+-0.16
+],
+"lr": 0.02
+},
+"hip": [
+0.12,
+-0.105,
+-0.29
+]
+}
+},
+"sight": [
+0,
+0.0204,
+-0.0964
+],
+"eye_relief": 0.26,
+"muzzle": [
+0,
+0,
+-0.2525
+],
+"ejection": [
+0.012,
+0.0,
+-0.05
+],
+"pose": {
+"top": [
+0,
+-0.0567,
+0.0418
+],
+"bottom": [
+0,
+-0.1106,
+0.0669
+],
+"r": 0.015,
+"trigger": [
+0,
+-0.055,
+0.0023
+],
+"left": "forend",
+"lc": [
+0,
+-0.045,
+-0.065
+],
+"lr": 0.02
+}
+}
+},
+"sight": [
+0,
+0.0204,
+-0.0964
+],
+"eye_relief": 0.26,
+"muzzle": [
+0,
+0,
+-0.2525
+],
+"ejection": [
+0.012,
+0.0,
+-0.05
+],
+"pose": {
+"top": [
+0,
+-0.0567,
+0.0418
+],
+"bottom": [
+0,
+-0.1106,
+0.0669
+],
+"r": 0.015,
+"trigger": [
+0,
+-0.055,
+0.0023
+],
+"left": "forend",
+"lc": [
+0,
+-0.032,
+-0.15
+],
+"lr": 0.02
+}
+}
+},
+"sight": [
+0,
+0.0204,
+-0.0964
+],
+"eye_relief": 0.26,
+"muzzle": [
+0,
+0,
+-0.2525
+],
+"ejection": [
+0.012,
+0.0,
+-0.05
+],
+"pose": {
+"top": [
+0,
+-0.0567,
+0.0418
+],
+"bottom": [
+0,
+-0.1106,
+0.0669
+],
+"r": 0.015,
+"trigger": [
+0,
+-0.055,
+0.0023
+],
+"left": "forend",
+"lc": [
+0,
+0,
+-0.13
+],
+"lr": 0.018
+}
+}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = "9×19"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi", "auto")
+rpm = 600.0
+damage = 25.0
+pellets = 1
+muzzle_velocity = 400.0
+drag = 0.0012
+max_ricochets = 2
+tracer_every = 0
+mag_size = 32
+start_reserve = 120
+spread_hip = 2.0
+spread_ads = 0.4
+pellet_spread = 0.0
+spread_move_mult = 1.6
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 0.55
+recoil_yaw = 0.35
+recoil_recovery = 0.65
+kick_back = 0.025
+kick_rot = 2.0
+recoil_ads_mult = 0.7
+reload_time = 2.3
+reload_time_empty = 2.9
+ads_time = 0.2
+draw_time = 0.35
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.22
+sfx_body_hz = 120.0
+sfx_volume_db = -4.0
+id = "pleter91"
+name_key = "weapon.pleter91"

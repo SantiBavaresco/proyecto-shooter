@@ -7,16 +7,202 @@ script = ExtResource("1_wd")
 slot = 1
 model = "rifle_battle"
 model_params = {
-"style": "dmr",
-"recv_len": 0.32,
-"recv_h": 0.065,
-"barrel": 0.48,
-"hg": 0.3,
-"hg_style": "rail",
-"stock": "buffer",
-"mag": "straight",
-"mag_len": 0.12,
-"muzzle_dev": "brake"
+"shape": "glb",
+"scene": "res://assets/models/weapons/m14/m14.glb",
+"rot": [
+0,
+-90,
+0
+],
+"scale": 0.09,
+"offset": [
+0,
+-0.2068,
+-0.13
+],
+"hide": [
+"mag_extend",
+"bullet"
+],
+"parts": {
+"Mag": [
+"mag_main",
+"mag_026",
+"j_mag_762n"
+],
+"Charging": [
+"j_charging_handle"
+]
+},
+"pivots": {
+"Mag": [
+0,
+-0.066,
+-0.159
+],
+"Charging": [
+0.024,
+0.022,
+-0.05
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0.006,
+0,
+0
+]
+}
+},
+"shift": [
+{
+"match": [
+"tag_rail"
+],
+"by": [
+0,
+-0.06,
+0
+]
+},
+{
+"match": [
+"sight_scope",
+"zoom_wheel"
+],
+"by": [
+0,
+-0.088,
+0
+]
+}
+],
+"scope_lens": {
+"pos": [
+0,
+0.0747,
+0.009
+],
+"d": 0.034
+},
+"sight": [
+0,
+0.0747,
+0.008
+],
+"eye_relief": 0.07,
+"muzzle": [
+0,
+0,
+-0.6725
+],
+"ejection": [
+0.015,
+0.0147,
+-0.057
+],
+"pose": {
+"top": [
+0,
+-0.0476,
+0.0458
+],
+"bottom": [
+0,
+-0.1172,
+0.1044
+],
+"r": 0.018,
+"trigger": [
+0,
+-0.0806,
+0.0018
+],
+"left": "forend",
+"lc": [
+0,
+-0.022,
+-0.35
+],
+"lr": 0.025
+}
+}
+},
+"shift": [
+{
+"match": [
+"tag_rail"
+],
+"by": [
+0,
+-0.038,
+0
+]
+},
+{
+"match": [
+"sight_scope",
+"zoom_wheel"
+],
+"by": [
+0,
+-0.066,
+0
+]
+}
+],
+"scope_lens": {
+"pos": [
+0,
+0.0967,
+0.009
+],
+"d": 0.034
+},
+"sight": [
+0,
+0.0967,
+0.008
+],
+"eye_relief": 0.07,
+"muzzle": [
+0,
+0,
+-0.6725
+],
+"ejection": [
+0.015,
+0.0147,
+-0.057
+],
+"pose": {
+"top": [
+0,
+-0.0476,
+0.0458
+],
+"bottom": [
+0,
+-0.1172,
+0.1044
+],
+"r": 0.018,
+"trigger": [
+0,
+-0.0806,
+0.0018
+],
+"left": "forend",
+"lc": [
+0,
+-0.022,
+-0.35
+],
+"lr": 0.025
+}
+}
+}
 }
 sight = "scope"
 scope_mag = 3.0

@@ -25,7 +25,7 @@ static func build(data: WeaponData) -> Node3D:
 	var root := Node3D.new()
 	root.name = data.id
 	root.set_meta("imported", true)
-	var inst := (load(String(p["scene"])) as PackedScene).instantiate() as Node3D
+	var inst := GlbWeapon.scene(String(p["scene"])).instantiate() as Node3D
 	inst.name = "Inst"
 	root.add_child(inst)
 	# Sombras y luces del viewmodel: el modelo no proyecta sombra propia

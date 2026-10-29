@@ -41,7 +41,7 @@ func _run() -> void:
 		var trig: Vector3 = m.to_global(hr.get_meta("grip_top") as Vector3)
 		# Marca roja en la cola del disparador (de POSES)
 		var key := d.id if ArmsBuilder.POSES.has(d.id) else String(ArmsBuilder.FAMILY_POSE.get(d.model, "rifle"))
-		var tp: Vector3 = ArmsBuilder.POSES[key]["trigger"]
+		var tp: Vector3 = hr.get_meta("trigger")
 		var mk := MeshInstance3D.new()
 		var sm := SphereMesh.new(); sm.radius = 0.004; sm.height = 0.008
 		mk.mesh = sm

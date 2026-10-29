@@ -55,6 +55,9 @@ var _r := Z
 var _rl := Z
 var _rr := Z
 var _slow := 1.0
+## Dirección del cargador: gira los recorridos "hacia abajo" (cargadores al costado,
+## como el del STEN).
+var _mr := Basis.IDENTITY
 
 
 ## geo: "pl"/"pr" palmas de las manos; "mag_base" y "grab" (si hay cargador);
@@ -68,6 +71,7 @@ static func make(act: String, geo: Dictionary, level: int, empty: bool, rng: Ran
 	p.travel = geo.get("travel", 0.07)
 	p.pull_part = geo.get("pull_part", "Charging")
 	p._slow = [1.0, 1.12, 1.27, 1.4][clampi(level, 0, 3)]
+	p._mr = geo.get("mag_rot", Basis.IDENTITY)
 	var can_rack: bool = geo.get("rack", false)
 	var pistol: bool = geo.get("pistol", false)
 	var u := 0.0
@@ -168,8 +172,8 @@ func _grab(geo: Dictionary) -> Vector3:
 ## La izquierda va al cargador, lo saca y lo baja fuera de la vista.
 func _mag_out(geo: Dictionary, u: float, hide: bool) -> float:
 	var g := _grab(geo)
-	var drop := g + Vector3(-0.004, -0.075, 0.014)
-	var out := g + Vector3(-0.14, -0.5, 0.18)
+	var drop := g + _mr * Vector3(-0.004, -0.075, 0.014)
+	var out := g + _mr * Vector3(-0.14, -0.5, 0.18)
 	_kl(u, _l, _rl)
 	_kl(u + 0.1, g * 0.62 + Vector3(0.012, -0.028, 0.03), Vector3(6, 4, -8))
 	_kl(u + 0.15, g, Vector3(8, 4, -12))
@@ -190,8 +194,8 @@ func _mag_out(geo: Dictionary, u: float, hide: bool) -> float:
 ## brocal, lo baja y vuelve a intentar.
 func _mag_in(geo: Dictionary, u: float, n_fumbles: int, _fresh: bool) -> float:
 	var g := _grab(geo)
-	var out := g + Vector3(-0.14, -0.5, 0.18)
-	var drop2 := g + Vector3(-0.014, -0.105, 0.024)
+	var out := g + _mr * Vector3(-0.14, -0.5, 0.18)
+	var drop2 := g + _mr * Vector3(-0.014, -0.105, 0.024)
 	var x := u + 0.12  # agarra uno nuevo (fuera de cuadro)
 	_kl(x, out, Vector3(26, 10, -30))
 	if not mag_hidden.is_empty() and float(mag_hidden[mag_hidden.size() - 1][1]) < 0.0:
@@ -203,18 +207,18 @@ func _mag_in(geo: Dictionary, u: float, n_fumbles: int, _fresh: bool) -> float:
 	for i in n_fumbles:
 		# Le pega al borde del brocal (adelante o atrás), se traba, lo baja y reintenta
 		var sx := 0.012 if i % 2 == 0 else -0.01
-		var miss := g + Vector3(sx, -0.016, 0.014 if i % 2 == 0 else -0.012)
+		var miss := g + _mr * Vector3(sx, -0.016, 0.014 if i % 2 == 0 else -0.012)
 		_kl(x + 0.05, miss, Vector3(10, 2, -18 if i % 2 == 0 else -4))
 		mag.append([x + 0.05, miss - g])
 		_ev(x + 0.05, "fumble")
 		_bump(x + 0.05, Vector3(0, -0.005, 0.002), Vector3(-1.5, 0.5, 1.2), 0.05)
-		_kl(x + 0.09, miss + Vector3(0.002, -0.004, 0.002), Vector3(12, 3, -15))
-		mag.append([x + 0.09, miss + Vector3(0.002, -0.004, 0.002) - g])
-		_kl(x + 0.15, drop2 + Vector3(0.004 * (i % 2), -0.01, 0.004), Vector3(16, 6, -14))
-		mag.append([x + 0.15, drop2 + Vector3(0.004 * (i % 2), -0.01, 0.004) - g])
+		_kl(x + 0.09, miss + _mr * Vector3(0.002, -0.004, 0.002), Vector3(12, 3, -15))
+		mag.append([x + 0.09, miss + _mr * Vector3(0.002, -0.004, 0.002) - g])
+		_kl(x + 0.15, drop2 + _mr * Vector3(0.004 * (i % 2), -0.01, 0.004), Vector3(16, 6, -14))
+		mag.append([x + 0.15, drop2 + _mr * Vector3(0.004 * (i % 2), -0.01, 0.004) - g])
 		x += 0.17
-	_kl(x + 0.06, g + Vector3(0, -0.014, 0.003), Vector3(9, 4, -11))
-	mag.append([x + 0.06, Vector3(0, -0.014, 0.003)])
+	_kl(x + 0.06, g + _mr * Vector3(0, -0.014, 0.003), Vector3(9, 4, -11))
+	mag.append([x + 0.06, _mr * Vector3(0, -0.014, 0.003)])
 	_kl(x + 0.11, g, Vector3(6, 3, -9))
 	mag.append([x + 0.11, Z])
 	_ev(x + 0.11, "mag_in")

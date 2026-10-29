@@ -188,6 +188,12 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 3. Tirando a una placa de acero: ya no hay zumbido de rebote.
 4. En automático cada fogonazo es distinto (forma, largo, color).
 
+## F1.23 — Modelos nuevos y personajes
+1. Armería (33 mesas): probá AR-M, AR-47, M-14E, VK-19, ST-2, PT-91, AC-9, R-700 SR y el revólver RS-6: mira, cadera, recarga vacía y con balas, montar.
+2. Revólver: recargá con 1-2 balas y vacío; en estrés alto/extremo los cartuchos a veces pegan y reintenta.
+3. Personajes a 18 m: tiros a cabeza, torso y piernas; al morir caen tiesos hacia atrás y a los 4 s se paran.
+4. Cajas y barriles a la izquierda cerca de la línea: se puede cubrir detrás y les pegan los tiros.
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

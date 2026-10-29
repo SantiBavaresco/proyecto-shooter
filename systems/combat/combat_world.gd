@@ -334,6 +334,11 @@ func _zone_of(collider: Object, pos: Vector3, dir: Vector3) -> String:
 
 func _find_hittable(collider: Object) -> Node:
 	var n := collider as Node
+	if n != null and n.has_meta("zone_owner"):
+		# Cuerpos pegados a huesos (personajes): el dueño está muchos niveles arriba
+		var owner_node: Object = n.get_meta("zone_owner")
+		if owner_node is Node and is_instance_valid(owner_node) and (owner_node as Node).has_method("apply_hit"):
+			return owner_node as Node
 	for i in 5:
 		if n == null:
 			return null

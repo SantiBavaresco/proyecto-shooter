@@ -162,7 +162,7 @@ func _build() -> void:
 ## Armería: una mesa por arma del catálogo, en filas detrás de la línea de tiro.
 func _build_armory(geo: Node3D) -> void:
 	var catalog: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/weapons/catalog.json"))
-	var cols := 5
+	var cols := 6
 	var x0 := RANGE_X_MIN + 2.6
 	var dx := (RANGE_X_MAX - RANGE_X_MIN - 5.2) / float(cols - 1)
 	var z0 := RANGE_LINE_Z - 4.5
@@ -173,7 +173,8 @@ func _build_armory(geo: Node3D) -> void:
 		t.position = Vector3(x0 + (i % cols) * dx, 0, z0 - (i / cols) * 2.8)
 		t.rotation = Vector3(0, PI, 0)
 		geo.add_child(t)
-	_sign(geo, Vector3((RANGE_X_MIN + RANGE_X_MAX) * 0.5, 3.6, z0 - 14.5), tr("greybox.armory"))
+	var rows := ceili(catalog.size() / float(cols))
+	_sign(geo, Vector3((RANGE_X_MIN + RANGE_X_MAX) * 0.5, 3.6, z0 - (rows - 1) * 2.8 - 2.5), tr("greybox.armory"))
 
 
 ## Polígono de tiro, detrás del punto de aparición.
@@ -235,6 +236,19 @@ func _build_range(geo: Node3D) -> void:
 		m.rotation = Vector3(0, PI, 0)
 		geo.add_child(m)
 	_box(geo, Vector3(cx, 0.5, RANGE_LINE_Z + 28.8), Vector3(2.0, 1.0, 0.3), _mat_block)
+	# Cajas y barriles (modelo .glb) con colisión exacta, para cubrirse cerca de la línea
+	_glb_prop(geo, "res://assets/models/props/crates_barrels/crates_barrels.glb", Vector3(20.6, 0, RANGE_LINE_Z + 6.5), 0.0, "wood")
+	# Personajes de prueba (modelos .glb) en fila a 18 m: caen tiesos al morir
+	var npcs: Array = [["fsb", 0.0], ["swat", 0.0], ["swat_remaster", 0.0], ["swat_special", 0.0], ["scifi_police", 90.0]]
+	var npc_x: Array = [19.3, 23.4, 28.4, 35.8, 41.0]
+	for i in npcs.size():
+		var nd := NpcDummy.new()
+		nd.name = "Npc_%s" % npcs[i][0]
+		nd.scene_path = "res://assets/models/npc/%s/%s.glb" % [npcs[i][0], npcs[i][0]]
+		nd.yaw_deg = npcs[i][1]
+		nd.position = Vector3(npc_x[i], 0, RANGE_LINE_Z + 18.0)
+		nd.rotation = Vector3(0, PI, 0)
+		geo.add_child(nd)
 
 	_build_penetration(geo)
 
@@ -372,3 +386,28 @@ func _sign(parent: Node3D, pos: Vector3, text: String) -> void:
 	l.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
 	l.modulate = Color(0.79, 0.64, 0.15)
 	parent.add_child(l)
+
+
+## Prop de un .glb con una colisión por malla (la forma exacta de cada pieza).
+func _glb_prop(geo: Node3D, path: String, pos: Vector3, yaw: float, surface: String) -> void:
+	if not ResourceLoader.exists(path):
+		return
+	var body := StaticBody3D.new()
+	body.name = path.get_file().get_basename().capitalize().replace(" ", "")
+	body.set_meta("surface", surface)
+	body.position = pos
+	body.rotation = Vector3(0, yaw, 0)
+	geo.add_child(body)
+	var inst := GlbWeapon.scene(path).instantiate() as Node3D
+	body.add_child(inst)
+	for mi: MeshInstance3D in inst.find_children("*", "MeshInstance3D", true, false):
+		var cs := CollisionShape3D.new()
+		cs.shape = mi.mesh.create_trimesh_shape()
+		var xf := Transform3D.IDENTITY
+		var n: Node = mi
+		while n != null and n != body:
+			if n is Node3D:
+				xf = (n as Node3D).transform * xf
+			n = n.get_parent()
+		cs.transform = xf
+		body.add_child(cs)

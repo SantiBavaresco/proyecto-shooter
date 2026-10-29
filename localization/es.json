@@ -151,5 +151,12 @@
 	"greybox.penetration": "PENETRACIÓN",
 	"breath.hold": "AGUANTANDO LA RESPIRACIÓN %d s",
 	"breath.out": "SIN AIRE",
-	"weapon.ak74u": "Carabina AR-74K"
+	"weapon.ak74u": "Carabina AR-74K",
+	"weapon.revolver45": "Revólver RS-6 .45",
+	"weapon.vityaz": "Subfusil VK-19",
+	"weapon.sten": "Subfusil ST-2",
+	"weapon.pleter91": "Subfusil PT-91",
+	"weapon.andrews": "Subfusil casero AC-9",
+	"weapon.ak47": "Fusil AR-47",
+	"weapon.xm2010": "Rifle R-700 SR"
 }

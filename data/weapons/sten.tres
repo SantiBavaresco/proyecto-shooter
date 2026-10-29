@@ -1,0 +1,193 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "smg"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/sten/sten.glb",
+"rot": [
+0,
+90,
+0
+],
+"scale": 0.304,
+"offset": [
+0,
+-0.003,
+-0.38
+],
+"parts": {
+"Mag": [
+"cube_003",
+"cube_004",
+"cube_005",
+"bolt head/",
+"plane_012"
+],
+"Charging": [
+"shutter"
+]
+},
+"pivots": {
+"Mag": [
+-0.03,
+-0.001,
+-0.243
+],
+"Charging": [
+0.016,
+0.0215,
+-0.055
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0.006,
+0,
+0
+]
+},
+"Mag": {
+"roll": -90.0,
+"grab": [
+-0.06,
+0,
+0
+]
+}
+},
+"sight": [
+0,
+0.043,
+-0.28
+],
+"eye_relief": 0.43,
+"muzzle": [
+0,
+0,
+-0.471
+],
+"ejection": [
+0.012,
+0.01,
+-0.2
+],
+"pose": {
+"top": [
+0,
+-0.043,
+0.052
+],
+"bottom": [
+0,
+-0.099,
+0.067
+],
+"r": 0.012,
+"trigger": [
+0,
+-0.073,
+0.008
+],
+"left": "forend",
+"lc": [
+0,
+-0.001,
+-0.31
+],
+"lr": 0.018
+}
+}
+},
+"sight": [
+0,
+0.0307,
+-0.28
+],
+"eye_relief": 0.43,
+"muzzle": [
+0,
+0,
+-0.471
+],
+"ejection": [
+0.012,
+0.01,
+-0.2
+],
+"pose": {
+"top": [
+0,
+-0.043,
+0.052
+],
+"bottom": [
+0,
+-0.099,
+0.067
+],
+"r": 0.012,
+"trigger": [
+0,
+-0.073,
+0.008
+],
+"left": "forend",
+"lc": [
+0,
+-0.001,
+-0.31
+],
+"lr": 0.018
+}
+}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = "9×19"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("auto")
+rpm = 520.0
+damage = 26.0
+pellets = 1
+muzzle_velocity = 400.0
+drag = 0.0012
+max_ricochets = 2
+tracer_every = 0
+mag_size = 32
+start_reserve = 120
+spread_hip = 2.6
+spread_ads = 0.45
+pellet_spread = 0.0
+spread_move_mult = 1.6
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 0.55
+recoil_yaw = 0.35
+recoil_recovery = 0.65
+kick_back = 0.025
+kick_rot = 2.0
+recoil_ads_mult = 0.7
+reload_time = 2.3
+reload_time_empty = 2.9
+ads_time = 0.2
+draw_time = 0.35
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.0
+sfx_tail = 0.22
+sfx_body_hz = 120.0
+sfx_volume_db = -4.0
+id = "sten"
+name_key = "weapon.sten"

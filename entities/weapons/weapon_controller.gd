@@ -21,7 +21,7 @@ const BREAK_OPEN_DEG := 62.0
 ## Cada muesca de la rueda multiplica el aumento por esto (visor variable).
 const ZOOM_STEP := 1.26
 ## Desgaste por disparo según el mecanismo (fracción del estado).
-const WEAR_PER_SHOT := {"magazine": 1.0 / 4000.0, "rounds": 1.0 / 5000.0, "break": 1.0 / 6000.0}
+const WEAR_PER_SHOT := {"magazine": 1.0 / 4000.0, "rounds": 1.0 / 5000.0, "break": 1.0 / 6000.0, "cylinder": 1.0 / 7000.0}
 ## Aguantar la respiración: segundos de aire, castigo al quedarse sin aire.
 const BREATH_MAX := 5.0
 const BREATH_PENALTY := 3.0
@@ -348,6 +348,15 @@ func _advance_state(delta: float) -> void:
 			var spent := c.data.mag_size - c.mag
 			for i in spent:
 				_eject_shell(c, true, i, _break_shell_pos(c, i))
+		# Revólver: la varilla expulsa todas las vainas juntas
+		if c.data.reload_type == "cylinder" and not _reload_fx_done and break_time(state_time / maxf(state_duration, 0.001)).x >= 0.27:
+			_reload_fx_done = true
+			var spent2 := c.data.mag_size - c.mag
+			var rounds := c.model.get_node_or_null("Rounds") as Node3D
+			for i in spent2:
+				var at := rounds.global_position + rounds.global_basis.z * 0.03 if rounds != null else Vector3.INF
+				_eject_shell(c, false, i, at)
+			_play_mech(SynthSfx.click("cyl_eject", 0.8, 0.06), -7.0)
 		if state_time >= state_duration:
 			_finish_reload(c)
 	elif state == State.HOLSTER and state_time >= state_duration:
@@ -428,8 +437,8 @@ func _start_reload() -> void:
 		_plan = ReloadPlan.make("reload", _plan_geo(c), player.stress.level(), _reload_empty, _rng,
 			c.data.reload_time, c.data.reload_time_empty)
 		dur = _plan.duration
-	elif c.data.reload_type == "break":
-		# Escopetas: más lenta con estrés y, a veces, los cartuchos pegan en el borde de la
+	elif c.data.reload_type == "break" or c.data.reload_type == "cylinder":
+		# Escopetas y revólver: más lenta con estrés y, a veces, los cartuchos pegan en el borde de la
 		# recámara (como el cargador en el brocal): se sacan y se vuelve a intentar
 		var lv := player.stress.level()
 		break_fumbles = 0
@@ -508,6 +517,14 @@ func _start_clear(c: WeaponSlot) -> void:
 		_set_state(State.CYCLING, c.data.cycle_time * [1.0, 1.15, 1.4, 1.6][player.stress.level()])
 		_emit_state()
 		return
+	if c.data.reload_type == "cylinder":
+		# Revólver: un cartucho que no salió; se gatilla de nuevo (gira el tambor)
+		_plan = null
+		_clear_eject_done = true
+		_set_state(State.CLEARING, 0.35)
+		_play_mech(SynthSfx.click("hammer", 1.3, 0.04), -8.0)
+		_emit_state()
+		return
 	if c.model.has_meta("imported"):
 		# Modelo con animación propia: destrabar = el tramo final de la recarga (montar)
 		_plan = null
@@ -549,6 +566,10 @@ func _plan_geo(c: WeaponSlot) -> Dictionary:
 		var mag := m.get_node("Mag") as Node3D
 		g["mag_base"] = view.part_base[mag]
 		g["grab"] = mag.get_meta("grab", Vector3(0, -0.05, 0.0))
+		# Cargadores al costado izquierdo (STEN, AC-9): "abajo" pasa a ser "a la izquierda"
+		# y "a la izquierda", "abajo" (sale hacia afuera y baja)
+		if float(mag.get_meta("roll", 0.0)) < -45.0:
+			g["mag_rot"] = Basis(Vector3.UP, Vector3.RIGHT, Vector3.BACK)
 	if m.has_node("Charging") and not g["pistol"]:
 		var ch := m.get_node("Charging") as Node3D
 		var kn: Vector3 = view.part_base[ch] + (ch.get_meta("knob", z) as Vector3)
@@ -693,7 +714,7 @@ func _fire(c: WeaponSlot) -> void:
 		else:
 			_cycle_fx_done = false
 			_set_state(State.CYCLING, w.cycle_time)
-	elif w.reload_type != "break":
+	elif w.reload_type != "break" and w.reload_type != "cylinder":
 		# Semiautomáticas: la vaina puede quedar trabada en la ventana o entrar dos
 		# cartuchos a la vez (solo si quedaba otro para alimentar)
 		var roll := _rng.randf()

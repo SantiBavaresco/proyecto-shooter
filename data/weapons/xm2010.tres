@@ -1,0 +1,155 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 1
+model = "bolt"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/xm2010/xm2010.glb",
+"rot": [
+0,
+-90,
+0
+],
+"scale": 0.09,
+"offset": [
+0,
+-0.1565,
+-0.235
+],
+"hide": [
+"bullet"
+],
+"parts": {
+"Mag": [
+"mag_main",
+"mag_00",
+"j_follower"
+],
+"Bolt": [
+"bolt_main",
+"j_bolt",
+"j_boltend",
+"j_boltpin"
+]
+},
+"pivots": {
+"Mag": [
+0,
+-0.0372,
+-0.128
+],
+"Bolt": [
+0,
+0,
+0.017
+]
+},
+"metas": {
+"Bolt": {
+"knob": [
+0.04,
+-0.0767,
+0.006
+]
+}
+},
+"scope_lens": {
+"pos": [
+0,
+0.0617,
+0.06
+],
+"d": 0.036
+},
+"sight": [
+0,
+0.0617,
+0.058
+],
+"eye_relief": 0.08,
+"muzzle": [
+0,
+0,
+-0.82
+],
+"ejection": [
+0.015,
+0.015,
+0.0
+],
+"pose": {
+"top": [
+0,
+-0.057,
+0.0503
+],
+"bottom": [
+0,
+-0.152,
+0.0938
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.0688,
+0.0265
+],
+"left": "forend",
+"lc": [
+0,
+-0.005,
+-0.47
+],
+"lr": 0.03
+}
+}
+}
+}
+sight = "scope"
+scope_mag = 6.0
+scope_mag_max = 25.0
+reticle = "duplex"
+caliber = ".308"
+reload_type = "rounds"
+round_time = 0.5
+clip_reload = false
+bolt_action = true
+cycle_time = 0.9
+fire_modes = PackedStringArray("semi")
+rpm = 200.0
+damage = 125.0
+pellets = 1
+muzzle_velocity = 880.0
+drag = 0.0006
+max_ricochets = 2
+tracer_every = 0
+mag_size = 5
+start_reserve = 30
+spread_hip = 3.0
+spread_ads = 0.04
+pellet_spread = 0.0
+spread_move_mult = 2.0
+spread_air_mult = 3.0
+spread_crouch_mult = 0.7
+recoil_pitch = 2.4
+recoil_yaw = 0.3
+recoil_recovery = 0.75
+kick_back = 0.07
+kick_rot = 6.0
+recoil_ads_mult = 0.7
+reload_time = 0.8
+reload_time_empty = 2.9
+ads_time = 0.3
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 1.0
+eye_relief = 0.0
+sfx_tail = 0.55
+sfx_body_hz = 60.0
+sfx_volume_db = 2.0
+id = "xm2010"
+name_key = "weapon.xm2010"

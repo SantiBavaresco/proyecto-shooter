@@ -151,5 +151,12 @@
 	"greybox.penetration": "PENETRATION",
 	"breath.hold": "HOLDING BREATH %d s",
 	"breath.out": "OUT OF BREATH",
-	"weapon.ak74u": "AR-74K carbine"
+	"weapon.ak74u": "AR-74K carbine",
+	"weapon.revolver45": "RS-6 .45 revolver",
+	"weapon.vityaz": "VK-19 SMG",
+	"weapon.sten": "ST-2 SMG",
+	"weapon.pleter91": "PT-91 SMG",
+	"weapon.andrews": "AC-9 homemade SMG",
+	"weapon.ak47": "AR-47 rifle",
+	"weapon.xm2010": "R-700 SR rifle"
 }

@@ -1,0 +1,127 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 3
+model = "pistol"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/revolver/revolver.glb",
+"rot": [
+0,
+180,
+0
+],
+"scale": 1.0,
+"offset": [
+0,
+0.0079,
+-0.055
+],
+"parts": {
+"Crane": [
+"/arm",
+"magazine",
+"axis"
+],
+"Rounds": [
+"cartrige",
+"bullet"
+]
+},
+"pivots": {
+"Crane": [
+-0.012,
+-0.013,
+-0.085
+],
+"Rounds": [
+-0.012,
+-0.013,
+-0.085
+]
+},
+"sight": [
+0,
+0.0413,
+-0.168
+],
+"eye_relief": 0.568,
+"muzzle": [
+0,
+0.02,
+-0.171
+],
+"ejection": [
+0,
+0.02,
+-0.055
+],
+"pose": {
+"top": [
+0,
+-0.0103,
+0.0276
+],
+"bottom": [
+0,
+-0.117,
+0.0578
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.0512,
+-0.0418
+],
+"left": "pistol"
+}
+}
+}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = ".45 ACP"
+reload_type = "cylinder"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi")
+rpm = 200.0
+damage = 40.0
+pellets = 1
+muzzle_velocity = 255.0
+drag = 0.0014
+max_ricochets = 2
+tracer_every = 0
+mag_size = 6
+start_reserve = 36
+spread_hip = 2.0
+spread_ads = 0.36
+pellet_spread = 0.0
+spread_move_mult = 1.6
+spread_air_mult = 2.5
+spread_crouch_mult = 0.8
+recoil_pitch = 2.6
+recoil_yaw = 0.6
+recoil_recovery = 0.7
+kick_back = 0.045
+kick_rot = 9.0
+recoil_ads_mult = 0.75
+reload_time = 2.3
+reload_time_empty = 2.3
+ads_time = 0.17
+draw_time = 0.3
+holster_time = 0.18
+ads_fov_mult = 0.9
+eye_relief = 0.0
+sfx_tail = 0.3
+sfx_body_hz = 82.0
+sfx_volume_db = -2.0
+id = "revolver45"
+name_key = "weapon.revolver45"
