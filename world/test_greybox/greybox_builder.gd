@@ -16,12 +16,16 @@ extends Node3D
 ##  - Penetración: paneles de madera y chapa (finos y gruesos) con dianas detrás
 ##  - Zonas de prueba junto a la línea de tiro: estrés medio, estrés alto y
 ##    armas gastadas (fallas frecuentes)
+##  - Inventario y saqueo (atrás a la izquierda del spawn): cajón, caja metálica,
+##    alijo pesado, ítems sueltos en el piso y alambre de púas (daño y sangrado)
 
 const GridShader := preload("res://world/test_greybox/grid.gdshader")
 const Mannequin := preload("res://world/props/mannequin.gd")
 const PaperTarget := preload("res://world/props/paper_target.gd")
 const AmmoCrate := preload("res://world/props/ammo_crate.gd")
 const WeaponTable := preload("res://world/props/weapon_table.gd")
+const LootContainerScript := preload("res://world/props/loot_container.gd")
+const WorldItemScript := preload("res://world/props/world_item.gd")
 
 ## Polígono: línea de tiro y franja que ocupa (x de 18 a 42).
 const RANGE_LINE_Z := 30.0
@@ -157,6 +161,59 @@ func _build() -> void:
 
 	_build_range(geo)
 	_build_armory(geo)
+	_build_loot_area(geo)
+
+
+## Inventario y saqueo: contenedores, ítems sueltos y alambre de púas.
+func _build_loot_area(geo: Node3D) -> void:
+	_sign(geo, Vector3(9.5, 3.4, 9.0), tr("greybox.loot"))
+	var boxes: Array = [
+		["LootCrate", "crate", Vector3(6.5, 0, 11.0), [], 7],
+		["LootMetal", "metal", Vector3(9.5, 0, 11.0), [["helmet_steel", 1], ["vest_light", 1], ["ammo_545x39", 60],
+			["ammo_9x19", 60], ["medkit_army", 1]], 0],
+		["LootStash", "stash", Vector3(12.5, 0, 11.0), [["backpack_large", 1], ["vest_plate", 1], ["tools_basic", 4],
+			["w_svd", 1], ["ammo_762x54r", 40], ["scrap_electronics", 4]], 0],
+	]
+	for b: Array in boxes:
+		var c := LootContainerScript.new() as LootContainer
+		c.name = b[0]
+		c.kind = b[1]
+		c.contents = b[3]
+		c.loot_seed = b[4]
+		c.position = b[2]
+		c.rotation = Vector3(0, PI, 0)
+		geo.add_child(c)
+	# Ítems sueltos en el piso
+	var loose: Array = [["backpack_small", 1, Vector3(6.0, 0.1, 14.5)], ["w_sks", 1, Vector3(8.0, 0.1, 14.5)],
+		["medkit", 1, Vector3(10.0, 0.1, 14.2)], ["bread", 1, Vector3(10.6, 0.1, 14.8)], ["cash", 500, Vector3(11.5, 0.1, 14.4)],
+		["bandage", 2, Vector3(12.4, 0.1, 14.6)], ["ammo_12g", 20, Vector3(13.3, 0.1, 14.3)]]
+	for e: Array in loose:
+		var w := WorldItemScript.make(e[0], e[1]) as WorldItem
+		w.position = e[2]
+		geo.add_child(w)
+	# Alambre de púas: lastima y hace sangrar (para probar vendas y botiquines)
+	var z := TestZone.new()
+	z.name = "Zone_hurt"
+	z.kind = "hurt"
+	z.size = Vector2(3.0, 2.4)
+	z.color = Color(0.75, 0.3, 0.15)
+	z.title = tr("greybox.zone_hurt")
+	z.position = Vector3(9.5, 0, 19.0)
+	geo.add_child(z)
+	var wire := StandardMaterial3D.new()
+	wire.albedo_color = Color(0.35, 0.33, 0.3)
+	wire.metallic = 0.8
+	wire.roughness = 0.5
+	for i in 4:
+		var coil := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = 0.27
+		tm.outer_radius = 0.3
+		coil.mesh = tm
+		coil.material_override = wire
+		coil.position = Vector3(8.4 + i * 0.75, 0.3, 19.0)
+		coil.rotation = Vector3(0, 0, PI * 0.5)
+		geo.add_child(coil)
 
 
 ## Armería: una mesa por arma del catálogo, en filas detrás de la línea de tiro.
@@ -239,8 +296,8 @@ func _build_range(geo: Node3D) -> void:
 	# Cajas y barriles (modelo .glb) con colisión exacta, para cubrirse cerca de la línea
 	_glb_prop(geo, "res://assets/models/props/crates_barrels/crates_barrels.glb", Vector3(20.6, 0, RANGE_LINE_Z + 6.5), 0.0, "wood")
 	# Personajes de prueba (modelos .glb) en fila a 18 m: caen tiesos al morir
-	var npcs: Array = [["fsb", 0.0], ["swat", 0.0], ["swat_remaster", 0.0], ["swat_special", 0.0], ["scifi_police", 90.0]]
-	var npc_x: Array = [19.3, 23.4, 28.4, 35.8, 41.0]
+	var npcs: Array = [["fsb", 0.0], ["swat", 0.0], ["swat_remaster", 0.0], ["swat_special", 0.0]]
+	var npc_x: Array = [20.5, 25.5, 30.5, 35.8]
 	for i in npcs.size():
 		var nd := NpcDummy.new()
 		nd.name = "Npc_%s" % npcs[i][0]

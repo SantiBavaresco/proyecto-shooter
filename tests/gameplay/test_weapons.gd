@@ -242,8 +242,13 @@ func test_ammo_crate_refills() -> void:
 	await physics_frames(3)
 	bot.press_interact()
 	await physics_frames(3)
-	assert_eq(weapons.current().mag, 20)
-	assert_eq(weapons.current().reserve, 100)
+	# Ahora es un contenedor: se abre el inventario y se toma la munición
+	var scr := level.find_child("InventoryScreen", true, false) as InventoryScreen
+	assert_true(scr.is_open, "abre la caja")
+	var before := weapons.current().reserve
+	scr.take_all()
+	scr.close()
+	assert_gt(float(weapons.current().reserve), float(before), "más munición en la mochila")
 
 
 func test_paper_target_reports_drop_at_100m() -> void:

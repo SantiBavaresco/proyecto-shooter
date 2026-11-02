@@ -8,6 +8,7 @@ const MOUSE_BASE := 0.0022
 const STICK_BASE := 3.2
 
 const SLOT_ACTIONS: Array[String] = ["weapon_1", "weapon_2", "weapon_3", "weapon_4"]
+const QUICK_ACTIONS: Array[String] = ["quick_1", "quick_2", "quick_3", "quick_4"]
 
 var _mouse_accum: Vector2 = Vector2.ZERO
 # Pulsaciones encoladas en _unhandled_input para no perderlas entre ticks de física.
@@ -18,12 +19,13 @@ var _mode_queued: bool = false
 var _interact_queued: bool = false
 var _slot_queued: int = -1
 var _zoom_queued: int = 0
+var _quick_queued: int = -1
 var _aim_state: bool = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not GameState.ui_open:
 			_mouse_accum += (event as InputEventMouseMotion).screen_relative
 		return
 	if event.is_echo():
@@ -41,6 +43,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	for i in SLOT_ACTIONS.size():
 		if event.is_action_pressed(SLOT_ACTIONS[i]):
 			_slot_queued = i + 1
+	for i in QUICK_ACTIONS.size():
+		if event.is_action_pressed(QUICK_ACTIONS[i]):
+			_quick_queued = i
 	if event.is_action_pressed("zoom_in"):
 		_zoom_queued += 1
 	if event.is_action_pressed("zoom_out"):
@@ -56,6 +61,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func poll_command(_delta: float) -> PlayerCommand:
 	var cmd := PlayerCommand.new()
+	if GameState.ui_open:
+		# Con el inventario abierto el jugador no se mueve ni dispara
+		_clear_queued()
+		return cmd
 	cmd.move = Input.get_vector("move_left", "move_right", "move_back", "move_forward")
 	cmd.jump = _jump_queued
 	cmd.sprint = Input.is_action_pressed("sprint")
@@ -69,6 +78,13 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.interact = _interact_queued
 	cmd.weapon_slot = _slot_queued
 	cmd.zoom = _zoom_queued
+	cmd.quick_slot = _quick_queued
+	_clear_queued()
+	return cmd
+
+
+func _clear_queued() -> void:
+	_quick_queued = -1
 	_zoom_queued = 0
 	_jump_queued = false
 	_fire_queued = false
@@ -76,7 +92,6 @@ func poll_command(_delta: float) -> PlayerCommand:
 	_mode_queued = false
 	_interact_queued = false
 	_slot_queued = -1
-	return cmd
 
 
 func consume_look(delta: float) -> Vector2:

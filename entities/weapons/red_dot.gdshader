@@ -10,6 +10,9 @@ uniform vec4 dot_color : source_color = vec4(1.0, 0.12, 0.06, 1.0);
 uniform float dot_radius = 0.0022;
 uniform float dot_glow = 3.5;
 uniform vec4 tint : source_color = vec4(0.45, 0.65, 0.75, 0.08);
+// Mira holográfica: ventana rectangular y anillo de 65 MOA alrededor del punto.
+uniform bool holo = false;
+uniform float ring_radius = 0.0189;
 
 varying vec3 sight_forward;
 
@@ -20,7 +23,7 @@ void vertex() {
 
 void fragment() {
 	// Lente redonda
-	if (length(UV - vec2(0.5)) > 0.5) {
+	if (!holo && length(UV - vec2(0.5)) > 0.5) {
 		discard;
 	}
 	vec3 ray = normalize(-VIEW);
@@ -28,6 +31,11 @@ void fragment() {
 	float core = 1.0 - smoothstep(dot_radius * 0.55, dot_radius, ang);
 	float halo = (1.0 - smoothstep(dot_radius, dot_radius * 2.5, ang)) * 0.25;
 	float d = clamp(core + halo, 0.0, 1.0);
+	if (holo) {
+		float rw = dot_radius * 0.45;
+		float ring = 1.0 - smoothstep(rw * 0.5, rw, abs(ang - ring_radius));
+		d = clamp(d + ring * 0.9, 0.0, 1.0);
+	}
 	ALBEDO = mix(tint.rgb, dot_color.rgb * dot_glow, d);
 	ALPHA = max(tint.a, d);
 }

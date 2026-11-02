@@ -80,3 +80,9 @@ La caja de la cabeza tiene adentro un núcleo (12 × 13 × 15 cm). Si el recorri
 
 ## 2026-10-25 — Brazos por código con pose por arma
 Hasta tener un modelo de brazos con huesos, los brazos se generan por arma con dedos que se cierran sobre la empuñadura y el guardamanos (`ArmsBuilder.POSES`). La mano izquierda de las escopetas cuelga de los caños.
+
+## 2026-11-02 — Inventario (F2)
+- Munición contada por calibre en la mochila (compartida entre armas del mismo calibre). Cargadores individuales quedan para más adelante.
+- Las mesas de la armería quedan como banco de pruebas: equipan directo (el arma reemplazada vuelve a la mesa) y dan la munición inicial. El comercio llega en F6.
+- El inventario no pausa el mundo (como STALKER 2); el jugador no se mueve ni dispara con la pantalla abierta.
+- Sin guardado todavía: morir reinicia el nivel.

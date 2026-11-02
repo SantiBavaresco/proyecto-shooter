@@ -113,3 +113,11 @@ CombatWorld (uno por nivel, grupo "combat_world")
 - Penetración en `CombatWorld._try_penetrate`: espesor medido con un rayo desde atrás hacia la entrada;
   capacidad = `Surface.TABLE[s].pen × WeaponData.penetration_power() × (v/v0)²`.
 
+
+## Inventario (F2)
+- Lógica sin escena (`core/inventory`): `ItemData` (definición), `ItemDB` (catálogo: armas del catálogo de armas, munición por calibre y `data/items/items.json`), `ItemStack` (pila con estado propio: cargador y desgaste de un arma), `Inventory` (grilla: colocar, girar, juntar, partir, ordenar, guardar a diccionario).
+- `PlayerInventory` (`entities/player`): mochila, equipo, ranuras rápidas, plata, peso y uso de consumibles. Es la fuente de la munición: `WeaponSlot.reserve` lee y escribe la munición de su calibre en la mochila.
+- `WeaponController` recibe armas con estado (`equip_weapon(data, slot, state, top_up, stack, draw)`), las saca (`remove_weapon`) y tolera las manos vacías. `lowered` baja el arma mientras se usa un consumible.
+- `Vitals` (`core/vitals.gd`): salud, sangrado y efectos con duración.
+- Mundo: `LootContainer`, `AmmoCrate` (contenedor que se repone), `WorldItem` (ítem suelto con física), `NpcDummy` (cuerpo con botín). Todos exponen `inventory`, `title_key` e `interact()`; abrirlos emite `EventBus.loot_requested`.
+- Interfaz (`ui/inventory`): `InventoryScreen` (la crea el HUD), `InvGrid`, `InvSlot`, `ItemIcons` (íconos renderizados una vez desde `ItemModels`, los modelos 3D por código de cada ítem).

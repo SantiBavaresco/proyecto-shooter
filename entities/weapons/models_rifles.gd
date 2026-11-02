@@ -542,6 +542,63 @@ static func bizon(data: WeaponData) -> Node3D:
 	return root
 
 
+## VK-19 (tipo PP-19-01 Vityaz): cajón de AK-74, 9×19 con cargador recto, culata
+## tubular plegable (abierta), riel sobre la tapa y mira holográfica.
+static func vityaz(data: WeaponData) -> Node3D:
+	var root := Node3D.new()
+	var p := data.model_params
+	var m := WeaponModelBuilder.mat("metal")
+	var poly := WeaponModelBuilder.mat("polymer")
+	var rf := -0.205
+	_ak_receiver(root, 0.075, rf, poly, -0.13)
+	_ak_charging(root, -0.1)
+	_ak_rear_sight(root, -0.13, -0.205, -0.188, 0.045)
+	# Riel sobre la tapa (montura de la tapa trabada atrás)
+	WeaponModelBuilder.rbox(root, "RailBase", Vector3(0.022, 0.004, 0.17), Vector3(0, 0.0295, -0.04), m, 0.0015)
+	WeaponModelBuilder.rail(root, "TopRail", -0.125, 0.045, 0.0315, m)
+	# Culata tubular plegable al costado (abierta) con tope de goma
+	WeaponModelBuilder.rbox(root, "StockHinge", Vector3(0.034, 0.05, 0.026), Vector3(0, -0.01, 0.087), m, 0.005)
+	WeaponModelBuilder.cyl(root, "StockHingePin", 0.006, 0.042, Vector3(0.0, -0.01, 0.092), m, 12, Vector3(PI * 0.5, 0, 0), 0.0015)
+	WeaponModelBuilder.cyl(root, "StockTube", 0.0085, 0.2, Vector3(0, 0.0, 0.19), m, 14, Vector3.ZERO, 0.002)
+	var a := atan2(0.062, 0.19)
+	var lo := Vector3(0, -0.03, 0.1)
+	var hi := Vector3(0, -0.092, 0.29)
+	WeaponModelBuilder.cyl(root, "StockStrut", 0.0075, lo.distance_to(hi), (lo + hi) * 0.5, m, 12, Vector3(a, 0, 0), 0.002)
+	WeaponModelBuilder.prism(root, "StockCheek", [0.13, 0.009, 0.002, 0.24, 0.009, 0.002, 0.24, -0.009, 0.002, 0.13, -0.009, 0.002], 0.022,
+		poly, 0.003)
+	WeaponModelBuilder.prism(root, "ButtFrame", [0.284, 0.014, 0.003, 0.3, 0.014, 0.003, 0.302, -0.112, 0.004, 0.286, -0.112, 0.004], 0.032, m, 0.003)
+	WeaponModelBuilder.prism(root, "ButtPad", [0.3, 0.016, 0.004, 0.316, 0.014, 0.005, 0.318, -0.112, 0.005, 0.302, -0.115, 0.004], 0.036,
+		WeaponModelBuilder.mat("rubber"), 0.005)
+	# Caño de 237 mm, guardamanos de polímero corto con rieles a los costados
+	var bz := rf - float(p.get("barrel", 0.237))
+	WeaponModelBuilder.barrel(root, "Barrel", rf, bz, 0.0112, 0.0092, m, 0.0045)
+	var hg: float = p.get("hg", 0.15)
+	var hf := rf - hg
+	WeaponModelBuilder.loft(root, "UpperHandguard", poly, rf - 0.006, hf + 0.012, [[0.0, 0.0158, 0.012, 0.03, 2.3], [1.0, 0.0145, 0.012, 0.028, 2.5]])
+	WeaponModelBuilder.loft(root, "Handguard", poly, rf - 0.004, hf, [[0.0, 0.0235, -0.038, 0.012, 3.2], [0.15, 0.0248, -0.035, 0.012, 2.6],
+		[0.55, 0.0262, -0.033, 0.012, 2.5], [0.9, 0.0245, -0.029, 0.012, 2.7], [1.0, 0.022, -0.022, 0.011, 3.2]])
+	for s: float in [-1.0, 1.0]:
+		WeaponModelBuilder.rail(root, "SideRail", rf - 0.04, hf + 0.01, 0.0, poly, Transform3D(Basis(Vector3.BACK, s * PI * 0.5),
+			Vector3(s * 0.024, -0.008, 0)))
+	WeaponModelBuilder.loft(root, "HgRetainer", m, rf + 0.004, rf - 0.006, [[0.0, 0.025, -0.041, 0.016, 3.0], [1.0, 0.025, -0.041, 0.016, 3.0]], 2)
+	WeaponModelBuilder.loft(root, "HgFrontCap", m, hf + 0.004, hf - 0.004, [[0.0, 0.0225, -0.024, 0.013, 3.2], [1.0, 0.0215, -0.022, 0.013, 3.2]], 2)
+	# Bloque de guion (sin toma de gases: es de retroceso directo)
+	var z_fs := bz + 0.05
+	WeaponModelBuilder.lathe(root, "FsCollar", [z_fs - 0.016, 0.0, z_fs - 0.016, 0.0122, z_fs + 0.02, 0.0122, z_fs + 0.02, 0.0], m, Vector3.ZERO, 16)
+	WeaponModelBuilder.front_post(root, z_fs, 0.006, 0.045, m, true, false, 0.016, 0.03)
+	var muzzle := _muzzle_device(root, "g3", bz, m)
+	# Cargador recto de 30 (9×19, levemente curvo)
+	var mag := WeaponModelBuilder.group(root, "Mag", Vector3(0, -0.04, -0.14))
+	WeaponModelBuilder.curved_mag(mag, 0.022, float(p.get("mag_len", 0.19)), 0.042, 0.046, 1.4, 0.024, poly, poly)
+	for i in 3:
+		WeaponModelBuilder.rbox(mag, "MagRib", Vector3(0.0255, 0.003, 0.03), Vector3(0, -0.04 - i * 0.035, -0.005 - i * 0.0045), poly, 0.001)
+	var sight := WeaponModelBuilder.holo(root, 0.041, -0.045)
+	WeaponModelBuilder.marker(root, "Sight", sight, 0.24)
+	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
+	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0156, 0.006, -0.07))
+	return root
+
+
 # --- MK5 (tipo MP5) -----------------------------------------------------------
 
 static func mp5(data: WeaponData) -> Node3D:

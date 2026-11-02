@@ -8,7 +8,12 @@ extends Node3D
 ## Al cargar se le sacan los visores nocturnos (mallas o huesos con "night_vision").
 
 const MAX_HP := 100.0
-const RESPAWN_TIME := 4.0
+## Segundos en el piso antes de pararse (si lo están revisando, espera).
+const RESPAWN_TIME := 10.0
+## Arma que lleva cada personaje (se saquea del cuerpo).
+const WEAPON_BY_MODEL := {"fsb": "ak74", "swat": "mp5", "swat_remaster": "hk416", "swat_special": "g3"}
+const BODY_LOOT := [["bandage", 1, 2, 0.6], ["medkit", 1, 1, 0.3], ["cash", 40, 250, 0.7], ["canned_meat", 1, 1, 0.3],
+	["energy_drink", 1, 1, 0.2], ["water", 1, 1, 0.25]]
 const HEIGHT := 1.8
 ## Zonas por nombre de hueso (en minúsculas) y radio del cuerpo de impacto.
 const ZONES := [["head", "head", 0.11], ["neck", "head", 0.06], ["spine", "torso", 0.16], ["hips", "torso", 0.15],
@@ -35,6 +40,10 @@ const ZONE_COLORS: Dictionary = {
 var hp: float = MAX_HP
 var down: bool = false
 var hits_received: Array[HitInfo] = []
+## Lo que lleva encima (se revisa con [F] cuando está en el piso).
+var inventory: Inventory
+var title_key: String = "loot.body"
+var _looting: bool = false
 
 var _body: Node3D
 var _sk: Skeleton3D
@@ -49,7 +58,44 @@ var _rising: bool = false
 
 
 func _ready() -> void:
+	inventory = Inventory.new(8, 6)
+	inventory.title_key = title_key
+	_make_loot()
 	_build()
+
+
+## Su arma con el cargador a medias, munición de ese calibre y algo de botín.
+func _make_loot() -> void:
+	inventory.clear()
+	var rng := RandomNumberGenerator.new()
+	rng.randomize()
+	var key := scene_path.get_file().get_basename()
+	var wid: String = WEAPON_BY_MODEL.get(key, "")
+	if wid != "" and ItemDB.has(ItemDB.weapon_item_id(wid)):
+		var it := ItemDB.get_item(ItemDB.weapon_item_id(wid))
+		var w := it.weapon()
+		inventory.add(ItemStack.make(it.id, 1, {"mag": rng.randi_range(0, w.mag_size), "condition": rng.randf_range(0.45, 0.9)}))
+		inventory.add_item(ItemDB.ammo_id(w.caliber), rng.randi_range(w.mag_size / 2, w.mag_size * 2))
+	for e: Array in BODY_LOOT:
+		if rng.randf() < float(e[3]):
+			inventory.add_item(String(e[0]), rng.randi_range(int(e[1]), int(e[2])))
+
+
+func get_interact_text() -> String:
+	return tr("interact.search") % ["%s", tr(title_key)] if down else ""
+
+
+func interact(_player: Node) -> void:
+	if down:
+		EventBus.loot_requested.emit(self)
+
+
+func on_loot_opened() -> void:
+	_looting = true
+
+
+func on_loot_closed() -> void:
+	_looting = false
 
 
 func _build() -> void:
@@ -245,6 +291,11 @@ func reset() -> void:
 
 
 func _respawn() -> void:
+	if _looting:
+		# Lo están revisando: se para cuando cierren la ventana
+		get_tree().create_timer(1.0, false).timeout.connect(_respawn)
+		return
+	_make_loot()
 	hp = MAX_HP
 	down = false
 	_rising = true

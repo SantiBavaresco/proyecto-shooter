@@ -35,6 +35,8 @@ const POSES := {
 		"left": "forend", "lc": Vector3(0, -0.004, -0.4), "lr": 0.03},
 	"pp19": {"top": Vector3(0, -0.045, 0.03), "bottom": Vector3(0, -0.128, 0.058), "r": 0.016, "trigger": Vector3(0, -0.05, -0.038),
 		"left": "forend", "lc": Vector3(0, -0.034, -0.25), "lr": 0.035},
+	"vityaz": {"top": Vector3(0, -0.045, 0.03), "bottom": Vector3(0, -0.128, 0.058), "r": 0.016, "trigger": Vector3(0, -0.05, -0.038),
+		"left": "forend", "lc": Vector3(0, -0.006, -0.3), "lr": 0.031},
 	# Otros fusiles y subfusiles
 	"mp5": {"top": Vector3(0, -0.04, 0.028), "bottom": Vector3(0, -0.126, 0.062), "r": 0.016, "trigger": Vector3(0, -0.042, -0.04),
 		"left": "forend", "lc": Vector3(0, -0.014, -0.27), "lr": 0.026},

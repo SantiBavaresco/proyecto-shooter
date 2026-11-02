@@ -14,6 +14,8 @@ const PauseMenuScript := preload("res://ui/pause/pause_menu.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 
 var state: State = State.BOOT
+## Hay una pantalla abierta sobre el juego (inventario): el jugador no recibe input.
+var ui_open: bool = false
 ## Nivel que la pantalla de carga tiene que cargar.
 var pending_level: String = ""
 
@@ -27,7 +29,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
-		if state == State.PLAYING:
+		if state == State.PLAYING and not ui_open:
 			set_paused(true)
 			get_viewport().set_input_as_handled()
 		elif state == State.PAUSED and _pause_menu != null and _pause_menu.call("is_at_root"):
@@ -37,6 +39,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func goto_title() -> void:
 	_clear_pause()
+	ui_open = false
 	_set_state(State.TITLE)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	get_tree().change_scene_to_file(SCENE_TITLE)
@@ -45,6 +48,7 @@ func goto_title() -> void:
 ## Arranca un nivel pasando por la pantalla de carga.
 func start_level(level_path: String) -> void:
 	_clear_pause()
+	ui_open = false
 	pending_level = level_path
 	_set_state(State.LOADING)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -72,7 +76,7 @@ func set_paused(paused: bool) -> void:
 	else:
 		_clear_pause()
 		_set_state(State.PLAYING)
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if ui_open else Input.MOUSE_MODE_CAPTURED
 
 
 func quit_game() -> void:
@@ -81,6 +85,14 @@ func quit_game() -> void:
 
 func state_name() -> String:
 	return State.keys()[state]
+
+
+## Inventario y pantallas parecidas: muestran el mouse y cortan el input del jugador
+## (el mundo sigue andando).
+func set_ui_open(open: bool) -> void:
+	ui_open = open
+	if state == State.PLAYING:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if open else Input.MOUSE_MODE_CAPTURED
 
 
 func _clear_pause() -> void:

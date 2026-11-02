@@ -42,6 +42,14 @@ var eye_height: float = 1.66
 var is_sprinting: bool = false
 ## Armas del jugador (se crean en _ready).
 var weapons: WeaponController
+## Inventario (mochila, equipo, ranuras rápidas) y salud.
+var inventory: PlayerInventory
+var vitals: Vitals = Vitals.new()
+var is_dead: bool = false
+## Alambre de púas de la zona de prueba: ya cortó al entrar.
+var _hurt_inside: bool = false
+const HURT_DPS := 6.0
+const RESTART_AFTER_DEATH := 4.0
 ## Rotación de mirada aplicada en el último frame (la usa el balanceo del arma).
 var last_look: Vector2 = Vector2.ZERO
 
@@ -90,10 +98,15 @@ func _ready() -> void:
 		human.name = "HumanInput"
 		add_child(human)
 		input_provider = human
+	inventory = PlayerInventory.new()
+	inventory.name = "Inventory"
+	add_child(inventory)
+	inventory.setup(self)
 	weapons = WeaponController.new()
 	weapons.name = "Weapons"
 	add_child(weapons)
-	weapons.setup(self)
+	weapons.setup(self, false)
+	inventory.give_start_kit()
 	var ov := StressOverlay.new()
 	ov.name = "StressOverlay"
 	ov.player = self
@@ -101,6 +114,7 @@ func _ready() -> void:
 	_update_head_transform()
 	EventBus.player_spawned.emit(self)
 	EventBus.stamina_changed.emit(stamina.current, stamina.maximum)
+	_emit_health()
 
 
 ## Reemplaza la fuente de input (los tests usan un bot).
@@ -235,14 +249,28 @@ func _update_zones(delta: float) -> void:
 		lvl = 1
 	stress.set_level(lvl)
 	stress.tick(delta)
+	# Alambre de púas: corta al entrar (sangrado) y lastima mientras se está adentro
+	if zone_kinds.has("hurt"):
+		take_damage(HURT_DPS * delta, 0 if _hurt_inside else 1)
+		_hurt_inside = true
+	else:
+		_hurt_inside = false
 
 
 # --- Física ---------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	var cmd := input_provider.poll_command(delta)
+	if is_dead:
+		cmd = PlayerCommand.new()
 	_last_cmd = cmd
+	stamina.cost_mult = inventory.stamina_cost_mult()
+	stamina.regen_mult = 1.0 + vitals.stamina_boost
 	stamina.tick(delta)
+	_tick_vitals(delta)
+	inventory.tick(delta)
+	if cmd.quick_slot >= 0:
+		inventory.use_quick(cmd.quick_slot)
 	_update_zones(delta)
 	_slide_cooldown = maxf(0.0, _slide_cooldown - delta)
 
@@ -309,21 +337,24 @@ func _can_sprint(cmd: PlayerCommand, on_floor: bool) -> bool:
 	# Apuntando con visor, Shift es aguantar la respiración (no corre)
 	if weapons != null and weapons.aiming and weapons.current_data() != null and weapons.current_data().sight == "scope":
 		return false
-	return cmd.sprint and stance == Stance.STANDING and on_floor \
+	return cmd.sprint and stance == Stance.STANDING and on_floor and inventory.can_sprint() \
 		and cmd.move.y > 0.3 and stamina.can_sprint() and absf(lean_amount) < 0.2
 	# Correr cancela el apuntado (lo resuelve WeaponController).
 
 
 func _target_speed() -> float:
+	var load_mult := inventory.speed_mult() if inventory != null else 1.0
 	match stance:
 		Stance.CROUCHING:
-			return config.crouch_speed * (weapons.move_speed_mult() if weapons != null else 1.0)
+			return config.crouch_speed * (weapons.move_speed_mult() if weapons != null else 1.0) * load_mult
 		_:
 			var base := config.sprint_speed if is_sprinting else config.walk_speed
-			return base * (weapons.move_speed_mult() if weapons != null and not is_sprinting else 1.0)
+			return base * (weapons.move_speed_mult() if weapons != null and not is_sprinting else 1.0) * load_mult
 
 
 func _try_jump() -> bool:
+	if inventory != null and inventory.overload() > 1.0:
+		return false
 	if stance != Stance.STANDING:
 		# Saltar desde agachado/deslizando primero intenta pararse.
 		if not _has_headroom():
@@ -410,6 +441,8 @@ func _set_capsule_height(h: float) -> void:
 
 
 func _target_eye_height() -> float:
+	if is_dead:
+		return 0.3
 	return capsule_height - config.eye_from_top
 
 
@@ -419,6 +452,58 @@ func _has_headroom() -> bool:
 	if needed <= 0.001:
 		return true
 	return not test_move(global_transform, Vector3(0.0, needed, 0.0))
+
+
+# --- Salud ------------------------------------------------------------------
+
+## Daño al jugador (bleed: niveles de sangrado que suma).
+func take_damage(amount: float, bleed := 0) -> void:
+	if is_dead:
+		return
+	var died := vitals.damage(amount, bleed)
+	EventBus.player_damaged.emit(amount)
+	_emit_health()
+	if died:
+		_die()
+
+
+## Efectos de un consumible (los aplica el inventario al terminar de usarlo).
+func apply_item_effects(fx: Dictionary) -> void:
+	vitals.apply_effects(fx)
+	if fx.has("stamina"):
+		stamina.restore(float(fx["stamina"]))
+	_emit_health()
+
+
+func _tick_vitals(delta: float) -> void:
+	if is_dead:
+		return
+	var b := vitals.bleeding
+	var h := int(vitals.health)
+	if vitals.tick(delta):
+		_emit_health()
+		_die()
+	elif b != vitals.bleeding or h != int(vitals.health):
+		_emit_health()
+
+
+func _emit_health() -> void:
+	EventBus.health_changed.emit(vitals.health, Vitals.MAX_HEALTH, vitals.bleeding)
+
+
+## Muerte: se cae la cámara y, a los segundos, vuelve a empezar el nivel (no hay
+## guardado todavía: "volver al último guardado" llega con F7).
+func _die() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	inventory.cancel_use()
+	EventBus.player_died.emit()
+	if GameState.state == GameState.State.PLAYING and get_tree().current_scene != null:
+		var path := get_tree().current_scene.scene_file_path
+		get_tree().create_timer(RESTART_AFTER_DEATH, false).timeout.connect(func() -> void:
+			if path != "" and GameState.state == GameState.State.PLAYING:
+				GameState.start_level(path))
 
 
 # --- Diagnóstico --------------------------------------------------------------
@@ -432,6 +517,8 @@ func get_debug_info() -> Dictionary:
 		"Estamina": "%.0f / %.0f%s" % [stamina.current, stamina.maximum, " (agotado)" if stamina.exhausted else ""],
 		"En el piso": is_on_floor(),
 		"Inclinación": "%.2f" % lean_amount,
-		"Arma": "%s · %s" % [tr(weapons.current_data().name_key), WeaponController.State.keys()[weapons.state]] if weapons != null else "-",
+		"Arma": "%s · %s" % [tr(weapons.current_data().name_key), WeaponController.State.keys()[weapons.state]] if weapons != null and weapons.current_data() != null else "-",
+		"Salud": "%.0f · sangrado %d" % [vitals.health, vitals.bleeding],
+		"Carga": "%.1f / %.0f kg" % [inventory.total_weight(), inventory.carry_limit()] if inventory != null else "-",
 		"Apuntado": "%.2f" % (weapons.ads_amount if weapons != null else 0.0),
 	}

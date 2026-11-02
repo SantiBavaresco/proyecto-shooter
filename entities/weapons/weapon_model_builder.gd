@@ -60,6 +60,8 @@ static func build(data: WeaponData) -> Node3D:
 			root = ModelsRifles.bizon(data)
 		"mp5":
 			root = ModelsRifles.mp5(data)
+		"vityaz":
+			root = ModelsRifles.vityaz(data)
 		"rifle":
 			root = ModelsRifles.fal(data)
 		"g3":
@@ -307,6 +309,46 @@ static func red_dot(parent: Node3D, y_rail_top: float, z: float) -> Vector3:
 	lens.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.add_child(lens)
 	return Vector3(0, y, z - 0.015)
+
+
+## Mira holográfica tipo caja (ventana rectangular con capuchón, batería adelante)
+## sobre un riel. Devuelve la posición del marcador Sight (centro de la ventana).
+static func holo(parent: Node3D, y_rail_top: float, z: float) -> Vector3:
+	var m := mat("anodized")
+	var base_h := 0.013
+	var by := y_rail_top + base_h * 0.5
+	rbox(parent, "HoloBase", Vector3(0.03, base_h, 0.094), Vector3(0, by, z), m, 0.003)
+	cyl(parent, "HoloClamp", 0.0055, 0.008, Vector3(0.017, y_rail_top + 0.005, z + 0.01), m, 12, Vector3(0, PI * 0.5, 0), 0.0015)
+	# Batería adelante de la ventana, botones atrás
+	cyl(parent, "HoloBattery", 0.006, 0.032, Vector3(0, by - 0.001, z - 0.04), m, 16, Vector3(0, PI * 0.5, 0), 0.002)
+	for i in 2:
+		rbox(parent, "HoloButton", Vector3(0.008, 0.005, 0.006), Vector3(0, y_rail_top + base_h + 0.002, z + 0.033 + i * 0.009),
+			mat("rubber"), 0.0015)
+	# Capuchón: dos paredes y techo
+	var wy := y_rail_top + base_h
+	var win_h := 0.03
+	var cy := wy + win_h * 0.5
+	for s: float in [-1.0, 1.0]:
+		prism(parent, "HoloWall", [z - 0.026, wy, 0.0, z + 0.03, wy, 0.0, z + 0.03, wy + win_h + 0.003, 0.002,
+			z - 0.018, wy + win_h + 0.003, 0.003, z - 0.026, wy + win_h - 0.006, 0.002], 0.0035, m, 0.001,
+			Vector3(s * 0.0175, 0, 0))
+	rbox(parent, "HoloRoof", Vector3(0.0385, 0.0035, 0.05), Vector3(0, wy + win_h + 0.0015, z + 0.004), m, 0.0015)
+	# Marco del vidrio
+	rbox(parent, "HoloFrame", Vector3(0.0385, 0.0025, 0.004), Vector3(0, wy + 0.0012, z - 0.012), m, 0.001)
+	var lens := MeshInstance3D.new()
+	lens.name = "Lens"
+	var q := QuadMesh.new()
+	q.size = Vector2(0.031, win_h - 0.002)
+	lens.mesh = q
+	var lm := ShaderMaterial.new()
+	lm.shader = RED_DOT_SHADER
+	lm.set_shader_parameter("holo", true)
+	lm.set_shader_parameter("dot_radius", 0.0012)
+	lens.material_override = lm
+	lens.position = Vector3(0, cy, z - 0.012)
+	lens.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	parent.add_child(lens)
+	return Vector3(0, cy, z - 0.012)
 
 
 ## Visor con aumento. style: "hunting", "tactical", "pso". Montado con anillas sobre

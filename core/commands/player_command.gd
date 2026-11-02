@@ -32,6 +32,8 @@ var interact: bool = false
 var weapon_slot: int = -1
 ## Muescas de aumento del visor este tick (+ acercar, − alejar).
 var zoom: int = 0
+## Ranura rápida pedida este tick (0–3, teclas 5–8) o −1.
+var quick_slot: int = -1
 
 
 func _to_string() -> String:

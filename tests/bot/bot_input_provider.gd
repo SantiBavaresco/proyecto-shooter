@@ -18,6 +18,7 @@ var _mode_pending: bool = false
 var _interact_pending: bool = false
 var _slot_pending: int = -1
 var _zoom_pending: int = 0
+var _quick_pending: int = -1
 var _prev_fire: bool = false
 
 
@@ -52,6 +53,11 @@ func press_zoom(notches: int) -> void:
 	_zoom_pending += notches
 
 
+## Ranura rápida (0–3).
+func press_quick(i: int) -> void:
+	_quick_pending = i
+
+
 func release_all() -> void:
 	move = Vector2.ZERO
 	sprint = false
@@ -79,6 +85,8 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.interact = _interact_pending
 	cmd.weapon_slot = _slot_pending
 	cmd.zoom = _zoom_pending
+	cmd.quick_slot = _quick_pending
+	_quick_pending = -1
 	_zoom_pending = 0
 	_jump_pending = false
 	_fire_pending = false

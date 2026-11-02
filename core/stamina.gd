@@ -14,6 +14,9 @@ var regen_delay: float = 1.0
 var recover_threshold: float = 25.0
 
 var exhausted: bool = false
+## Multiplicadores: regeneración (energizante) y costo de todo gasto (sobrepeso).
+var regen_mult: float = 1.0
+var cost_mult: float = 1.0
 var _since_spent: float = 999.0
 
 
@@ -30,7 +33,7 @@ func configure(cfg: PlayerMovementConfig) -> void:
 func tick(delta: float) -> void:
 	_since_spent += delta
 	if _since_spent >= regen_delay and current < maximum:
-		current = minf(maximum, current + regen_rate * delta)
+		current = minf(maximum, current + regen_rate * regen_mult * delta)
 	if exhausted and current >= recover_threshold:
 		exhausted = false
 
@@ -42,10 +45,17 @@ func drain(amount_per_sec: float, delta: float) -> void:
 
 ## Gasto puntual. Devuelve false (y no gasta) si no alcanza.
 func try_consume(amount: float) -> bool:
-	if current < amount:
+	if current < amount * cost_mult:
 		return false
 	_spend(amount)
 	return true
+
+
+## Recupera estamina de golpe (energizante, agua).
+func restore(amount: float) -> void:
+	current = minf(maximum, current + amount)
+	if exhausted and current >= recover_threshold:
+		exhausted = false
 
 
 func can_sprint() -> bool:
@@ -57,7 +67,7 @@ func ratio() -> float:
 
 
 func _spend(amount: float) -> void:
-	current = maxf(0.0, current - amount)
+	current = maxf(0.0, current - amount * cost_mult)
 	_since_spent = 0.0
 	if current <= 0.0:
 		exhausted = true

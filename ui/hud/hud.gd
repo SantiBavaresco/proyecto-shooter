@@ -5,7 +5,11 @@ extends CanvasLayer
 ##  - Munición del arma actual (siempre visible), modo de disparo y recarga.
 ##  - Barra de estamina (solo cuando no está llena).
 ##  - Texto de interacción.
-## Todo se oculta con Opciones → Video → Mostrar interfaz.
+##  - Salud (abajo a la izquierda, con el sangrado), ranuras rápidas 5–8 con lo que
+##    queda de cada consumible, sobrecarga y la barra de "usando".
+##  - Viñeta roja con poca salud y al recibir daño; pantalla de muerte.
+## Todo se oculta con Opciones → Video → Mostrar interfaz (menos la muerte).
+## También crea la pantalla de inventario (Tab).
 ## La brújula llega en F3.
 
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
@@ -26,11 +30,36 @@ var _hint_label: Label
 var _status_label: Label
 var _fault_label: Label
 var _player: Player
+var _health_bar: ProgressBar
+var _health_label: Label
+var _bleed_label: Label
+var _quick_boxes: Array[InvSlot] = []
+var _overload_label: Label
+var _use_root: Control
+var _use_bar: ProgressBar
+var _use_label: Label
+var _use_total: float = 0.0
+var _use_left: float = 0.0
+var _vignette: TextureRect
+var _hurt_flash: float = 0.0
+var _health_ratio: float = 1.0
+var _death: Control
+var inventory_screen: InventoryScreen
 
 
 func _ready() -> void:
 	layer = 10
 	_build()
+	_build_vitals()
+	inventory_screen = InventoryScreen.new()
+	inventory_screen.name = "InventoryScreen"
+	add_child(inventory_screen)
+	EventBus.health_changed.connect(_on_health)
+	EventBus.player_damaged.connect(func(a: float) -> void: _hurt_flash = minf(1.0, _hurt_flash + 0.25 + a * 0.03))
+	EventBus.inventory_changed.connect(_on_inventory)
+	EventBus.item_use_started.connect(_on_use_started)
+	EventBus.item_use_finished.connect(func(_id: String, _ok: bool) -> void: _use_left = 0.0)
+	EventBus.player_died.connect(func() -> void: _death.visible = true)
 	EventBus.stamina_changed.connect(_on_stamina_changed)
 	EventBus.weapon_state_changed.connect(_on_weapon_state)
 	EventBus.aim_changed.connect(func(aiming: bool) -> void: _dot.visible = not aiming)
@@ -41,6 +70,9 @@ func _ready() -> void:
 	var p := get_tree().get_first_node_in_group("player") as Player
 	if p != null and p.weapons != null:
 		_on_weapon_state(p.weapons.get_state_dict())
+	if p != null:
+		_on_health(p.vitals.health, Vitals.MAX_HEALTH, p.vitals.bleeding)
+	_on_inventory()
 
 
 func _apply_visibility() -> void:
@@ -50,6 +82,15 @@ func _apply_visibility() -> void:
 func _process(delta: float) -> void:
 	_stamina_root.modulate.a = move_toward(_stamina_root.modulate.a, _target_alpha, FADE_SPEED * delta)
 	_update_status()
+	# Viñeta: con poca salud (late) y un golpe rojo al recibir daño
+	_hurt_flash = maxf(0.0, _hurt_flash - delta * 1.6)
+	var low := clampf((0.45 - _health_ratio) / 0.35, 0.0, 1.0)
+	var pulse := 0.85 + 0.15 * sin(Time.get_ticks_msec() * 0.006)
+	_vignette.modulate.a = clampf(low * 0.75 * pulse + _hurt_flash * 0.6, 0.0, 1.0)
+	if _use_left > 0.0:
+		_use_left -= delta
+		_use_bar.value = 100.0 * (1.0 - _use_left / maxf(_use_total, 0.01))
+	_use_root.visible = _use_left > 0.0
 	if _hit_time > 0.0:
 		_hit_time -= delta
 		_hitmarker.modulate.a = clampf(_hit_time / 0.18, 0.0, 1.0)
@@ -67,6 +108,12 @@ func _on_stamina_changed(current: float, maximum: float) -> void:
 
 func _on_weapon_state(s: Dictionary) -> void:
 	if s.is_empty():
+		# Manos vacías
+		_ammo_label.text = ""
+		_reserve_label.text = ""
+		_weapon_label.text = ""
+		_mode_label.text = ""
+		_fault_label.text = ""
 		return
 	_ammo_label.text = "%d" % s["mag"]
 	_reserve_label.text = "∞" if s["infinite"] else "/ %d" % s["reserve"]
@@ -213,6 +260,142 @@ func _build() -> void:
 	_fault_label.offset_top = 110
 	_fault_label.offset_bottom = 150
 	_root.add_child(_fault_label)
+
+
+func _build_vitals() -> void:
+	# Salud abajo a la izquierda
+	var hb := VBoxContainer.new()
+	hb.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	hb.offset_left = 48
+	hb.offset_right = 380
+	hb.offset_top = -150
+	hb.offset_bottom = -40
+	hb.alignment = BoxContainer.ALIGNMENT_END
+	hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(hb)
+	_overload_label = _label(16, UiTheme.ALERT, HORIZONTAL_ALIGNMENT_LEFT)
+	hb.add_child(_overload_label)
+	_bleed_label = _label(18, UiTheme.ALERT, HORIZONTAL_ALIGNMENT_LEFT)
+	hb.add_child(_bleed_label)
+	var hrow := HBoxContainer.new()
+	hrow.add_theme_constant_override("separation", 10)
+	hrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hb.add_child(hrow)
+	_health_label = _label(26, UiTheme.TEXT, HORIZONTAL_ALIGNMENT_LEFT)
+	_health_label.custom_minimum_size = Vector2(52, 0)
+	hrow.add_child(_health_label)
+	_health_bar = ProgressBar.new()
+	_health_bar.show_percentage = false
+	_health_bar.custom_minimum_size = Vector2(220, 8)
+	_health_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var hf := StyleBoxFlat.new()
+	hf.bg_color = Color(0.78, 0.76, 0.68)
+	hf.set_corner_radius_all(2)
+	_health_bar.add_theme_stylebox_override("fill", hf)
+	hrow.add_child(_health_bar)
+	# Ranuras rápidas (5–8) arriba de la salud
+	var qrow := HBoxContainer.new()
+	qrow.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	qrow.offset_left = 48
+	qrow.offset_top = -214
+	qrow.offset_bottom = -160
+	qrow.add_theme_constant_override("separation", 6)
+	qrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(qrow)
+	for i in 4:
+		var q := InvSlot.new()
+		q.setup(null, "quick", Vector2(54, 54), i)
+		q.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		q.modulate.a = 0.85
+		qrow.add_child(q)
+		_quick_boxes.append(q)
+	# Barra de "usando" abajo al centro
+	_use_root = VBoxContainer.new()
+	_use_root.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_use_root.offset_left = -170
+	_use_root.offset_right = 170
+	_use_root.offset_top = -140
+	_use_root.offset_bottom = -100
+	_use_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_use_root.visible = false
+	_root.add_child(_use_root)
+	_use_label = _label(18, UiTheme.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	_use_root.add_child(_use_label)
+	_use_bar = ProgressBar.new()
+	_use_bar.show_percentage = false
+	_use_bar.custom_minimum_size = Vector2(340, 6)
+	_use_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_use_root.add_child(_use_bar)
+	# Viñeta roja (poca salud / daño)
+	_vignette = TextureRect.new()
+	_vignette.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_vignette.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_vignette.stretch_mode = TextureRect.STRETCH_SCALE
+	_vignette.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	var g := Gradient.new()
+	g.set_color(0, Color(0.55, 0.0, 0.0, 0.0))
+	g.set_color(1, Color(0.55, 0.02, 0.0, 0.85))
+	g.add_point(0.55, Color(0.55, 0.0, 0.0, 0.0))
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.fill = GradientTexture2D.FILL_RADIAL
+	gt.fill_from = Vector2(0.5, 0.5)
+	gt.fill_to = Vector2(1.05, 0.5)
+	gt.width = 256
+	gt.height = 256
+	_vignette.texture = gt
+	_vignette.modulate.a = 0.0
+	add_child(_vignette)
+	move_child(_vignette, 0)
+	# Muerte
+	_death = ColorRect.new()
+	(_death as ColorRect).color = Color(0.05, 0.0, 0.0, 0.6)
+	_death.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_death.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_death.visible = false
+	add_child(_death)
+	var dv := VBoxContainer.new()
+	dv.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	dv.offset_left = -300
+	dv.offset_right = 300
+	dv.offset_top = -60
+	dv.offset_bottom = 60
+	_death.add_child(dv)
+	var dl := _label(64, UiTheme.ALERT, HORIZONTAL_ALIGNMENT_CENTER)
+	dl.text = tr("hud.dead")
+	dv.add_child(dl)
+	var ds := _label(22, UiTheme.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
+	ds.text = tr("hud.dead_sub")
+	dv.add_child(ds)
+
+
+func _on_health(current: float, maximum: float, bleeding: int) -> void:
+	_health_ratio = current / maxf(maximum, 1.0)
+	_health_bar.value = _health_ratio * 100.0
+	_health_label.text = "%d" % ceili(current)
+	var fill := _health_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	fill.bg_color = UiTheme.ALERT if _health_ratio < 0.3 else Color(0.78, 0.76, 0.68)
+	_bleed_label.text = "%s %s" % [tr("hud.bleeding"), "▮".repeat(bleeding)] if bleeding > 0 else ""
+
+
+func _on_inventory() -> void:
+	var p := get_tree().get_first_node_in_group("player") as Player
+	if p == null or p.inventory == null:
+		return
+	for q in _quick_boxes:
+		q.pinv = p.inventory
+		q.queue_redraw()
+	var o := p.inventory.overload()
+	_overload_label.text = "" if o <= 0.0 else ("%s · %.0f kg" % [tr("hud.overloaded"), p.inventory.total_weight()])
+
+
+func _on_use_started(id: String, duration: float) -> void:
+	_use_total = duration
+	_use_left = duration
+	_use_bar.value = 0.0
+	var it := ItemDB.get_item(id)
+	_use_label.text = tr("inv.using") % (ItemDB.display_name(it) if it != null else id)
 
 
 func _label(font_size: int, color: Color, align: HorizontalAlignment) -> Label:

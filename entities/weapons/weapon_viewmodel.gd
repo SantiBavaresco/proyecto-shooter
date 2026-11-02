@@ -241,6 +241,11 @@ func _process(delta: float) -> void:
 	pos += kick_pos
 	rot += kick_rot
 
+	# Arma baja (usando un consumible)
+	var lt := smooth(wc.lower_amount)
+	if lt > 0.0:
+		pos.y -= 0.3 * lt
+		rot.x -= deg_to_rad(42) * lt
 	# Animaciones de estado
 	_reload_roll = 0.0
 	var vis_state: int = -1 if imported else int(wc.state)

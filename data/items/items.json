@@ -1,0 +1,32 @@
+{
+	"_doc": "Ítems que no son armas ni munición (esas se generan del catálogo de armas y de los calibres). size: celdas [ancho, alto]; weight: kg por unidad; price: USD; effects: lo que hace al usarlo; use_time: segundos.",
+	"items": [
+		{"id": "bandage", "kind": "medical", "size": [1, 1], "weight": 0.1, "stack": 10, "price": 60,
+			"use_time": 2.2, "effects": {"bleed": -2, "heal": 4}},
+		{"id": "medkit", "kind": "medical", "size": [1, 2], "weight": 0.35, "stack": 4, "price": 250,
+			"use_time": 2.8, "effects": {"heal": 45, "bleed": -1}},
+		{"id": "medkit_army", "kind": "medical", "size": [2, 2], "weight": 0.6, "stack": 3, "price": 600,
+			"use_time": 3.4, "effects": {"heal": 75, "bleed": -3}},
+		{"id": "energy_drink", "kind": "drink", "size": [1, 1], "weight": 0.25, "stack": 5, "price": 90,
+			"use_time": 1.8, "effects": {"stamina": 100, "stamina_regen": 1.0, "duration": 60}},
+		{"id": "water", "kind": "drink", "size": [1, 2], "weight": 0.55, "stack": 3, "price": 25,
+			"use_time": 2.4, "effects": {"heal": 3, "stamina": 30}},
+		{"id": "canned_meat", "kind": "food", "size": [1, 1], "weight": 0.35, "stack": 4, "price": 45,
+			"use_time": 3.0, "effects": {"heal": 10, "regen": 0.5, "duration": 20}},
+		{"id": "bread", "kind": "food", "size": [2, 1], "weight": 0.3, "stack": 3, "price": 20,
+			"use_time": 2.6, "effects": {"heal": 6, "regen": 0.3, "duration": 20}},
+		{"id": "helmet_steel", "kind": "helmet", "size": [2, 2], "weight": 1.4, "stack": 1, "price": 900,
+			"protection": 0.25},
+		{"id": "vest_light", "kind": "armor", "size": [3, 3], "weight": 4.5, "stack": 1, "price": 2200,
+			"protection": 0.3, "carry_bonus": 5},
+		{"id": "vest_plate", "kind": "armor", "size": [3, 3], "weight": 9.0, "stack": 1, "price": 5400,
+			"protection": 0.55, "carry_bonus": 10},
+		{"id": "backpack_small", "kind": "backpack", "size": [3, 3], "weight": 1.2, "stack": 1, "price": 700,
+			"carry_bonus": 10},
+		{"id": "backpack_large", "kind": "backpack", "size": [3, 4], "weight": 2.4, "stack": 1, "price": 1800,
+			"carry_bonus": 20},
+		{"id": "cash", "kind": "money", "size": [1, 1], "weight": 0.0, "stack": 100000, "price": 1},
+		{"id": "scrap_electronics", "kind": "misc", "size": [2, 1], "weight": 0.8, "stack": 4, "price": 140},
+		{"id": "tools_basic", "kind": "misc", "size": [2, 2], "weight": 2.2, "stack": 1, "price": 500}
+	]
+}

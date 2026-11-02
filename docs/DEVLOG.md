@@ -282,3 +282,31 @@
 - Bug: al volver a los WAV de la F1.20 (F1.22) se sacaron de git como punteros de Git LFS (texto de 130 bytes) porque el repositorio no tenía los filtros de LFS instalados; el juego no los podía cargar y usaba el disparo sintético viejo. Se restauraron los archivos reales (iguales al demo de la F1.20, comprobado muestra por muestra) y se instaló LFS en el repo (`git lfs install --local`).
 - El test de la armería ahora verifica que cada variante de disparo sea audio de verdad (no un puntero).
 - Texturas de los modelos .glb comprimidas para la placa de video (S3TC): antes iban sin comprimir (≈4 MB de memoria de video cada una de 1024 px).
+
+## F1.25 — Limpieza de modelos (2026-11-02)
+- Se sacaron el Fusil AR-47 (modelo de 500 mil triángulos) y el policía sci-fi de la fila de personajes. El AR-M sigue con el modelo AKMN.
+- El Subfusil VK-19 ya no usa el .glb: tiene modelo propio por código (tipo PP-19-01 Vityaz): cajón de AK-74, culata tubular plegable con tope de goma, caño de 237 mm con apagallamas, guardamanos con rieles a los costados, cargador recto de 9×19 y **mira holográfica** de caja (ventana rectangular con anillo y punto, nuevo modo del shader del punto rojo).
+- Armería con 32 armas. El juego pesa ≈65 MB menos.
+
+## 2.0 / F2 — Inventario estilo STALKER 2 (2026-11-02)
+
+### Funciona
+- **Inventario (Tab)**: mochila en grilla de 12×10 con peso. Equipo: Arma 1, Arma 2, Pistola, Casco, Chaleco, Mochila. Cuatro **ranuras rápidas** (teclas 5–8) para consumibles. Plata en USD.
+  - Arrastrar y soltar (R gira mientras se arrastra; soltar afuera de los paneles = tirar al suelo). Clic derecho: usar, equipar, desequipar, descargar, dividir, asignar a ranura rápida, tirar. Doble clic: usar / equipar / pasar. Mayús+clic: pasar entre mochila y contenedor. Botón Ordenar.
+  - Ficha del ítem con sus datos; las armas se comparan con la equipada (daño, cadencia, cargador, precisión, en verde/rojo).
+  - Íconos sacados de los modelos 3D reales de cada ítem (las armas, de costado).
+  - El mundo no se pausa con el inventario abierto (como en STALKER 2), pero el jugador no se mueve ni dispara.
+- **Munición por calibre en la mochila**: las armas del mismo calibre la comparten y la recarga la saca de ahí (.308 y 7.62×51 son la misma). Descargar un arma devuelve los cartuchos.
+- **Armas como ítems**: guardan su cargador, desgaste, modo de disparo y fallas al desequiparlas. Sin armas equipadas se queda con las manos vacías.
+- **Peso**: 40 kg sin penalidad (+10/+20 con mochila chica/grande, +5/+10 con chaleco). Arriba de eso se camina más lento y correr y saltar cansan más; pasando 20 kg más no se puede correr ni saltar.
+- **Salud y sangrado** (HUD abajo a la izquierda, viñeta roja con poca salud o al recibir daño). Morir reinicia el nivel (el guardado llega en F7).
+- **Consumibles** con tiempo de uso (el arma baja mientras tanto): venda, botiquín, botiquín militar, energizante, agua, carne en lata, pan. Barra "Usando" en el HUD.
+- **Saqueo** en ventana doble: cajón de madera (al azar), caja metálica, alijo, caja de munición (ahora es un contenedor que se repone al abrirlo) y **cuerpos** de los personajes de prueba (su arma, munición y botín; se paran recién cuando cerrás la ventana). "Tomar todo".
+- **Ítems sueltos** en el piso: [F] para agarrarlos; lo que tirás cae con física.
+- Laboratorio: zona "Inventario y saqueo" atrás a la izquierda del spawn con contenedores, ítems sueltos y **alambre de púas** (lastima y hace sangrar).
+- Las mesas de la armería siguen (equipan directo y dan munición) para probar armas rápido.
+
+### Decisiones
+- Munición total por calibre (como pide el plan); cargadores individuales a futuro.
+- Cascos y chalecos guardan su protección pero recién cuenta con el daño al jugador de la F3.
+- Hambre, sed y sueño: F5. Comercio y reparación: F6.

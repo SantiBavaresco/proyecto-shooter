@@ -48,7 +48,7 @@ func _equip(id: String) -> WeaponData:
 
 func test_catalog_has_26_valid_weapons() -> void:
 	var cat := _catalog()
-	assert_eq(cat.size(), 33)
+	assert_eq(cat.size(), 32)
 	for id: String in cat:
 		var d := _load(id)
 		assert_true(d != null, "%s carga" % id)
@@ -335,6 +335,21 @@ func test_glb_models_have_parts_and_hands() -> void:
 		var meshes := m.find_children("*", "MeshInstance3D", true, false)
 		assert_gt(float(meshes.size()), 1.0, "%s: tiene mallas" % id)
 		m.free()
+
+
+func test_vk19_is_procedural_with_holo() -> void:
+	var d := _load("vityaz")
+	assert_eq(String(d.model_params.get("shape", "")), "vityaz")
+	var m := WeaponModelBuilder.build(d)
+	assert_true(m.has_node("Lens"), "vidrio de la holográfica")
+	var lm := (m.get_node("Lens") as MeshInstance3D).material_override as ShaderMaterial
+	assert_true(bool(lm.get_shader_parameter("holo")), "retícula holográfica")
+	var sight := (m.get_node("Sight") as Node3D).position
+	var muzzle := (m.get_node("Muzzle") as Node3D).position
+	assert_true(absf(sight.x) < 0.001 and absf(muzzle.x) < 0.001, "mira y boca sobre el eje")
+	assert_gt(sight.y, 0.06, "la ventana queda por encima del alza y del guion")
+	assert_true(m.has_node("Mag") and m.has_node("Charging"), "cargador y manija animables")
+	m.free()
 
 
 func test_revolver_reloads_all_at_once() -> void:

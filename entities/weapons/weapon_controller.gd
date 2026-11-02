@@ -6,6 +6,7 @@ extends Node
 
 enum State { READY, RELOADING, HOLSTER, DRAW, CYCLING, CLEARING }
 
+## Armas iniciales si el jugador no tiene inventario (el inventario trae las suyas).
 const WEAPON_FILES: Dictionary = {
 	1: "res://data/weapons/ak74u.tres",
 	2: "res://data/weapons/shotgun.tres",
@@ -33,7 +34,20 @@ const WORN_CONDITION := 0.35
 class WeaponSlot:
 	var data: WeaponData
 	var mag: int = 0
-	var reserve: int = 0
+	## Munición de reserva: la del inventario para su calibre (compartida con las
+	## demás armas del mismo calibre). Sin inventario, un contador propio.
+	var reserve: int:
+		get:
+			return pool.ammo_count(data.caliber) if pool != null else _reserve
+		set(v):
+			if pool != null:
+				pool.set_ammo(data.caliber, v)
+			else:
+				_reserve = v
+	var _reserve: int = 0
+	var pool: PlayerInventory = null
+	## Ítem equipado al que corresponde (su estado se actualiza al desequipar).
+	var stack: ItemStack = null
 	var mode_index: int = 0
 	var model: Node3D
 	var shots: int = 0
@@ -102,43 +116,116 @@ var view: WeaponViewmodel
 var _audio_shot: AudioStreamPlayer
 var _audio_mech: AudioStreamPlayer
 var _cycle_fx_done: bool = false
+## Inventario del jugador (munición por calibre, armas como ítems). Puede ser null.
+var inv: PlayerInventory = null
+## Arma baja (usando un consumible): no dispara, no apunta, no recarga.
+var lowered: bool = false
+## 0 = arriba, 1 = abajo (para la vista).
+var lower_amount: float = 0.0
 
 
-func setup(p: Player) -> void:
+func setup(p: Player, with_default_weapons := true) -> void:
 	player = p
+	inv = p.inventory
 	_rng.randomize()
 	_build_audio()
 	view = WeaponViewmodel.new()
 	view.name = "Viewmodel"
 	view.wc = self
 	add_child(view)
-	for slot: int in WEAPON_FILES:
-		slots[slot] = _make_slot(load(WEAPON_FILES[slot]) as WeaponData)
-	_equip(1)
+	if with_default_weapons:
+		for slot: int in WEAPON_FILES:
+			equip_weapon(load(WEAPON_FILES[slot]) as WeaponData, slot, {}, true, null, false)
+		_equip(1)
 
 
-func _make_slot(data: WeaponData) -> WeaponSlot:
+func _make_slot(data: WeaponData, st := {}) -> WeaponSlot:
 	var ws := WeaponSlot.new()
 	ws.data = data
-	ws.mag = data.mag_size
-	ws.reserve = data.start_reserve
-	ws.zoom = data.scope_mag
+	ws.pool = inv
+	ws.mag = int(st.get("mag", data.mag_size))
+	if inv == null:
+		ws.reserve = data.start_reserve
+	ws.zoom = float(st.get("zoom", data.scope_mag))
+	ws.condition = float(st.get("condition", 1.0))
+	ws.mode_index = clampi(int(st.get("mode_index", 0)), 0, maxi(0, data.fire_modes.size() - 1))
+	ws.malfunction = String(st.get("malfunction", ""))
+	ws.case_stuck = bool(st.get("case_stuck", false))
 	ws.model = WeaponModelBuilder.build(data)
 	ws.model.visible = false
 	view.add_model(ws.model)
 	return ws
 
 
-## Pone un arma en un slot (reemplaza la que había) y la saca.
-func equip_weapon(data: WeaponData, slot: int) -> void:
+## Pone un arma en un slot (reemplaza la que había).
+##  - state: estado del ítem (cargador, desgaste, modo...).
+##  - top_up: asegura munición de su calibre (mesas del laboratorio, tests).
+##  - stack: ítem del inventario que la representa.
+##  - draw: la saca (si no, solo la pone en el slot; si es el slot en la mano, la saca igual).
+func equip_weapon(data: WeaponData, slot: int, state := {}, top_up := true, stack: ItemStack = null,
+		draw := true) -> void:
 	if slots.has(slot):
 		var old := slots[slot] as WeaponSlot
 		view.remove_model(old.model)
-	slots[slot] = _make_slot(data)
+	var ws := _make_slot(data, state)
+	slots[slot] = ws
+	if inv != null:
+		ws.stack = inv.on_weapon_installed(slot, data, stack)
+		if top_up:
+			inv.ensure_ammo(data.caliber, data.start_reserve)
 	if slot == current_slot:
 		_equip(slot)
-	else:
+	elif draw or (self.state != State.HOLSTER and current() == null):
 		_start_holster(slot)
+	_emit_state()
+
+
+## Saca el arma de un slot. Devuelve su estado (para guardarlo en el ítem).
+func remove_weapon(slot: int) -> Dictionary:
+	if not slots.has(slot):
+		return {}
+	var st := weapon_state(slot)
+	var ws := slots[slot] as WeaponSlot
+	view.remove_model(ws.model)
+	slots.erase(slot)
+	if slot == current_slot:
+		_plan = null
+		if aiming:
+			aiming = false
+			EventBus.aim_changed.emit(false)
+		_equip(slot)  # queda con las manos vacías
+	elif _pending_slot == slot:
+		_pending_slot = -1
+		_set_state(State.READY, 0.0)
+	_emit_state()
+	return st
+
+
+## Estado del arma de un slot (para el ítem del inventario).
+func weapon_state(slot: int) -> Dictionary:
+	if not slots.has(slot):
+		return {}
+	var ws := slots[slot] as WeaponSlot
+	return {"mag": ws.mag, "condition": ws.condition, "mode_index": ws.mode_index, "zoom": ws.zoom,
+		"malfunction": ws.malfunction, "case_stuck": ws.case_stuck}
+
+
+## Saca los cartuchos del cargador. Devuelve cuántos.
+func unload(slot: int) -> int:
+	if not slots.has(slot):
+		return 0
+	if slot == current_slot and state != State.READY and state != State.DRAW:
+		return 0
+	var ws := slots[slot] as WeaponSlot
+	var n := ws.mag
+	ws.mag = 0
+	_emit_state()
+	return n
+
+
+## ¿Se puede bajar el arma ahora (para usar un consumible)?
+func can_lower() -> bool:
+	return current() == null or state == State.READY or state == State.DRAW
 
 
 ## Toma un arma (armería, saqueo): pistolas al slot 3; las largas al slot
@@ -245,6 +332,19 @@ func get_state_dict() -> Dictionary:
 func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 	_cooldown -= delta
 	_advance_state(delta)
+	lower_amount = move_toward(lower_amount, 1.0 if lowered else 0.0, delta / 0.25)
+
+	# Manos vacías o arma baja (usando un consumible): solo cambiar de arma e interactuar
+	if current() == null or lowered:
+		if aiming:
+			aiming = false
+			EventBus.aim_changed.emit(false)
+		ads_amount = move_toward(ads_amount, 0.0, delta / 0.2)
+		if not lowered and cmd.weapon_slot > 0 and slots.has(cmd.weapon_slot) and cmd.weapon_slot != current_slot:
+			_start_holster(cmd.weapon_slot)
+		breath_hold = 0.0
+		_update_interaction(cmd)
+		return
 
 	if player.is_sprinting:
 		_sprint_block = SPRINT_RECOVERY
@@ -318,6 +418,12 @@ func _advance_state(delta: float) -> void:
 		return
 	state_time += delta
 	var c := current()
+	if c == null:
+		if state == State.HOLSTER and state_time >= state_duration:
+			_equip(_pending_slot)
+		elif state != State.HOLSTER:
+			_set_state(State.READY, 0.0)
+		return
 	if (state == State.RELOADING or state == State.CLEARING) and _plan != null:
 		_run_plan_events(c)
 	if state == State.CLEARING and _plan == null and not _clear_eject_done and state_time >= state_duration * 0.45:
@@ -393,12 +499,20 @@ func _equip(slot: int) -> void:
 		(slots[k] as WeaponSlot).model.visible = (k == slot)
 	current_slot = slot
 	_pending_slot = -1
+	if current() == null:
+		# Manos vacías
+		_set_state(State.READY, 0.0)
+		_emit_state()
+		return
 	_set_state(State.DRAW, current().data.draw_time)
 	_play_mech(SynthSfx.click("draw", 0.7, 0.07), -10.0)
 	_emit_state()
 
 
 func _start_holster(slot: int) -> void:
+	if current() == null:
+		_equip(slot)
+		return
 	_pending_slot = slot
 	if aiming:
 		player.input_provider.cancel_aim()
@@ -841,6 +955,8 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 	var target: Node = null
 	if not hit.is_empty():
 		var n := hit["collider"] as Node
+		if n != null and n.has_meta("zone_owner"):
+			n = n.get_meta("zone_owner") as Node
 		for i in 4:
 			if n == null:
 				break
@@ -848,6 +964,8 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 				target = n
 				break
 			n = n.get_parent()
+		if target != null and String(target.call("get_interact_text")) == "":
+			target = null
 	if target != _hint_target:
 		_hint_target = target
 		var text := ""
@@ -863,7 +981,8 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 func refill_all() -> void:
 	for k: int in slots:
 		var ws := slots[k] as WeaponSlot
-		ws.reserve = ws.data.start_reserve
+		if ws.reserve < ws.data.start_reserve:
+			ws.reserve = ws.data.start_reserve
 		ws.mag = ws.data.mag_size
 	_emit_state()
 

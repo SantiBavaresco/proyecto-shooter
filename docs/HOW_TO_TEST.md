@@ -194,6 +194,16 @@ La estación está a la izquierda del polígono, afuera del muro, con su propia 
 3. Personajes a 18 m: tiros a cabeza, torso y piernas; al morir caen tiesos hacia atrás y a los 4 s se paran.
 4. Cajas y barriles a la izquierda cerca de la línea: se puede cubrir detrás y les pegan los tiros.
 
+## 2.0 — Inventario (F2)
+1. **Tab** abre el inventario. Arrastrá ítems por la grilla; con R girás lo que arrastrás. Clic derecho para ver las acciones. Doble clic en una venda la usa.
+2. Arrastrá el arma de "Arma 1" a la mochila: te quedás con las manos vacías. Volvé a ponerla: tiene el mismo cargador.
+3. Zona **Inventario y saqueo** (date vuelta desde el spawn y caminá a la izquierda): [F] en el cajón, la caja metálica y el alijo abre la ventana doble. Probá "Tomar todo" en el alijo: con todo eso encima quedás con sobrecarga (más lento, no corrés).
+4. Equipá la mochila grande o el chaleco con placas: sube el peso que podés llevar.
+5. Agarrá los ítems del piso con [F]. Tirá algo soltándolo afuera de los paneles.
+6. Pisá el **alambre de púas**: perdés salud y sangrás. Usá la venda con la tecla **5** (ranura rápida) y el botiquín con la **6**.
+7. Matá un personaje de la fila de 18 m y revisalo con [F]: tiene su fusil y munición.
+8. Disparar y recargar gasta la munición de la mochila; la pistola y un subfusil de 9 mm comparten la misma.
+
 ## Tests automáticos (opcional, desde una terminal)
 
 ```

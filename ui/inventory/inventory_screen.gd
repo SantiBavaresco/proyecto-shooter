@@ -1,0 +1,807 @@
+class_name InventoryScreen
+extends CanvasLayer
+## Pantalla de inventario (Tab), estilo STALKER 2:
+##  - izquierda: equipo (2 armas largas, pistola, casco, chaleco, mochila) y las 4
+##    ranuras rápidas (5–8);
+##  - centro: la mochila en grilla, con el peso y la plata; abajo, la ficha del ítem
+##    (con comparación contra lo equipado);
+##  - derecha (al revisar algo): el contenedor o el cuerpo, con "Tomar todo".
+##
+## Mouse: arrastrar para mover (R gira mientras se arrastra), soltar afuera para
+## tirar, clic derecho para acciones, doble clic para usar / equipar / pasar,
+## Mayús+clic para pasar entre mochila y contenedor. El mundo no se pausa.
+
+const UiTheme := preload("res://ui/theme/ui_theme.gd")
+const CELL := 46.0
+const DRAG_START_PX := 5.0
+
+enum Act { USE, EQUIP, UNEQUIP, UNLOAD, SPLIT, DROP, TAKE, STORE, CLEAR_QUICK, QUICK_1 = 20 }
+
+var player: Player
+var pinv: PlayerInventory
+## Contenedor abierto (LootContainer o NpcDummy: tienen "inventory" y "title_key").
+var container: Object = null
+var is_open: bool = false
+
+var _root: Control
+var _bag_grid: InvGrid
+var _loot_grid: InvGrid
+var _loot_panel: Control
+var _loot_title: Label
+var _slots: Dictionary = {}
+var _quick: Array[InvSlot] = []
+var _weight_bar: ProgressBar
+var _weight_label: Label
+var _weight_warn: Label
+var _money_label: Label
+var _vitals_label: Label
+var _info: RichTextLabel
+var _menu: PopupMenu
+var _drag_ctl: Control
+
+# Arrastre
+var _press_stack: ItemStack = null
+var _press_from: Variant = null  # InvGrid o InvSlot
+var _press_pos := Vector2.ZERO
+var _dragging := false
+var _drag_rot := false
+var _grab := Vector2.ZERO  # punto agarrado relativo a la esquina del ítem (px, sin girar)
+var _menu_stack: ItemStack = null
+var _menu_from: Variant = null
+var _info_stack: ItemStack = null
+var _selected: ItemStack = null
+
+
+func _ready() -> void:
+	layer = 20
+	_build()
+	visible = false
+	EventBus.loot_requested.connect(func(c: Object) -> void: open(c))
+	EventBus.inventory_changed.connect(_refresh)
+	EventBus.player_died.connect(func() -> void: close())
+
+
+func _find_player() -> bool:
+	if player == null or not is_instance_valid(player):
+		player = get_tree().get_first_node_in_group("player") as Player
+		pinv = player.inventory if player != null else null
+	return pinv != null
+
+
+# --- Abrir / cerrar --------------------------------------------------------------
+
+func open(c: Object = null) -> void:
+	if not _find_player() or player.is_dead:
+		return
+	if is_open and c == container:
+		return
+	if is_open:
+		_close_container()
+	pinv.sync_weapons()
+	container = c
+	is_open = true
+	visible = true
+	GameState.set_ui_open(true)
+	_bag_grid.setup(pinv.bag, CELL)
+	for k: String in _slots:
+		(_slots[k] as InvSlot).pinv = pinv
+	for q in _quick:
+		q.pinv = pinv
+	if container != null:
+		var ci := container.get("inventory") as Inventory
+		_loot_grid.setup(ci, CELL)
+		_loot_title.text = tr(String(container.get("title_key"))).to_upper()
+		_loot_panel.visible = true
+		if container.has_method("on_loot_opened"):
+			container.call("on_loot_opened")
+	else:
+		_loot_panel.visible = false
+	_selected = null
+	_info_stack = null
+	_refresh()
+
+
+func close() -> void:
+	if not is_open:
+		return
+	_cancel_drag()
+	_menu.hide()
+	_close_container()
+	is_open = false
+	visible = false
+	GameState.set_ui_open(false)
+
+
+func _close_container() -> void:
+	if container != null and is_instance_valid(container) and container.has_method("on_loot_closed"):
+		container.call("on_loot_closed")
+	container = null
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if is_open or GameState.state != GameState.State.PLAYING:
+		return
+	if event.is_action_pressed("inventory") and not event.is_echo():
+		open(null)
+		get_viewport().set_input_as_handled()
+
+
+func _input(event: InputEvent) -> void:
+	if not is_open:
+		return
+	if _menu.visible:
+		return
+	if event is InputEventKey and event.is_pressed() and not event.is_echo():
+		if event.is_action("inventory") or event.is_action("pause"):
+			close()
+			get_viewport().set_input_as_handled()
+			return
+		if (event as InputEventKey).physical_keycode == KEY_R and _dragging:
+			_drag_rot = not _drag_rot
+			_update_drag(_mouse())
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventMouseMotion:
+		var m := _mouse()
+		if _press_stack != null and not _dragging and m.distance_to(_press_pos) > DRAG_START_PX:
+			_start_drag()
+		if _dragging:
+			_update_drag(m)
+		else:
+			_update_hover(m)
+	elif event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		var m := _mouse()
+		if mb.button_index == MOUSE_BUTTON_LEFT:
+			if mb.pressed:
+				if mb.double_click:
+					_cancel_drag()
+					var hit := _hit(m)
+					if hit[0] != null:
+						_quick_action(hit[0], hit[1])
+				else:
+					_press(m, mb.shift_pressed)
+			else:
+				if _dragging:
+					_drop(m)
+				_press_stack = null
+				_dragging = false
+				_drag_ctl.queue_redraw()
+			get_viewport().set_input_as_handled()
+		elif mb.button_index == MOUSE_BUTTON_RIGHT and mb.pressed:
+			_cancel_drag()
+			var hit2 := _hit(m)
+			if hit2[0] != null:
+				_open_menu(hit2[0], hit2[1], mb.global_position)
+			get_viewport().set_input_as_handled()
+
+
+func _mouse() -> Vector2:
+	return _root.get_global_mouse_position()
+
+
+# --- Qué hay bajo el mouse ---------------------------------------------------------
+
+## [pila, origen (InvGrid o InvSlot)] bajo el punto.
+func _hit(m: Vector2) -> Array:
+	for g: InvGrid in _grids():
+		if g.get_global_rect().has_point(m):
+			return [g.stack_at_local(m - g.global_position), g]
+	for sl: InvSlot in _all_slots():
+		if sl.get_global_rect().has_point(m):
+			return [sl.stack(), sl]
+	return [null, null]
+
+
+func _grids() -> Array[InvGrid]:
+	var out: Array[InvGrid] = [_bag_grid]
+	if _loot_panel.visible:
+		out.append(_loot_grid)
+	return out
+
+
+func _all_slots() -> Array[InvSlot]:
+	var out: Array[InvSlot] = []
+	for k: String in _slots:
+		out.append(_slots[k])
+	out.append_array(_quick)
+	return out
+
+
+func _update_hover(m: Vector2) -> void:
+	var hit := _hit(m)
+	var s := hit[0] as ItemStack
+	for g: InvGrid in _grids():
+		var hv: ItemStack = s if hit[1] == g else null
+		if g.hovered != hv:
+			g.hovered = hv
+			g.queue_redraw()
+	for sl: InvSlot in _all_slots():
+		var hv2: bool = hit[1] == sl
+		if sl.hovered != hv2:
+			sl.hovered = hv2
+			sl.queue_redraw()
+	_show_info(s if s != null else _selected)
+
+
+# --- Arrastrar y soltar ------------------------------------------------------------
+
+func _press(m: Vector2, shift: bool) -> void:
+	var hit := _hit(m)
+	var s := hit[0] as ItemStack
+	if s == null:
+		_selected = null
+		_redraw_all()
+		return
+	if shift and hit[1] is InvGrid and _loot_panel.visible:
+		# Mayús+clic: pasa entre la mochila y el contenedor
+		_shift_transfer(s, hit[1])
+		return
+	_selected = s
+	_press_stack = s
+	_press_from = hit[1]
+	_press_pos = m
+	_drag_rot = s.rotated if hit[1] is InvGrid else false
+	if hit[1] is InvGrid:
+		var g := hit[1] as InvGrid
+		_grab = m - (g.global_position + Vector2(s.pos) * g.cell)
+	else:
+		_grab = Vector2(CELL, CELL) * 0.5
+	_show_info(s)
+	_redraw_all()
+
+
+func _start_drag() -> void:
+	_dragging = true
+	if _press_from is InvGrid:
+		(_press_from as InvGrid).dragging = _press_stack
+		(_press_from as InvGrid).queue_redraw()
+	_drag_ctl.queue_redraw()
+
+
+func _drag_cells() -> Vector2i:
+	var sz := _press_stack.item.size
+	return Vector2i(sz.y, sz.x) if _drag_rot else sz
+
+
+## Celda de destino en una grilla para el ítem arrastrado (esquina superior izquierda).
+func _drop_cell(g: InvGrid, m: Vector2) -> Vector2i:
+	var grab := _grab
+	if _drag_rot != (_press_stack.rotated if _press_from is InvGrid else false):
+		grab = Vector2(grab.y, grab.x)
+	var corner := m - g.global_position - grab + Vector2(g.cell, g.cell) * 0.5
+	return g.cell_at(corner)
+
+
+func _update_drag(m: Vector2) -> void:
+	for g: InvGrid in _grids():
+		g.ghost_at = Vector2i(-1, -1)
+		if g.get_global_rect().has_point(m):
+			var at := _drop_cell(g, m)
+			g.ghost_at = at
+			g.ghost_size = _drag_cells()
+			var target := g.inv.stack_at(g.cell_at(m - g.global_position))
+			var ok := g.inv.fits(_drag_cells(), at, _press_stack if _press_from == g else null)
+			if target != null and _press_stack.can_merge(target):
+				ok = true
+			g.ghost_ok = ok
+		g.queue_redraw()
+	for sl: InvSlot in _all_slots():
+		var hl := 0
+		if sl.get_global_rect().has_point(m):
+			if sl.slot == "quick":
+				hl = 1 if _press_stack.item.is_consumable() else -1
+			else:
+				hl = 1 if pinv.can_equip(_press_stack, sl.slot) or (sl == _press_from) else -1
+		if sl.highlight != hl:
+			sl.highlight = hl
+			sl.queue_redraw()
+	_drag_ctl.queue_redraw()
+
+
+func _drop(m: Vector2) -> void:
+	var s := _press_stack
+	var from: Variant = _press_from
+	_clear_drag_marks()
+	if s == null:
+		return
+	# Sobre una casilla de equipo o rápida
+	for sl: InvSlot in _all_slots():
+		if sl.get_global_rect().has_point(m):
+			_drop_on_slot(s, from, sl)
+			return
+	# Sobre una grilla
+	for g: InvGrid in _grids():
+		if g.get_global_rect().has_point(m):
+			var at := _drop_cell(g, m)
+			var target := g.inv.stack_at(g.cell_at(m - g.global_position))
+			if target != null and target != s and s.can_merge(target):
+				at = target.pos
+			if from is InvGrid:
+				pinv.move_to(s, (from as InvGrid).inv, g.inv, at, _drag_rot)
+			elif from is InvSlot and (from as InvSlot).slot != "quick":
+				pinv.unequip((from as InvSlot).slot, g.inv, at, _drag_rot)
+			_refresh()
+			return
+	# Afuera de los paneles: se tira al suelo
+	if not _over_panel(m):
+		_drop_to_ground(s, from)
+	_refresh()
+
+
+func _drop_on_slot(s: ItemStack, from: Variant, sl: InvSlot) -> void:
+	if sl.slot == "quick":
+		if s.item.is_consumable():
+			pinv.set_quick(sl.quick_index, s.item.id)
+		return
+	if from is InvSlot:
+		var fs := from as InvSlot
+		if fs.slot in ["weapon1", "weapon2"] and sl.slot in ["weapon1", "weapon2"] and fs != sl:
+			pinv.swap_weapon_slots()
+		return
+	if from is InvGrid and pinv.can_equip(s, sl.slot):
+		if not pinv.equip(s, sl.slot, (from as InvGrid).inv):
+			EventBus.toast.emit(tr("inv.no_room"))
+	_refresh()
+
+
+func _drop_to_ground(s: ItemStack, from: Variant) -> void:
+	if from is InvGrid:
+		(from as InvGrid).inv.remove(s)
+		pinv.drop(s)
+	elif from is InvSlot and (from as InvSlot).slot != "quick":
+		var t := pinv.take_equipped((from as InvSlot).slot)
+		if t != null:
+			pinv.drop(t)
+	elif from is InvSlot:
+		pinv.set_quick((from as InvSlot).quick_index, "")
+	if _selected == s:
+		_selected = null
+
+
+func _over_panel(m: Vector2) -> bool:
+	for p: Control in _root.get_meta("panels", []):
+		if p.visible and p.get_global_rect().has_point(m):
+			return true
+	return false
+
+
+func _cancel_drag() -> void:
+	_press_stack = null
+	_dragging = false
+	_clear_drag_marks()
+
+
+func _clear_drag_marks() -> void:
+	for g: InvGrid in [_bag_grid, _loot_grid]:
+		if g == null:
+			continue
+		g.dragging = null
+		g.ghost_at = Vector2i(-1, -1)
+		g.queue_redraw()
+	for sl: InvSlot in _all_slots():
+		sl.highlight = 0
+		sl.queue_redraw()
+	if _drag_ctl != null:
+		_drag_ctl.queue_redraw()
+
+
+func _draw_drag() -> void:
+	if not _dragging or _press_stack == null:
+		return
+	var m := _drag_ctl.get_local_mouse_position()
+	var grab := _grab
+	if _drag_rot != (_press_stack.rotated if _press_from is InvGrid else false):
+		grab = Vector2(grab.y, grab.x)
+	var r := Rect2(m - grab, Vector2(_drag_cells()) * CELL)
+	_drag_ctl.draw_rect(r, Color(0.2, 0.22, 0.16, 0.75))
+	_drag_ctl.draw_rect(r, UiTheme.ACCENT, false, 1.5)
+	InvGrid.draw_icon(_drag_ctl, _press_stack, r, false, 1 if _drag_rot else 0)
+
+
+# --- Acciones ------------------------------------------------------------------------
+
+## Doble clic: consumible → usar; equipo → equipar; en el contenedor → tomar;
+## equipado → desequipar.
+func _quick_action(s: ItemStack, from: Variant) -> void:
+	if from is InvSlot:
+		var sl := from as InvSlot
+		if sl.slot == "quick":
+			pinv.use(s)
+		elif pinv.unequip(sl.slot) == null:
+			EventBus.toast.emit(tr("inv.no_room"))
+	elif from == _loot_grid:
+		pinv.transfer(s, _loot_grid.inv, pinv.bag)
+	elif s.item.is_consumable():
+		if not pinv.use(s):
+			EventBus.toast.emit(tr("inv.cant_now"))
+	elif s.item.is_equipment():
+		pinv.equip(s, pinv.slot_for(s), pinv.bag)
+	_refresh()
+
+
+func _shift_transfer(s: ItemStack, g: InvGrid) -> void:
+	if g == _loot_grid:
+		pinv.transfer(s, _loot_grid.inv, pinv.bag)
+	else:
+		pinv.transfer(s, pinv.bag, _loot_grid.inv)
+	_refresh()
+
+
+func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
+	_menu.clear()
+	_menu_stack = s
+	_menu_from = from
+	var in_bag: bool = from == _bag_grid
+	var in_loot: bool = from == _loot_grid
+	var equipped: bool = from is InvSlot and (from as InvSlot).slot != "quick"
+	var quick_slot: bool = from is InvSlot and (from as InvSlot).slot == "quick"
+	if s.item.is_consumable() and (in_bag or quick_slot):
+		_menu.add_item(tr("inv.use"), Act.USE)
+	if s.item.is_equipment() and (in_bag or in_loot):
+		_menu.add_item(tr("inv.equip"), Act.EQUIP)
+	if equipped:
+		_menu.add_item(tr("inv.unequip"), Act.UNEQUIP)
+	if s.item.kind == "weapon" and int(s.state.get("mag", 0)) > 0 and not in_loot:
+		_menu.add_item(tr("inv.unload"), Act.UNLOAD)
+	if in_loot:
+		_menu.add_item(tr("inv.take"), Act.TAKE)
+	if in_bag and _loot_panel.visible:
+		_menu.add_item(tr("inv.store"), Act.STORE)
+	if (in_bag or in_loot) and s.count > 1:
+		_menu.add_item(tr("inv.split"), Act.SPLIT)
+	if s.item.is_consumable() and in_bag:
+		for i in 4:
+			_menu.add_item(tr("inv.assign_quick") % (i + 5), Act.QUICK_1 + i)
+	if quick_slot:
+		_menu.add_item(tr("inv.clear_quick"), Act.CLEAR_QUICK)
+	if not quick_slot:
+		_menu.add_item(tr("inv.drop"), Act.DROP)
+	_menu.reset_size()
+	_menu.position = Vector2i(at)
+	_menu.popup()
+
+
+func _on_menu(id: int) -> void:
+	var s := _menu_stack
+	var from: Variant = _menu_from
+	if s == null:
+		return
+	match id:
+		Act.USE:
+			if not pinv.use(s):
+				EventBus.toast.emit(tr("inv.cant_now"))
+		Act.EQUIP:
+			var src: Inventory = (from as InvGrid).inv
+			if not pinv.equip(s, pinv.slot_for(s), src):
+				EventBus.toast.emit(tr("inv.no_room"))
+		Act.UNEQUIP:
+			if pinv.unequip((from as InvSlot).slot) == null:
+				EventBus.toast.emit(tr("inv.no_room"))
+		Act.UNLOAD:
+			pinv.unload(s)
+		Act.SPLIT:
+			(from as InvGrid).inv.split(s, s.count / 2)
+		Act.DROP:
+			_drop_to_ground(s, from)
+		Act.TAKE:
+			pinv.transfer(s, _loot_grid.inv, pinv.bag)
+		Act.STORE:
+			pinv.transfer(s, pinv.bag, _loot_grid.inv)
+		Act.CLEAR_QUICK:
+			pinv.set_quick((from as InvSlot).quick_index, "")
+		_:
+			if id >= Act.QUICK_1 and id < Act.QUICK_1 + 4:
+				pinv.set_quick(id - Act.QUICK_1, s.item.id)
+	_menu_stack = null
+	_refresh()
+
+
+func take_all() -> void:
+	if container != null and _find_player():
+		pinv.take_all(container.get("inventory") as Inventory)
+		_refresh()
+
+
+# --- Ficha del ítem ------------------------------------------------------------------
+
+func _show_info(s: ItemStack) -> void:
+	if s == _info_stack and s != null:
+		return
+	_info_stack = s
+	if s == null:
+		_info.text = "[color=#%s]%s[/color]" % [UiTheme.TEXT_DIM.to_html(false), tr("inv.hint")]
+		return
+	_info.text = item_sheet(s, pinv)
+
+
+## Texto de la ficha (BBCode): nombre, descripción y datos; las armas, comparadas con
+## la equipada en la ranura que ocuparían.
+static func item_sheet(s: ItemStack, p: PlayerInventory) -> String:
+	var it := s.item
+	var dim := UiTheme.TEXT_DIM.to_html(false)
+	var acc := UiTheme.ACCENT.to_html(false)
+	var t := "[font_size=22][color=#%s]%s[/color][/font_size]\n" % [acc, ItemDB.display_name(it)]
+	t += "[color=#%s]%s[/color]\n" % [dim, TranslationServer.translate(it.desc_key)]
+	var rows: Array = []
+	if it.kind == "weapon":
+		var w := it.weapon()
+		var cmp: WeaponData = null
+		var cmp_name := ""
+		if p != null:
+			var slot := p.slot_for(s)
+			var eq := p.equipment.get(slot) as ItemStack
+			if eq != null and eq != s:
+				cmp = eq.item.weapon()
+				cmp_name = TranslationServer.translate(eq.item.name_key)
+		rows.append([tr_s("inv.stat.caliber"), w.caliber, ""])
+		rows.append([tr_s("inv.stat.damage"), "%d" % roundi(w.damage * w.pellets), _delta(w.damage * w.pellets, cmp.damage * cmp.pellets if cmp else NAN, 0)])
+		rows.append([tr_s("inv.stat.rpm"), "%d" % roundi(w.rpm), _delta(w.rpm, cmp.rpm if cmp else NAN, 0)])
+		rows.append([tr_s("inv.stat.mag"), "%d / %d" % [int(s.state.get("mag", 0)), w.mag_size], _delta(w.mag_size, cmp.mag_size if cmp else NAN, 0)])
+		rows.append([tr_s("inv.stat.accuracy"), "%d" % accuracy(w), _delta(accuracy(w), accuracy(cmp) if cmp else NAN, 0)])
+		rows.append([tr_s("inv.stat.condition"), "%d %%" % roundi(float(s.state.get("condition", 1.0)) * 100.0), ""])
+		if cmp != null:
+			t += "[color=#%s]%s[/color]\n" % [dim, TranslationServer.translate("inv.compare") % cmp_name]
+	elif it.kind == "ammo":
+		rows.append([tr_s("inv.stat.caliber"), it.caliber, ""])
+		rows.append([tr_s("inv.stat.count"), "%d" % s.count, ""])
+	elif it.is_consumable():
+		var fx := it.effects
+		if fx.has("heal"):
+			rows.append([tr_s("inv.stat.heal"), "+%d" % int(fx["heal"]), ""])
+		if fx.has("bleed"):
+			rows.append([tr_s("inv.stat.bleed"), "%d" % int(fx["bleed"]), ""])
+		if fx.has("stamina"):
+			rows.append([tr_s("inv.stat.stamina"), "+%d" % int(fx["stamina"]), ""])
+		if fx.has("regen"):
+			rows.append([tr_s("inv.stat.regen"), "%.1f/s · %d s" % [float(fx["regen"]), int(fx.get("duration", 0))], ""])
+		rows.append([tr_s("inv.stat.use_time"), "%.1f s" % it.use_time, ""])
+	else:
+		if it.protection > 0.0:
+			rows.append([tr_s("inv.stat.protection"), "%d %%" % roundi(it.protection * 100.0), ""])
+		if it.carry_bonus > 0.0:
+			rows.append([tr_s("inv.stat.carry"), "+%d kg" % int(it.carry_bonus), ""])
+		if s.state.has("condition"):
+			rows.append([tr_s("inv.stat.condition"), "%d %%" % roundi(float(s.state["condition"]) * 100.0), ""])
+	rows.append([tr_s("inv.stat.weight"), "%.2f kg" % s.weight(), ""])
+	if it.kind != "money":
+		rows.append([tr_s("inv.stat.price"), "$ %d" % s.price(), ""])
+	for r: Array in rows:
+		t += "[color=#%s]%s:[/color] %s %s\n" % [dim, r[0], r[1], r[2]]
+	return t
+
+
+static func tr_s(k: String) -> String:
+	return TranslationServer.translate(k)
+
+
+## Precisión 0–100 a partir de la dispersión apuntando (más chica, mejor).
+static func accuracy(w: WeaponData) -> float:
+	if w == null:
+		return 0.0
+	return roundf(100.0 / (1.0 + w.spread_ads * 4.0 + w.pellet_spread * 0.5))
+
+
+static func _delta(v: float, other: float, decimals: int) -> String:
+	if is_nan(other) or is_equal_approx(v, other):
+		return ""
+	var d := v - other
+	var col := "7fbf5f" if d > 0 else "c4553a"
+	var txt := ("%+." + str(decimals) + "f") % d
+	return "[color=#%s](%s)[/color]" % [col, txt]
+
+
+# --- Refresco ------------------------------------------------------------------------
+
+func _refresh() -> void:
+	if not is_open or pinv == null:
+		return
+	var w := pinv.total_weight()
+	var lim := pinv.carry_limit()
+	_weight_label.text = tr("inv.weight") % [w, lim]
+	_weight_bar.max_value = pinv.carry_max()
+	_weight_bar.value = w
+	var fill := _weight_bar.get_theme_stylebox("fill") as StyleBoxFlat
+	var o := pinv.overload()
+	fill.bg_color = UiTheme.ALERT if o > 1.0 else (UiTheme.ACCENT if o > 0.0 else UiTheme.TEXT.darkened(0.3))
+	_weight_warn.text = tr("inv.too_heavy") if o > 1.0 else (tr("inv.overloaded") if o > 0.0 else "")
+	_money_label.text = tr("inv.money") % _thousands(pinv.money)
+	var v := player.vitals
+	_vitals_label.text = "%s %d   %s" % [tr("inv.stat.heal"), roundi(v.health), tr("hud.bleeding") if v.bleeding > 0 else ""]
+	if _selected != null and not _stack_exists(_selected):
+		_selected = null
+	_info_stack = null
+	_show_info(_selected)
+	_redraw_all()
+
+
+func _stack_exists(s: ItemStack) -> bool:
+	if pinv.bag.has_stack(s):
+		return true
+	if _loot_panel.visible and _loot_grid.inv != null and _loot_grid.inv.has_stack(s):
+		return true
+	return pinv.equipment.values().has(s)
+
+
+func _redraw_all() -> void:
+	for g: InvGrid in [_bag_grid, _loot_grid]:
+		g.selected = _selected
+		g.queue_redraw()
+	for sl: InvSlot in _all_slots():
+		sl.queue_redraw()
+
+
+static func _thousands(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = "." + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
+
+# --- Armado --------------------------------------------------------------------------
+
+func _build() -> void:
+	_root = Control.new()
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(_root)
+	var dim := ColorRect.new()
+	dim.color = Color(0.02, 0.025, 0.02, 0.72)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(dim)
+
+	var main := HBoxContainer.new()
+	main.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	main.offset_left = 48
+	main.offset_right = -48
+	main.offset_top = 40
+	main.offset_bottom = -40
+	main.add_theme_constant_override("separation", 22)
+	main.alignment = BoxContainer.ALIGNMENT_CENTER
+	main.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(main)
+	var panels: Array[Control] = []
+
+	# Equipo
+	var eq := _panel(tr("inv.equipment"))
+	main.add_child(eq[0])
+	panels.append(eq[0])
+	var ev := eq[1] as VBoxContainer
+	for k: String in ["weapon1", "weapon2"]:
+		var s := _slot(k, Vector2(CELL * 6.5, CELL * 2.4))
+		ev.add_child(s)
+	var row1 := HBoxContainer.new()
+	row1.add_theme_constant_override("separation", 8)
+	ev.add_child(row1)
+	row1.add_child(_slot("pistol", Vector2(CELL * 3.2, CELL * 2.4)))
+	row1.add_child(_slot("helmet", Vector2(CELL * 3.1, CELL * 2.4)))
+	var row2 := HBoxContainer.new()
+	row2.add_theme_constant_override("separation", 8)
+	ev.add_child(row2)
+	row2.add_child(_slot("armor", Vector2(CELL * 3.2, CELL * 3.2)))
+	row2.add_child(_slot("backpack", Vector2(CELL * 3.1, CELL * 3.2)))
+	var ql := _small_label(tr("inv.quick"), UiTheme.TEXT_DIM, 15)
+	ev.add_child(ql)
+	var qrow := HBoxContainer.new()
+	qrow.add_theme_constant_override("separation", 8)
+	ev.add_child(qrow)
+	for i in 4:
+		var q := InvSlot.new()
+		q.setup(null, "quick", Vector2(CELL * 1.5, CELL * 1.5), i)
+		qrow.add_child(q)
+		_quick.append(q)
+	_vitals_label = _small_label("", UiTheme.TEXT, 17)
+	ev.add_child(_vitals_label)
+
+	# Mochila e info
+	var center := VBoxContainer.new()
+	center.add_theme_constant_override("separation", 14)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main.add_child(center)
+	var bag := _panel(tr("inv.backpack"))
+	center.add_child(bag[0])
+	panels.append(bag[0])
+	var bv := bag[1] as VBoxContainer
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 12)
+	bv.add_child(top)
+	_weight_bar = ProgressBar.new()
+	_weight_bar.show_percentage = false
+	_weight_bar.custom_minimum_size = Vector2(220, 12)
+	_weight_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var wfill := StyleBoxFlat.new()
+	wfill.bg_color = UiTheme.TEXT.darkened(0.3)
+	_weight_bar.add_theme_stylebox_override("fill", wfill)
+	top.add_child(_weight_bar)
+	_weight_label = _small_label("", UiTheme.TEXT, 17)
+	top.add_child(_weight_label)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(sp)
+	_money_label = _small_label("", UiTheme.ACCENT, 19)
+	top.add_child(_money_label)
+	var sort := Button.new()
+	sort.text = tr("inv.sort")
+	sort.add_theme_font_size_override("font_size", 16)
+	sort.focus_mode = Control.FOCUS_NONE
+	sort.pressed.connect(func() -> void:
+		if pinv != null:
+			pinv.bag.sort())
+	top.add_child(sort)
+	_weight_warn = _small_label("", UiTheme.ALERT, 15)
+	bv.add_child(_weight_warn)
+	_bag_grid = InvGrid.new()
+	_bag_grid.setup(Inventory.new(PlayerInventory.GRID.x, PlayerInventory.GRID.y), CELL)
+	bv.add_child(_bag_grid)
+	var info_panel := PanelContainer.new()
+	info_panel.custom_minimum_size = Vector2(CELL * PlayerInventory.GRID.x + 36, 250)
+	center.add_child(info_panel)
+	panels.append(info_panel)
+	_info = RichTextLabel.new()
+	_info.bbcode_enabled = true
+	_info.fit_content = false
+	_info.scroll_active = false
+	_info.add_theme_font_size_override("normal_font_size", 17)
+	_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info_panel.add_child(_info)
+
+	# Contenedor
+	var loot := _panel("")
+	_loot_panel = loot[0]
+	main.add_child(_loot_panel)
+	panels.append(_loot_panel)
+	var lv := loot[1] as VBoxContainer
+	_loot_title = lv.get_child(0) as Label
+	var take := Button.new()
+	take.text = tr("inv.take_all")
+	take.add_theme_font_size_override("font_size", 16)
+	take.focus_mode = Control.FOCUS_NONE
+	take.pressed.connect(take_all)
+	lv.add_child(take)
+	_loot_grid = InvGrid.new()
+	_loot_grid.setup(Inventory.new(8, 6), CELL)
+	lv.add_child(_loot_grid)
+	_loot_panel.visible = false
+	_root.set_meta("panels", panels)
+
+	_menu = PopupMenu.new()
+	_menu.add_theme_font_size_override("font_size", 18)
+	_menu.id_pressed.connect(_on_menu)
+	add_child(_menu)
+
+	_drag_ctl = Control.new()
+	_drag_ctl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_drag_ctl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_drag_ctl.draw.connect(_draw_drag)
+	_root.add_child(_drag_ctl)
+
+
+func _panel(title: String) -> Array:
+	var p := PanelContainer.new()
+	p.mouse_filter = Control.MOUSE_FILTER_PASS
+	p.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(v)
+	v.add_child(_small_label(title, UiTheme.ACCENT, 20))
+	return [p, v]
+
+
+func _slot(name: String, px: Vector2) -> InvSlot:
+	var s := InvSlot.new()
+	s.setup(null, name, px)
+	_slots[name] = s
+	return s
+
+
+func _small_label(t: String, c: Color, fs: int) -> Label:
+	var l := Label.new()
+	l.text = t
+	l.add_theme_font_size_override("font_size", fs)
+	l.add_theme_color_override("font_color", c)
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return l

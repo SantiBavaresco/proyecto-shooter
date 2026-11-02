@@ -48,7 +48,7 @@ func _build() -> void:
 		for z: float in [-0.24, 0.24]:
 			_mesh(Vector3(0.05, TABLE_HEIGHT, 0.05), Vector3(x, TABLE_HEIGHT * 0.5, z), wood)
 	# Arma acostada sobre la mesa, de costado, con el caño hacia +X
-	_model = WeaponModelBuilder.build(data)
+	_model = ItemModels.display_weapon(data)
 	for n in ["HandR", "HandL", "HookR", "HookL", "HookP"]:
 		var h := _model.find_child(n, true, false)
 		if h != null:
