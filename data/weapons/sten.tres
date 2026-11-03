@@ -62,6 +62,7 @@ model_params = {
 ]
 }
 },
+"side_mag_wrist": -35.0,
 "shift": [
 {
 "match": [

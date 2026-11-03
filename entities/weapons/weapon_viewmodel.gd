@@ -543,7 +543,7 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 				var smag := m.get_node_or_null("Mag") as Node3D
 				if smag != null and float(smag.get_meta("roll", 0.0)) < -45.0:
 					var kw := smooth(clampf(off_l.length() / 0.05, 0.0, 1.0))
-					wrist = Basis(Vector3.BACK, deg_to_rad(80.0) * kw)
+					wrist = Basis(Vector3.BACK, deg_to_rad(float(w.model_params.get("side_mag_wrist", 0.0))) * kw)
 			var b := Basis(Vector3.BACK, -_reload_roll * 0.85 * on_hg) * wrist * bw
 			hl.transform = Transform3D(b, part_base[hl] + c0 - b * c0 + off_l)
 	return mag_follow

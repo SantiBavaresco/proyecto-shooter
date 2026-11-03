@@ -334,3 +334,7 @@
 - Revisando una caja o un cuerpo, mochila y contenedor quedan lado a lado (el equipo se oculta, como en STALKER 2).
 - **E: tomar todo** del alijo, caja o cuerpo.
 - Teclas propias de la pantalla de inventario, configurables en Opciones → Controles → Pantalla de inventario: tomar todo (E), girar (R), ordenar (T), usar / equipar el ítem señalado (F) y pasar al otro lado (Mayús + clic). No chocan con las del juego.
+
+## 2.0.3 — Ajustes (2026-11-03)
+- ST-2 y AC-9: el giro de muñeca de la 2.0.2 dejaba la mano dada vuelta hacia arriba. Ahora es un giro de 35° hacia el otro lado (la mano agarra el cargador por detrás), configurable por arma (`side_mag_wrist` en model_params).
+- R-700 SR: vidrio del visor 1 mm más abajo; ya queda centrado en el ocular.
