@@ -252,5 +252,8 @@
 	"item.scrap_electronics": "Scrap electronics",
 	"item.scrap_electronics.desc": "Boards and wires. Sellable (trade in F6).",
 	"item.tools_basic": "Basic tools",
-	"item.tools_basic.desc": "Toolbox for technicians (repairs in F6). Heavy."
+	"item.tools_basic.desc": "Toolbox for technicians (repairs in F6). Heavy.",
+	"inv.slot.melee": "Melee",
+	"item.knife": "Combat knife",
+	"item.knife.desc": "Goes in the melee slot. Melee attacks (V) come later."
 }

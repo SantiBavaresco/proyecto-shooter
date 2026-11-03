@@ -114,7 +114,7 @@ static func draw_icon(ci: CanvasItem, s: ItemStack, r: Rect2, faded := false, fo
 	var tex := ItemIcons.icon(ci.get_tree(), s.item)
 	if tex == null:
 		return
-	var rot := s.rotated if force_rot < 0 else force_rot == 1
+	var rot := s.rotated if force_rot < 0 else force_rot >= 1
 	var mod := Color(1, 1, 1, 0.35 if faded else 1.0)
 	var inner := r.grow(-3.0)
 	if not rot:
@@ -124,7 +124,11 @@ static func draw_icon(ci: CanvasItem, s: ItemStack, r: Rect2, faded := false, fo
 		var tsz := tex.get_size()
 		var target := Rect2(Vector2.ZERO, Vector2(inner.size.y, inner.size.x))
 		var fit := _fit(tsz, target)
-		ci.draw_set_transform(inner.position + Vector2(inner.size.x, 0), PI * 0.5, Vector2.ONE)
+		# 1: girado a la derecha (como en la grilla); 2: a la izquierda (caño arriba)
+		if force_rot == 2:
+			ci.draw_set_transform(inner.position + Vector2(0, inner.size.y), -PI * 0.5, Vector2.ONE)
+		else:
+			ci.draw_set_transform(inner.position + Vector2(inner.size.x, 0), PI * 0.5, Vector2.ONE)
 		ci.draw_texture_rect(tex, fit, false, mod)
 		ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 

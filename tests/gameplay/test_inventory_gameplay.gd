@@ -49,6 +49,7 @@ func test_start_kit() -> void:
 		"tres armas equipadas")
 	assert_eq(weapons.current_slot, 1, "en la mano el arma 1")
 	assert_eq(weapons.current().reserve, weapons.current_data().start_reserve, "munición en la mochila")
+	assert_eq((pinv.equipment["melee"] as ItemStack).item.id, "knife", "cuchillo en arma blanca")
 	assert_eq(pinv.bag.count_of("bandage"), 3)
 	assert_eq(pinv.quick[0], "bandage")
 	assert_eq(pinv.money, PlayerInventory.START_MONEY)

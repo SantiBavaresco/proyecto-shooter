@@ -15,6 +15,7 @@
 			"use_time": 3.0, "effects": {"heal": 10, "regen": 0.5, "duration": 20}},
 		{"id": "bread", "kind": "food", "size": [2, 1], "weight": 0.3, "stack": 3, "price": 20,
 			"use_time": 2.6, "effects": {"heal": 6, "regen": 0.3, "duration": 20}},
+		{"id": "knife", "kind": "melee", "size": [3, 1], "weight": 0.3, "stack": 1, "price": 150},
 		{"id": "helmet_steel", "kind": "helmet", "size": [2, 2], "weight": 1.4, "stack": 1, "price": 900,
 			"protection": 0.25},
 		{"id": "vest_light", "kind": "armor", "size": [3, 3], "weight": 4.5, "stack": 1, "price": 2200,

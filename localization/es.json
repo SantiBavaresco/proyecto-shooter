@@ -252,5 +252,8 @@
 	"item.scrap_electronics": "Chatarra electrónica",
 	"item.scrap_electronics.desc": "Plaquetas y cables. Se venden (comercio en la F6).",
 	"item.tools_basic": "Herramientas básicas",
-	"item.tools_basic.desc": "Caja de herramientas para técnicos (reparación en la F6). Pesada."
+	"item.tools_basic.desc": "Caja de herramientas para técnicos (reparación en la F6). Pesada.",
+	"inv.slot.melee": "Arma blanca",
+	"item.knife": "Cuchillo de combate",
+	"item.knife.desc": "Va en la ranura de arma blanca. El ataque cuerpo a cuerpo (V) llega más adelante."
 }

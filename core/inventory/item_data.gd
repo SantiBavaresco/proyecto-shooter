@@ -5,12 +5,12 @@ extends RefCounted
 ## Ver ItemDB.
 
 ## Orden de los tipos al ordenar el inventario.
-const KIND_ORDER := ["weapon", "armor", "helmet", "backpack", "ammo", "medical", "drink", "food", "misc", "money"]
+const KIND_ORDER := ["weapon", "melee", "armor", "helmet", "backpack", "ammo", "medical", "drink", "food", "misc", "money"]
 
 var id: String = ""
 var name_key: String = ""
 var desc_key: String = ""
-## "weapon", "ammo", "medical", "food", "drink", "armor", "helmet", "backpack", "misc", "money".
+## "weapon", "melee", "ammo", "medical", "food", "drink", "armor", "helmet", "backpack", "misc", "money".
 var kind: String = "misc"
 ## Celdas que ocupa (ancho, alto) sin rotar.
 var size: Vector2i = Vector2i.ONE
@@ -45,7 +45,7 @@ func is_consumable() -> bool:
 
 
 func is_equipment() -> bool:
-	return kind in ["weapon", "armor", "helmet", "backpack"]
+	return kind in ["weapon", "melee", "armor", "helmet", "backpack"]
 
 
 func stackable() -> bool:
@@ -66,6 +66,8 @@ func equip_slots() -> PackedStringArray:
 			return PackedStringArray(["helmet"])
 		"backpack":
 			return PackedStringArray(["backpack"])
+		"melee":
+			return PackedStringArray(["melee"])
 	return PackedStringArray()
 
 

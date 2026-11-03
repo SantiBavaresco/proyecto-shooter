@@ -310,3 +310,7 @@
 - Munición total por calibre (como pide el plan); cargadores individuales a futuro.
 - Cascos y chalecos guardan su protección pero recién cuenta con el daño al jugador de la F3.
 - Hambre, sed y sueño: F5. Comercio y reparación: F6.
+
+## 2.0.1 — Equipo reacomodado (2026-11-03)
+- Inventario: Arma 2 a la izquierda y Arma 1 a la derecha (paradas, caño arriba), casco, chaleco y mochila al centro, pistola debajo del Arma 2 y la nueva ranura de **arma blanca** debajo del Arma 1.
+- Nuevo ítem: cuchillo de combate (viene equipado). El ataque cuerpo a cuerpo (V) llega más adelante.

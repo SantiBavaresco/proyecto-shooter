@@ -16,7 +16,7 @@ const GRID := Vector2i(12, 10)
 ## kg sin penalidad (sin mochila ni chaleco) y margen hasta el máximo.
 const BASE_CARRY := 40.0
 const OVER_MARGIN := 20.0
-const EQUIP_SLOTS := ["weapon1", "weapon2", "pistol", "helmet", "armor", "backpack"]
+const EQUIP_SLOTS := ["weapon1", "weapon2", "pistol", "melee", "helmet", "armor", "backpack"]
 ## Ranura de equipo → slot del WeaponController.
 const WEAPON_SLOT := {"weapon1": 1, "weapon2": 2, "pistol": 3}
 const START_MONEY := 1500
@@ -57,6 +57,7 @@ func give_start_kit() -> void:
 	for slot: String in START_WEAPONS:
 		var d := load("res://data/weapons/%s.tres" % START_WEAPONS[slot]) as WeaponData
 		player.weapons.equip_weapon(d, WEAPON_SLOT[slot], {}, true, null, false)
+	equipment["melee"] = ItemStack.make("knife")
 	for e: Array in START_ITEMS:
 		bag.add_item(e[0], e[1])
 	for i in START_QUICK.size():

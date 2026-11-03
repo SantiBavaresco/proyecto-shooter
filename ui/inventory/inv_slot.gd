@@ -64,7 +64,9 @@ func _draw() -> void:
 	label = tr("inv.slot." + slot)
 	var s := stack()
 	if s != null:
-		InvGrid.draw_icon(self, s, r.grow(-6), false, 0)
+		# Casilla parada (armas largas a los costados): el arma se dibuja con el caño arriba
+		var upright := size.y > size.x * 1.3 and s.item.size.x > s.item.size.y
+		InvGrid.draw_icon(self, s, Rect2(Vector2(6, 22), size - Vector2(12, 34)), false, 2 if upright else 0)
 		if s.state.has("condition"):
 			var c := float(s.state["condition"])
 			var bar := Rect2(Vector2(6, size.y - 8), Vector2(minf(60.0, size.x * 0.4), 3))

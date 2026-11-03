@@ -51,7 +51,7 @@ func _icon_for(item: ItemData) -> Texture2D:
 	env.ambient_light_energy = 0.6
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	cam.environment = env
-	if item.kind == "weapon":
+	if item.kind == "weapon" or item.kind == "melee":
 		# De costado (el modelo está acostado con el caño hacia +X): desde arriba
 		cam.basis = Basis.looking_at(Vector3.DOWN, Vector3.FORWARD)
 	else:

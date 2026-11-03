@@ -670,19 +670,24 @@ func _build() -> void:
 	main.add_child(eq[0])
 	panels.append(eq[0])
 	var ev := eq[1] as VBoxContainer
-	for k: String in ["weapon1", "weapon2"]:
-		var s := _slot(k, Vector2(CELL * 6.5, CELL * 2.4))
-		ev.add_child(s)
-	var row1 := HBoxContainer.new()
-	row1.add_theme_constant_override("separation", 8)
-	ev.add_child(row1)
-	row1.add_child(_slot("pistol", Vector2(CELL * 3.2, CELL * 2.4)))
-	row1.add_child(_slot("helmet", Vector2(CELL * 3.1, CELL * 2.4)))
-	var row2 := HBoxContainer.new()
-	row2.add_theme_constant_override("separation", 8)
-	ev.add_child(row2)
-	row2.add_child(_slot("armor", Vector2(CELL * 3.2, CELL * 3.2)))
-	row2.add_child(_slot("backpack", Vector2(CELL * 3.1, CELL * 3.2)))
+	# Tres columnas: Arma 2 y pistola a la izquierda, casco / chaleco / mochila al
+	# centro, Arma 1 y arma blanca a la derecha (las armas largas, paradas)
+	var cols := HBoxContainer.new()
+	cols.add_theme_constant_override("separation", 8)
+	cols.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ev.add_child(cols)
+	var side := Vector2(CELL * 2.6, CELL * 6.6)
+	var small := Vector2(CELL * 2.6, CELL * 2.6)
+	var layout := [[["weapon2", side], ["pistol", small]],
+		[["helmet", Vector2(CELL * 3.0, CELL * 2.4)], ["armor", Vector2(CELL * 3.0, CELL * 3.4)], ["backpack", Vector2(CELL * 3.0, CELL * 3.4)]],
+		[["weapon1", side], ["melee", small]]]
+	for col: Array in layout:
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 8)
+		cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cols.add_child(cv)
+		for e: Array in col:
+			cv.add_child(_slot(e[0], e[1]))
 	var ql := _small_label(tr("inv.quick"), UiTheme.TEXT_DIM, 15)
 	ev.add_child(ql)
 	var qrow := HBoxContainer.new()

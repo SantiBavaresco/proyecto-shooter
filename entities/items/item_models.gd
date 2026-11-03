@@ -46,6 +46,13 @@ static func build(item: ItemData) -> Node3D:
 			_ammo(root, item)
 		_:
 			match item.id:
+				"knife":
+					# Hoja y mango acostados, punta hacia +X
+					var steel := _m(Color(0.62, 0.63, 0.65), 0.3, 0.9)
+					_box(root, Vector3(0.16, 0.005, 0.03), Vector3(0.07, 0.004, 0), steel, 0.002)
+					_box(root, Vector3(0.025, 0.006, 0.026), Vector3(0.16, 0.004, -0.002), steel, 0.002).rotation = Vector3(0, 0.75, 0)
+					_box(root, Vector3(0.012, 0.014, 0.06), Vector3(-0.015, 0.007, 0), _m(Color(0.2, 0.2, 0.2), 0.5, 0.6), 0.002)
+					_box(root, Vector3(0.12, 0.022, 0.026), Vector3(-0.085, 0.011, 0), _m(Color(0.1, 0.1, 0.09), 0.85), 0.008)
 				"bandage":
 					_cyl(root, 0.03, 0.055, Vector3(0, 0.03, 0), _m(Color(0.92, 0.9, 0.84), 0.95), Vector3(PI * 0.5, 0, 0))
 					_cyl(root, 0.012, 0.056, Vector3(0, 0.03, 0), _m(Color(0.75, 0.72, 0.66), 0.95), Vector3(PI * 0.5, 0, 0))
