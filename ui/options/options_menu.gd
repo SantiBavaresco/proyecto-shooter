@@ -127,6 +127,13 @@ func _controls_tab() -> Control:
 	grid.add_child(reset)
 
 	for action: String in InputActions.REBINDABLE:
+		if action == InputActions.UI_ACTIONS[0]:
+			# Teclas dentro de la pantalla de inventario
+			var h2 := Label.new()
+			h2.text = tr("options.keybinds_inventory")
+			h2.add_theme_color_override("font_color", UiTheme.ACCENT)
+			grid.add_child(h2)
+			grid.add_child(Control.new())
 		var l := Label.new()
 		l.text = tr("action." + action)
 		grid.add_child(l)

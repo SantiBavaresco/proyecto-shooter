@@ -314,3 +314,23 @@
 ## 2.0.1 — Equipo reacomodado (2026-11-03)
 - Inventario: Arma 2 a la izquierda y Arma 1 a la derecha (paradas, caño arriba), casco, chaleco y mochila al centro, pistola debajo del Arma 2 y la nueva ranura de **arma blanca** debajo del Arma 1.
 - Nuevo ítem: cuchillo de combate (viene equipado). El ataque cuerpo a cuerpo (V) llega más adelante.
+
+## 2.0.2 — Correcciones de armas e inventario más grande (2026-11-03)
+
+### Armas
+- **AR-74K**: la recarga no se veía. La animación se manejaba a mano con velocidad 0 y arrancaba con un fundido de 0,12 s que nunca avanzaba: el modelo se quedaba en la pose quieta. Ahora arranca sin fundido.
+- **ST-2**: la línea de mira pasaba por debajo del agujero del alza (es de anillo). Ahora pasa por el centro del anillo y el guion se subió 4 mm para quedar alineado.
+- **AC-9**: la mira estaba 8 mm por encima de las miras reales; bajada a la altura de alza y guion.
+- **ST-2 y AC-9**: al recargar, la muñeca izquierda gira para agarrar y meter el cargador de costado.
+- **PT-91**: el cierre (con su manija) va y viene en cada disparo. También la manija de toda la familia AK por código.
+- **AR-M**: la mira apuntaba a lo alto del arco del guion; bajada al poste.
+- **R-700 SR**: más adelante en la cadera, ocular más lejos del ojo y el vidrio del visor centrado en el tubo (estaba 3,5 mm arriba).
+- **Visores**: desde la cadera el ocular muestra lo que ve el visor, pero chico, corrido según el ángulo, deformado y borroso (como un visor lejos del ojo). Se actualiza a medio ritmo para no costar tanto.
+- **SK-45**: con peine, los cartuchos entran de a uno con un empujón del pulgar cada uno (el contador sube de a uno).
+- Herramienta de datos: `set_params.py` cortaba mal el bloque `model_params` (diccionarios anidados) y dejaba restos viejos en los .tres; arreglado y archivos limpios (el juego ya leía el bloque correcto).
+
+### Inventario
+- Celdas al doble (92 px en 1920×1080). Mochila de 8×15 con desplazamiento (rueda o arrastrando al borde); contenedores de hasta 8 columnas.
+- Revisando una caja o un cuerpo, mochila y contenedor quedan lado a lado (el equipo se oculta, como en STALKER 2).
+- **E: tomar todo** del alijo, caja o cuerpo.
+- Teclas propias de la pantalla de inventario, configurables en Opciones → Controles → Pantalla de inventario: tomar todo (E), girar (R), ordenar (T), usar / equipar el ítem señalado (F) y pasar al otro lado (Mayús + clic). No chocan con las del juego.

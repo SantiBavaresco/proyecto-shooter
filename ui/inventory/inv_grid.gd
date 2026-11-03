@@ -82,7 +82,7 @@ func _draw_stack(s: ItemStack) -> void:
 	draw_rect(r, UiTheme.ACCENT.darkened(0.2) if s == selected else UiTheme.PANEL_BORDER, false, 1.0)
 	draw_icon(self, s, r, faded)
 	# Cantidad abajo a la derecha; estado (barra) abajo a la izquierda
-	var fs := 15
+	var fs := int(clampf(cell * 0.22, 14.0, 22.0))
 	if s.count > 1 or s.item.kind == "ammo":
 		var t := "%d" % s.count
 		var tw := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
@@ -90,15 +90,15 @@ func _draw_stack(s: ItemStack) -> void:
 			UiTheme.TEXT if not faded else UiTheme.TEXT_DIM)
 	if s.state.has("condition"):
 		var c := float(s.state["condition"])
-		var bw := minf(r.size.x * 0.4, 46.0)
-		var bar := Rect2(Vector2(r.position.x + 4, r.end.y - 7), Vector2(bw, 3))
+		var bw := minf(r.size.x * 0.4, cell * 0.9)
+		var bar := Rect2(Vector2(r.position.x + 5, r.end.y - 9), Vector2(bw, 4))
 		draw_rect(bar, Color(0, 0, 0, 0.6))
-		draw_rect(Rect2(bar.position, Vector2(bw * c, 3)), cond_color(c))
+		draw_rect(Rect2(bar.position, Vector2(bw * c, 4)), cond_color(c))
 	if s.item.kind == "weapon":
 		var w := s.item.weapon()
 		if w != null:
 			var t2 := "%d/%d" % [int(s.state.get("mag", 0)), w.mag_size]
-			draw_string(_font, Vector2(r.position.x + 4, r.position.y + 15), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiTheme.TEXT_DIM)
+			draw_string(_font, Vector2(r.position.x + 5, r.position.y + fs + 2), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, fs - 2, UiTheme.TEXT_DIM)
 
 
 static func cond_color(c: float) -> Color:

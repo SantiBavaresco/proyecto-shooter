@@ -79,8 +79,6 @@ model_params = {
 "left": "pistol"
 }
 }
-}
-}
 sight = "iron"
 scope_mag = 0.0
 scope_mag_max = 0.0

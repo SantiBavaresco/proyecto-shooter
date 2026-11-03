@@ -368,6 +368,7 @@ static func _ak_receiver(root: Node3D, rr: float, rf: float, grip_mat: Material,
 static func _ak_charging(root: Node3D, z: float) -> void:
 	var ch := WeaponModelBuilder.group(root, "Charging", Vector3(0.0158, 0.004, z))
 	ch.set_meta("knob", Vector3(0.018, 0, 0))
+	ch.set_meta("cycle", 0.03)  # va con el portacierre
 	WeaponModelBuilder.cyl(ch, "ChStem", 0.0034, 0.016, Vector3(0.007, 0, 0), WeaponModelBuilder.mat("metal"), 10, Vector3(0, PI * 0.5, 0))
 	WeaponModelBuilder.cyl(ch, "ChKnob", 0.0062, 0.01, Vector3(0.018, 0, 0), WeaponModelBuilder.mat("metal"), 14, Vector3(0, PI * 0.5, 0), 0.0025)
 

@@ -6,7 +6,9 @@ path = f"/home/claude/proyecto-shooter/data/weapons/{wid}.tres"
 s = open(path).read()
 params = json.load(open(src)) if not src.startswith('{') else json.loads(src)
 txt = "model_params = " + json.dumps(params, indent=0, ensure_ascii=False).replace("\n", "\n") + "\n"
-s2 = re.sub(r"model_params = \{.*?\n\}\n", lambda m: txt, s, count=1, flags=re.S)
+# El bloque termina en la primera "}" sola seguida de otra propiedad (los diccionarios
+# anidados también cierran con "}" en la columna 0)
+s2 = re.sub(r"model_params = \{.*?\n\}\n(?=[a-z_]+ = )", lambda m: txt, s, count=1, flags=re.S)
 if s2 == s and "model_params = {}" in s:
     s2 = s.replace("model_params = {}\n", txt)
 for kv in sys.argv[3:]:

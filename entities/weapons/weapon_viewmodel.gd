@@ -35,6 +35,8 @@ var part_base: Dictionary = {}
 var kick_pos: Vector3 = Vector3.ZERO
 var kick_rot: Vector3 = Vector3.ZERO
 var slide_kick: float = 0.0
+## Cierre que va y viene con cada disparo (manija pegada al cierre: AK, PT-91, ST-2).
+var charge_kick: float = 0.0
 var flash_time: float = 0.0
 ## Desvío del eje del arma por respiración y pulso (euler, rad): la bala sale por ahí
 ## apuntando (lo usa WeaponController al disparar) y la retícula del visor lo muestra.
@@ -50,6 +52,7 @@ var _flame_mat: StandardMaterial3D
 ## Forma elegida para el disparo en curso: [variante, escala, largo de llama, ancho, giro, color].
 var _flash_shot: Array = []
 var _scope_vp: SubViewport
+var _scope_hip_frame: bool = false
 var _sway: Vector3 = Vector3.ZERO
 var _bob_t: float = 0.0
 var _time: float = 0.0
@@ -97,6 +100,7 @@ func kick(w: WeaponData, ads: float, roll_deg: float) -> void:
 	kick_rot.x += deg_to_rad(w.kick_rot) * lerpf(1.0, 0.45, ads)
 	kick_rot.z += deg_to_rad(roll_deg)
 	slide_kick = 1.0
+	charge_kick = 1.0
 	_shot_new = true
 
 
@@ -168,7 +172,9 @@ func _drive_anims(c: WeaponController.WeaponSlot) -> void:
 	_shot_new = false
 	var key_now := "%s@%d" % [want, c.model.get_instance_id()]
 	if key_now != _anim_key or restart:
-		ap.play(want, 0.02 if want == shoot else 0.12)
+		# Manejada a mano (recarga): sin fundido, porque con velocidad 0 el fundido no
+		# avanza y el modelo se queda en la pose anterior
+		ap.play(want, 0.0 if manual >= 0.0 else (0.02 if want == shoot else 0.12))
 		ap.seek(from if from >= 0.0 else (idle_from if want == idle else 0.0), true)
 		_anim_key = key_now
 	ap.speed_scale = speed
@@ -487,11 +493,12 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 		var port: Vector3 = (m.get_node("Ejection") as Node3D).position + Vector3(0.03, -0.04, 0.025) - palm
 		var o := path(t, [[0.0, z], [0.1, port + Vector3(0.03, -0.04, 0.03)], [0.16, port], [0.86, port],
 			[0.94, port * 0.4 + Vector3(0.02, -0.02, 0.02)], [1.0, z]])
-		if t > 0.16 and t < 0.86:
-			# Empuja cada cartucho hacia abajo
-			var per := 0.7 / maxf(float(1 if wc._clip_load else wc._rounds_planned), 1.0)
-			var k := fmod(t - 0.16, maxf(per, 0.01)) / maxf(per, 0.01)
-			o += Vector3(0, -0.012 * sin(k * PI), 0.004 * sin(k * TAU))
+		var win := wc.rounds_window()
+		if t > win.x and t < win.x + win.y:
+			# Empuja cada cartucho hacia abajo (también del peine: uno por empujón)
+			var per := win.y / maxf(float(wc._rounds_planned), 1.0)
+			var k := fmod(t - win.x, maxf(per, 0.01)) / maxf(per, 0.01)
+			o += Vector3(0, -0.016 * sin(k * PI), 0.005 * sin(k * TAU))
 		off_r = o
 	elif wc.state == WeaponController.State.CYCLING and hr != null and m.has_node("Bolt"):
 		var bolt := m.get_node("Bolt") as Node3D
@@ -529,7 +536,15 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 				var lead := 1.0 if wc.state == WeaponController.State.CLEARING else 0.14
 				on_hg = maxf(on_hg, smooth(clampf((t - float(w0[0]) + lead) / 0.08, 0.0, 1.0))
 					* (1.0 - smooth(clampf((t - float(w1[1]) - 0.02) / 0.08, 0.0, 1.0))))
-			var b := Basis(Vector3.BACK, -_reload_roll * 0.85 * on_hg) * bw
+			# Cargador al costado (izquierda): la muñeca gira para agarrarlo y meterlo de
+			# lado (palma hacia el arma) mientras la mano está lejos del guardamanos
+			var wrist := Basis.IDENTITY
+			if t >= 0.0 and wc._plan != null and wc.state == WeaponController.State.RELOADING:
+				var smag := m.get_node_or_null("Mag") as Node3D
+				if smag != null and float(smag.get_meta("roll", 0.0)) < -45.0:
+					var kw := smooth(clampf(off_l.length() / 0.05, 0.0, 1.0))
+					wrist = Basis(Vector3.BACK, deg_to_rad(80.0) * kw)
+			var b := Basis(Vector3.BACK, -_reload_roll * 0.85 * on_hg) * wrist * bw
 			hl.transform = Transform3D(b, part_base[hl] + c0 - b * c0 + off_l)
 	return mag_follow
 
@@ -554,6 +569,11 @@ func _animate_parts(c: WeaponController.WeaponSlot, delta: float) -> void:
 			back = 0.07 * smooth(clampf(t / 0.08, 0.0, 1.0)) * (1.0 - smooth(clampf((t - 0.92) / 0.08, 0.0, 1.0)))
 		elif c.malfunction == "double_feed":
 			back = 0.012  # el cerrojo no cerró: la manija queda un poco atrás
+		# La manija va con el cierre: atrás y adelante en cada disparo
+		charge_kick = move_toward(charge_kick, 0.0, delta / 0.06)
+		var cyc := float(ch.get_meta("cycle", 0.0))
+		if cyc > 0.0 and charge_kick > 0.0 and t < 0.0:
+			back = maxf(back, sin(charge_kick * PI) * cyc)
 		ch.position = part_base[ch] + Vector3(0, 0, back)
 	if m.has_node("Slide"):
 		var sl := m.get_node("Slide") as Node3D
@@ -810,11 +830,21 @@ func _remember_parts(model: Node3D) -> void:
 ## se calcula para que el aumento sea real respecto de la vista sin visor.
 func _update_scope(c: WeaponController.WeaponSlot, a: float) -> void:
 	var lens := c.model.get_node_or_null("ScopeLens") as MeshInstance3D
-	var on := lens != null and a > 0.02 and c.data.scope_mag > 1.0
-	_scope_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on else SubViewport.UPDATE_DISABLED
+	# Con visor en la mano siempre se ve algo por el ocular: apuntando, la imagen
+	# real; desde la cadera, la misma imagen deformada (se actualiza a medio ritmo)
+	var on := lens != null and c.data.scope_mag > 1.0 and c.model.visible
+	if on and a > 0.02:
+		_scope_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	elif on:
+		_scope_hip_frame = not _scope_hip_frame
+		_scope_vp.render_target_update_mode = SubViewport.UPDATE_ONCE if _scope_hip_frame else SubViewport.UPDATE_DISABLED
+	else:
+		_scope_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	if lens == null:
 		return
-	(lens.material_override as ShaderMaterial).set_shader_parameter("active", a if on else 0.0)
+	var sm := lens.material_override as ShaderMaterial
+	sm.set_shader_parameter("active", a if a > 0.02 else 0.0)
+	sm.set_shader_parameter("hip_view", 1.0 if on else 0.0)
 	if not on:
 		return
 	var main := wc.player.camera

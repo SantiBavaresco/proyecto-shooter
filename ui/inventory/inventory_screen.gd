@@ -12,7 +12,12 @@ extends CanvasLayer
 ## Mayús+clic para pasar entre mochila y contenedor. El mundo no se pausa.
 
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
-const CELL := 46.0
+## Celda de la grilla (px, en la resolución base 1920×1080) y unidad de las casillas
+## de equipo.
+const CELL := 92.0
+const EQ := 60.0
+## Filas de la grilla que se ven a la vez (el resto, con la rueda).
+const VISIBLE_ROWS := 6.4
 const DRAG_START_PX := 5.0
 
 enum Act { USE, EQUIP, UNEQUIP, UNLOAD, SPLIT, DROP, TAKE, STORE, CLEAR_QUICK, QUICK_1 = 20 }
@@ -38,6 +43,9 @@ var _vitals_label: Label
 var _info: RichTextLabel
 var _menu: PopupMenu
 var _drag_ctl: Control
+var _equip_panel: Control
+var _hint: Label
+var _take_btn: Button
 
 # Arrastre
 var _press_stack: ItemStack = null
@@ -92,10 +100,14 @@ func open(c: Object = null) -> void:
 		_loot_grid.setup(ci, CELL)
 		_loot_title.text = tr(String(container.get("title_key"))).to_upper()
 		_loot_panel.visible = true
+		# Revisando algo: mochila y contenedor lado a lado (como en STALKER 2)
+		_equip_panel.visible = false
+		(_loot_grid.get_parent() as ScrollContainer).scroll_vertical = 0
 		if container.has_method("on_loot_opened"):
 			container.call("on_loot_opened")
 	else:
 		_loot_panel.visible = false
+		_equip_panel.visible = true
 	_selected = null
 	_info_stack = null
 	_refresh()
@@ -136,9 +148,23 @@ func _input(event: InputEvent) -> void:
 			close()
 			get_viewport().set_input_as_handled()
 			return
-		if (event as InputEventKey).physical_keycode == KEY_R and _dragging:
+		if event.is_action("inv_rotate") and _dragging:
 			_drag_rot = not _drag_rot
 			_update_drag(_mouse())
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action("inv_take_all") and _loot_panel.visible:
+			take_all()
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action("inv_sort"):
+			pinv.bag.sort()
+			get_viewport().set_input_as_handled()
+			return
+		if event.is_action("inv_use") and not _dragging:
+			var hu := _hit(_mouse())
+			if hu[0] != null:
+				_quick_action(hu[0], hu[1])
 			get_viewport().set_input_as_handled()
 			return
 	if event is InputEventMouseMotion:
@@ -146,6 +172,7 @@ func _input(event: InputEvent) -> void:
 		if _press_stack != null and not _dragging and m.distance_to(_press_pos) > DRAG_START_PX:
 			_start_drag()
 		if _dragging:
+			_autoscroll(m)
 			_update_drag(m)
 		else:
 			_update_hover(m)
@@ -160,7 +187,7 @@ func _input(event: InputEvent) -> void:
 					if hit[0] != null:
 						_quick_action(hit[0], hit[1])
 				else:
-					_press(m, mb.shift_pressed)
+					_press(m, Input.is_action_pressed("inv_quick_move"))
 			else:
 				if _dragging:
 					_drop(m)
@@ -185,12 +212,36 @@ func _mouse() -> Vector2:
 ## [pila, origen (InvGrid o InvSlot)] bajo el punto.
 func _hit(m: Vector2) -> Array:
 	for g: InvGrid in _grids():
-		if g.get_global_rect().has_point(m):
+		if _grid_rect(g).has_point(m):
 			return [g.stack_at_local(m - g.global_position), g]
 	for sl: InvSlot in _all_slots():
 		if sl.get_global_rect().has_point(m):
 			return [sl.stack(), sl]
 	return [null, null]
+
+
+## Parte visible de una grilla (las grillas van dentro de un panel con desplazamiento).
+func _grid_rect(g: InvGrid) -> Rect2:
+	var r := g.get_global_rect()
+	var sc := g.get_parent() as ScrollContainer
+	if sc != null:
+		r = r.intersection(sc.get_global_rect())
+	return r
+
+
+## Arrastrando cerca del borde de arriba o de abajo de una grilla: se desplaza sola.
+func _autoscroll(m: Vector2) -> void:
+	for g: InvGrid in _grids():
+		var sc := g.get_parent() as ScrollContainer
+		if sc == null:
+			continue
+		var r := sc.get_global_rect()
+		if m.x < r.position.x or m.x > r.end.x:
+			continue
+		if m.y < r.position.y + 40.0 and m.y > r.position.y - 30.0:
+			sc.scroll_vertical -= 18
+		elif m.y > r.end.y - 40.0 and m.y < r.end.y + 30.0:
+			sc.scroll_vertical += 18
 
 
 func _grids() -> Array[InvGrid]:
@@ -276,7 +327,7 @@ func _drop_cell(g: InvGrid, m: Vector2) -> Vector2i:
 func _update_drag(m: Vector2) -> void:
 	for g: InvGrid in _grids():
 		g.ghost_at = Vector2i(-1, -1)
-		if g.get_global_rect().has_point(m):
+		if _grid_rect(g).has_point(m):
 			var at := _drop_cell(g, m)
 			g.ghost_at = at
 			g.ghost_size = _drag_cells()
@@ -312,7 +363,7 @@ func _drop(m: Vector2) -> void:
 			return
 	# Sobre una grilla
 	for g: InvGrid in _grids():
-		if g.get_global_rect().has_point(m):
+		if _grid_rect(g).has_point(m):
 			var at := _drop_cell(g, m)
 			var target := g.inv.stack_at(g.cell_at(m - g.global_position))
 			if target != null and target != s and s.can_merge(target):
@@ -510,7 +561,7 @@ func _show_info(s: ItemStack) -> void:
 		return
 	_info_stack = s
 	if s == null:
-		_info.text = "[color=#%s]%s[/color]" % [UiTheme.TEXT_DIM.to_html(false), tr("inv.hint")]
+		_info.text = ""
 		return
 	_info.text = item_sheet(s, pinv)
 
@@ -521,7 +572,7 @@ static func item_sheet(s: ItemStack, p: PlayerInventory) -> String:
 	var it := s.item
 	var dim := UiTheme.TEXT_DIM.to_html(false)
 	var acc := UiTheme.ACCENT.to_html(false)
-	var t := "[font_size=22][color=#%s]%s[/color][/font_size]\n" % [acc, ItemDB.display_name(it)]
+	var t := "[font_size=26][color=#%s]%s[/color][/font_size]\n" % [acc, ItemDB.display_name(it)]
 	t += "[color=#%s]%s[/color]\n" % [dim, TranslationServer.translate(it.desc_key)]
 	var rows: Array = []
 	if it.kind == "weapon":
@@ -606,6 +657,8 @@ func _refresh() -> void:
 	fill.bg_color = UiTheme.ALERT if o > 1.0 else (UiTheme.ACCENT if o > 0.0 else UiTheme.TEXT.darkened(0.3))
 	_weight_warn.text = tr("inv.too_heavy") if o > 1.0 else (tr("inv.overloaded") if o > 0.0 else "")
 	_money_label.text = tr("inv.money") % _thousands(pinv.money)
+	_hint.text = _hint_text()
+	_take_btn.text = "%s  [%s]" % [tr("inv.take_all"), InputActions.event_label(InputActions.get_kbm_event("inv_take_all"))]
 	var v := player.vitals
 	_vitals_label.text = "%s %d   %s" % [tr("inv.stat.heal"), roundi(v.health), tr("hud.bleeding") if v.bleeding > 0 else ""]
 	if _selected != null and not _stack_exists(_selected):
@@ -667,6 +720,7 @@ func _build() -> void:
 
 	# Equipo
 	var eq := _panel(tr("inv.equipment"))
+	_equip_panel = eq[0]
 	main.add_child(eq[0])
 	panels.append(eq[0])
 	var ev := eq[1] as VBoxContainer
@@ -676,10 +730,10 @@ func _build() -> void:
 	cols.add_theme_constant_override("separation", 8)
 	cols.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ev.add_child(cols)
-	var side := Vector2(CELL * 2.6, CELL * 6.6)
-	var small := Vector2(CELL * 2.6, CELL * 2.6)
+	var side := Vector2(EQ * 2.6, EQ * 6.6)
+	var small := Vector2(EQ * 2.6, EQ * 2.6)
 	var layout := [[["weapon2", side], ["pistol", small]],
-		[["helmet", Vector2(CELL * 3.0, CELL * 2.4)], ["armor", Vector2(CELL * 3.0, CELL * 3.4)], ["backpack", Vector2(CELL * 3.0, CELL * 3.4)]],
+		[["helmet", Vector2(EQ * 3.0, EQ * 2.4)], ["armor", Vector2(EQ * 3.0, EQ * 3.4)], ["backpack", Vector2(EQ * 3.0, EQ * 3.4)]],
 		[["weapon1", side], ["melee", small]]]
 	for col: Array in layout:
 		var cv := VBoxContainer.new()
@@ -688,17 +742,17 @@ func _build() -> void:
 		cols.add_child(cv)
 		for e: Array in col:
 			cv.add_child(_slot(e[0], e[1]))
-	var ql := _small_label(tr("inv.quick"), UiTheme.TEXT_DIM, 15)
+	var ql := _small_label(tr("inv.quick"), UiTheme.TEXT_DIM, 18)
 	ev.add_child(ql)
 	var qrow := HBoxContainer.new()
 	qrow.add_theme_constant_override("separation", 8)
 	ev.add_child(qrow)
 	for i in 4:
 		var q := InvSlot.new()
-		q.setup(null, "quick", Vector2(CELL * 1.5, CELL * 1.5), i)
+		q.setup(null, "quick", Vector2(EQ * 1.5, EQ * 1.5), i)
 		qrow.add_child(q)
 		_quick.append(q)
-	_vitals_label = _small_label("", UiTheme.TEXT, 17)
+	_vitals_label = _small_label("", UiTheme.TEXT, 20)
 	ev.add_child(_vitals_label)
 
 	# Mochila e info
@@ -721,35 +775,35 @@ func _build() -> void:
 	wfill.bg_color = UiTheme.TEXT.darkened(0.3)
 	_weight_bar.add_theme_stylebox_override("fill", wfill)
 	top.add_child(_weight_bar)
-	_weight_label = _small_label("", UiTheme.TEXT, 17)
+	_weight_label = _small_label("", UiTheme.TEXT, 20)
 	top.add_child(_weight_label)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
-	_money_label = _small_label("", UiTheme.ACCENT, 19)
+	_money_label = _small_label("", UiTheme.ACCENT, 23)
 	top.add_child(_money_label)
 	var sort := Button.new()
 	sort.text = tr("inv.sort")
-	sort.add_theme_font_size_override("font_size", 16)
+	sort.add_theme_font_size_override("font_size", 19)
 	sort.focus_mode = Control.FOCUS_NONE
 	sort.pressed.connect(func() -> void:
 		if pinv != null:
 			pinv.bag.sort())
 	top.add_child(sort)
-	_weight_warn = _small_label("", UiTheme.ALERT, 15)
+	_weight_warn = _small_label("", UiTheme.ALERT, 18)
 	bv.add_child(_weight_warn)
 	_bag_grid = InvGrid.new()
 	_bag_grid.setup(Inventory.new(PlayerInventory.GRID.x, PlayerInventory.GRID.y), CELL)
-	bv.add_child(_bag_grid)
+	bv.add_child(_scroller(_bag_grid, PlayerInventory.GRID.x))
 	var info_panel := PanelContainer.new()
-	info_panel.custom_minimum_size = Vector2(CELL * PlayerInventory.GRID.x + 36, 250)
+	info_panel.custom_minimum_size = Vector2(CELL * PlayerInventory.GRID.x + 52, 230)
 	center.add_child(info_panel)
 	panels.append(info_panel)
 	_info = RichTextLabel.new()
 	_info.bbcode_enabled = true
 	_info.fit_content = false
 	_info.scroll_active = false
-	_info.add_theme_font_size_override("normal_font_size", 17)
+	_info.add_theme_font_size_override("normal_font_size", 19)
 	_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	info_panel.add_child(_info)
 
@@ -762,18 +816,29 @@ func _build() -> void:
 	_loot_title = lv.get_child(0) as Label
 	var take := Button.new()
 	take.text = tr("inv.take_all")
-	take.add_theme_font_size_override("font_size", 16)
+	take.add_theme_font_size_override("font_size", 19)
 	take.focus_mode = Control.FOCUS_NONE
 	take.pressed.connect(take_all)
+	take.set_meta("take_button", true)
+	_take_btn = take
 	lv.add_child(take)
 	_loot_grid = InvGrid.new()
 	_loot_grid.setup(Inventory.new(8, 6), CELL)
-	lv.add_child(_loot_grid)
+	lv.add_child(_scroller(_loot_grid, 8))
 	_loot_panel.visible = false
 	_root.set_meta("panels", panels)
+	# Ayuda de teclas abajo de todo
+	_hint = _small_label("", UiTheme.TEXT_DIM, 16)
+	_hint.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
+	_hint.offset_left = -900
+	_hint.offset_right = 900
+	_hint.offset_top = -34
+	_hint.offset_bottom = -8
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_root.add_child(_hint)
 
 	_menu = PopupMenu.new()
-	_menu.add_theme_font_size_override("font_size", 18)
+	_menu.add_theme_font_size_override("font_size", 21)
 	_menu.id_pressed.connect(_on_menu)
 	add_child(_menu)
 
@@ -784,6 +849,24 @@ func _build() -> void:
 	_root.add_child(_drag_ctl)
 
 
+## Grilla dentro de un panel con desplazamiento vertical (rueda del mouse).
+func _scroller(g: InvGrid, cols: int) -> ScrollContainer:
+	var sc := ScrollContainer.new()
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sc.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	sc.custom_minimum_size = Vector2(cols * CELL + 16, CELL * VISIBLE_ROWS)
+	sc.mouse_filter = Control.MOUSE_FILTER_PASS
+	sc.add_child(g)
+	return sc
+
+
+## Texto de ayuda con las teclas configuradas.
+func _hint_text() -> String:
+	var k := func(a: String) -> String: return InputActions.event_label(InputActions.get_kbm_event(a))
+	return tr("inv.hint") % [k.call("inv_rotate"), k.call("inv_quick_move"), k.call("inv_use"), k.call("inv_take_all"),
+		k.call("inv_sort")]
+
+
 func _panel(title: String) -> Array:
 	var p := PanelContainer.new()
 	p.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -792,7 +875,7 @@ func _panel(title: String) -> Array:
 	v.add_theme_constant_override("separation", 8)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(v)
-	v.add_child(_small_label(title, UiTheme.ACCENT, 20))
+	v.add_child(_small_label(title, UiTheme.ACCENT, 24))
 	return [p, v]
 
 

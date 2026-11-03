@@ -58,6 +58,12 @@ const DEFAULTS: Dictionary = {
 	"flashlight": [{"key": KEY_L}, {"joy_button": JOY_BUTTON_DPAD_UP}],
 	"detector": [{"key": KEY_O}, {"joy_button": JOY_BUTTON_DPAD_DOWN}],
 	"pause": [{"key": KEY_ESCAPE}, {"joy_button": JOY_BUTTON_START}],
+	# Dentro de la pantalla de inventario (no chocan con las del juego)
+	"inv_take_all": [{"key": KEY_E}],
+	"inv_rotate": [{"key": KEY_R}],
+	"inv_sort": [{"key": KEY_T}],
+	"inv_use": [{"key": KEY_F}],
+	"inv_quick_move": [{"key": KEY_SHIFT}],
 	# Desarrollo
 	"debug_overlay": [{"key": KEY_F1}],
 	"bug_report": [{"key": KEY_F12}],
@@ -74,7 +80,20 @@ const REBINDABLE: Array[String] = [
 	"weapon_1", "weapon_2", "weapon_3", "weapon_4",
 	"grenade", "melee", "quick_1", "quick_2", "quick_3", "quick_4",
 	"inventory", "pda", "flashlight", "detector",
+	"inv_take_all", "inv_rotate", "inv_sort", "inv_use", "inv_quick_move",
 ]
+## Acciones de la pantalla de inventario: solo chocan entre ellas (y con Tab / Esc,
+## que la cierran), no con las del juego.
+const UI_ACTIONS: Array[String] = ["inv_take_all", "inv_rotate", "inv_sort", "inv_use", "inv_quick_move"]
+## Acciones que valen en los dos contextos.
+const SHARED_ACTIONS: Array[String] = ["inventory", "pause"]
+
+
+## ¿Pueden chocar estas dos acciones? (están en el mismo contexto)
+static func same_context(a: String, b: String) -> bool:
+	if a in SHARED_ACTIONS or b in SHARED_ACTIONS:
+		return true
+	return (a in UI_ACTIONS) == (b in UI_ACTIONS)
 
 
 ## Registra todas las acciones con sus eventos por defecto.
@@ -185,7 +204,7 @@ static func event_label(event: InputEvent) -> String:
 static func find_conflict(action: String, event: InputEvent) -> String:
 	var wanted := event_to_dict(event)
 	for other: String in REBINDABLE:
-		if other == action:
+		if other == action or not same_context(action, other):
 			continue
 		var e := get_kbm_event(other)
 		if e != null and event_to_dict(e) == wanted:

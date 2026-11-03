@@ -20,7 +20,8 @@ func test_no_duplicate_default_keys() -> void:
 	var seen: Dictionary = {}
 	for action: String in InputActions.REBINDABLE:
 		var d := InputActions.event_to_dict(InputActions.get_kbm_event(action))
-		var k := str(d)
+		# Cada contexto (juego / pantalla de inventario) por separado
+		var k := ("ui:" if action in InputActions.UI_ACTIONS else "") + str(d)
 		assert_false(seen.has(k), "%s y %s usan la misma tecla" % [action, seen.get(k, "")])
 		seen[k] = action
 
@@ -41,6 +42,15 @@ func test_set_kbm_event_keeps_joypad() -> void:
 			has_joy = true
 	assert_true(has_joy, "el remapeo no debe borrar el botón de joystick")
 	assert_eq(InputActions.event_to_dict(InputActions.get_kbm_event("jump")), {"key": KEY_K})
+
+
+func test_inventory_keys_do_not_clash_with_game_keys() -> void:
+	var e := InputActions.event_from_dict({"key": KEY_E})
+	assert_eq(InputActions.find_conflict("inv_take_all", e), "", "E: tomar todo no choca con inclinarse")
+	var r := InputActions.event_from_dict({"key": KEY_R})
+	assert_eq(InputActions.find_conflict("inv_take_all", r), "inv_rotate", "dentro del inventario sí choca")
+	var tab := InputActions.event_from_dict({"key": KEY_TAB})
+	assert_eq(InputActions.find_conflict("inv_sort", tab), "inventory", "Tab cierra el inventario")
 
 
 func test_find_conflict() -> void:

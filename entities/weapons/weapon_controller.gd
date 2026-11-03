@@ -602,10 +602,11 @@ func _load_rounds(c: WeaponSlot) -> void:
 	if _rounds_stop or _rounds_done >= _rounds_planned:
 		return
 	var t := state_time / maxf(state_duration, 0.001)
-	var due := _rounds_planned if (_clip_load and t >= 0.55) else 0
-	if not _clip_load:
-		while due < _rounds_planned and t >= 0.16 + 0.7 * (float(due) + 0.5) / float(_rounds_planned):
-			due += 1
+	# Con peine también entran de a uno (el pulgar los empuja uno tras otro)
+	var win := rounds_window()
+	var due := 0
+	while due < _rounds_planned and t >= win.x + win.y * (float(due) + 0.5) / float(_rounds_planned):
+		due += 1
 	while _rounds_done < due:
 		_rounds_done += 1
 		c.mag += 1
@@ -613,6 +614,12 @@ func _load_rounds(c: WeaponSlot) -> void:
 			c.reserve -= 1
 		_play_mech(SynthSfx.click("round_in", 1.15, 0.03), -9.0)
 		_emit_state()
+
+
+## Parte de la recarga (inicio, largo) en que entran los cartuchos: de a uno a mano,
+## o empujados del peine (más rápido, después de calzarlo).
+func rounds_window() -> Vector2:
+	return Vector2(0.3, 0.45) if _clip_load else Vector2(0.16, 0.7)
 
 
 ## Cortar la carga cartucho a cartucho (gatillo): cierra el cerrojo con lo que ya entró.

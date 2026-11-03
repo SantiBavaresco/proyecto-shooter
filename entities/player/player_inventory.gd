@@ -12,7 +12,8 @@ extends Node
 ##    lento y correr cansa más; pasado el máximo no se puede correr ni saltar.
 ##  - Usar un consumible lleva su tiempo (el arma baja mientras tanto).
 
-const GRID := Vector2i(12, 10)
+## 8 columnas (las armas largas entran acostadas) y 15 filas, con desplazamiento.
+const GRID := Vector2i(8, 15)
 ## kg sin penalidad (sin mochila ni chaleco) y margen hasta el máximo.
 const BASE_CARRY := 40.0
 const OVER_MARGIN := 20.0

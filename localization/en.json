@@ -189,7 +189,7 @@
 	"inv.quick_empty": "None left: %s",
 	"inv.using": "Using: %s",
 	"inv.cant_now": "Can't do that now",
-	"inv.hint": "Drag: move · R (while dragging): rotate · Right click: actions · Double click: use / equip / transfer · Shift+click: transfer · Tab: close",
+	"inv.hint": "Drag: move · %s: rotate · %s + click: transfer · %s: use / equip · %s: take all · %s: sort · Right click: actions · Double click: use / equip / transfer · Wheel: scroll",
 	"inv.stat.weight": "Weight",
 	"inv.stat.price": "Value",
 	"inv.stat.caliber": "Caliber",
@@ -255,5 +255,11 @@
 	"item.tools_basic.desc": "Toolbox for technicians (repairs in F6). Heavy.",
 	"inv.slot.melee": "Melee",
 	"item.knife": "Combat knife",
-	"item.knife.desc": "Goes in the melee slot. Melee attacks (V) come later."
+	"item.knife.desc": "Goes in the melee slot. Melee attacks (V) come later.",
+	"action.inv_take_all": "Take all (crate, stash, body)",
+	"action.inv_rotate": "Rotate the dragged item",
+	"action.inv_sort": "Sort backpack",
+	"action.inv_use": "Use / equip hovered item",
+	"action.inv_quick_move": "Transfer (hold + click)",
+	"options.keybinds_inventory": "INVENTORY SCREEN"
 }

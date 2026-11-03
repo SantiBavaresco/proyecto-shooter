@@ -56,10 +56,10 @@ func _draw() -> void:
 			var n := pinv.bag.count_of(id)
 			InvGrid.draw_icon(self, tmp, r.grow(-4), n == 0, 0)
 			var t := "%d" % n
-			var tw := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
-			draw_string(_font, Vector2(r.end.x - tw - 4, r.end.y - 4), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 15,
+			var tw := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
+			draw_string(_font, Vector2(r.end.x - tw - 4, r.end.y - 4), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 17,
 				UiTheme.TEXT if n > 0 else UiTheme.ALERT)
-		draw_string(_font, Vector2(4, 15), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiTheme.ACCENT)
+		draw_string(_font, Vector2(5, 17), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, UiTheme.ACCENT)
 		return
 	label = tr("inv.slot." + slot)
 	var s := stack()
@@ -81,5 +81,5 @@ func _draw() -> void:
 			var t2 := "%d/%d" % [mag, w.mag_size]
 			var tw2 := _font.get_string_size(t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 			draw_string(_font, Vector2(size.x - tw2 - 6, size.y - 6), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiTheme.TEXT_DIM)
-	draw_string(_font, Vector2(6, 16), label.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 13,
+	draw_string(_font, Vector2(6, 18), label.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 15,
 		UiTheme.TEXT_DIM if s != null else UiTheme.TEXT_DIM.darkened(0.2))

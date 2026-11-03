@@ -189,7 +189,7 @@
 	"inv.quick_empty": "No te queda: %s",
 	"inv.using": "Usando: %s",
 	"inv.cant_now": "Ahora no se puede",
-	"inv.hint": "Arrastrar: mover · R (arrastrando): girar · Clic derecho: acciones · Doble clic: usar / equipar / pasar · Mayús+clic: pasar · Tab: cerrar",
+	"inv.hint": "Arrastrar: mover · %s: girar · %s + clic: pasar · %s: usar / equipar · %s: tomar todo · %s: ordenar · Clic derecho: acciones · Doble clic: usar / equipar / pasar · Rueda: desplazar",
 	"inv.stat.weight": "Peso",
 	"inv.stat.price": "Valor",
 	"inv.stat.caliber": "Calibre",
@@ -255,5 +255,11 @@
 	"item.tools_basic.desc": "Caja de herramientas para técnicos (reparación en la F6). Pesada.",
 	"inv.slot.melee": "Arma blanca",
 	"item.knife": "Cuchillo de combate",
-	"item.knife.desc": "Va en la ranura de arma blanca. El ataque cuerpo a cuerpo (V) llega más adelante."
+	"item.knife.desc": "Va en la ranura de arma blanca. El ataque cuerpo a cuerpo (V) llega más adelante.",
+	"action.inv_take_all": "Tomar todo (caja, alijo, cuerpo)",
+	"action.inv_rotate": "Girar el ítem que arrastrás",
+	"action.inv_sort": "Ordenar la mochila",
+	"action.inv_use": "Usar / equipar el ítem señalado",
+	"action.inv_quick_move": "Pasar al otro lado (mantener + clic)",
+	"options.keybinds_inventory": "PANTALLA DE INVENTARIO"
 }

@@ -10,7 +10,7 @@ extends StaticBody3D
 ## El contenido sale de "contents" ([[id, cantidad], ...]) o, si está vacío, de una
 ## tabla al azar según el tipo.
 
-const SIZES := {"crate": Vector2i(8, 6), "metal": Vector2i(6, 5), "stash": Vector2i(10, 8), "ammo": Vector2i(10, 6)}
+const SIZES := {"crate": Vector2i(8, 6), "metal": Vector2i(6, 5), "stash": Vector2i(8, 10), "ammo": Vector2i(8, 8)}
 ## Tabla al azar: [id, mínimo, máximo, probabilidad].
 const RANDOM_LOOT := [
 	["bandage", 1, 3, 0.6], ["medkit", 1, 1, 0.35], ["canned_meat", 1, 2, 0.45], ["water", 1, 1, 0.4],
