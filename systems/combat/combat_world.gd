@@ -19,7 +19,15 @@ const MAX_DECALS := 120
 const MAX_PARTICLES := 24
 const MAX_SHELLS := 30
 const MAX_TRACERS := 32
+## Segundos máximos de vuelo de un casquillo con física; al quedarse quieto (o al
+## pasar este tiempo) pasa al piso como casquillo "dormido" (sin física, se dibuja
+## junto con todos los demás en una sola llamada).
 const SHELL_LIFETIME := 6.0
+## Casquillos en el piso: cuánto duran, hasta qué distancia se dibujan y cuántos hay
+## como máximo por tipo (los más viejos se reemplazan).
+const REST_LIFETIME := 270.0
+const REST_RANGE := 150.0
+const MAX_REST := 600
 const TRAJ_LIFETIME := 6.0
 const TRAJ_MAX_SEGMENTS := 3000
 ## Capa de colisión de los casquillos (no chocan con el jugador ni con balas).
@@ -44,6 +52,12 @@ var _tracers: Array[MeshInstance3D] = []
 var _shells: Array[RigidBody3D] = []
 var _shell_index: int = 0
 var _shell_time: PackedFloat32Array = []
+var _shell_big: Array[bool] = []
+## Casquillos en el piso: [transform, segundos que le quedan] por tipo (latón / escopeta).
+var _rest: Array = [[], []]
+var _rest_mm: Array[MultiMeshInstance3D] = []
+var _rest_dirty: bool = false
+var _rest_cull_t: float = 0.0
 var _audio: Array[AudioStreamPlayer3D] = []
 var _audio_index: int = 0
 var _muzzle_light: OmniLight3D
@@ -132,10 +146,18 @@ func active_projectiles() -> int:
 
 
 ## Casquillo expulsado (posición y velocidad en el mundo).
-func spawn_shell(xform: Transform3D, velocity: Vector3, big: bool = false) -> void:
-	var s := _shells[_shell_index]
+func spawn_shell(xform: Transform3D, velocity: Vector3, big: bool = false, ignore: PhysicsBody3D = null) -> void:
+	var idx := _shell_index
+	var s := _shells[idx]
 	_shell_index = (_shell_index + 1) % _shells.size()
-	_shell_time[_shells.find(s)] = SHELL_LIFETIME
+	if _shell_time[idx] > 0.0:
+		_settle_shell(idx)  # el más viejo todavía volando: queda en el piso donde esté
+	_shell_time[idx] = SHELL_LIFETIME
+	_shell_big[idx] = big
+	for e in s.get_collision_exceptions():
+		s.remove_collision_exception_with(e)
+	if ignore != null:
+		s.add_collision_exception_with(ignore)
 	s.freeze = false
 	s.visible = true
 	s.global_transform = xform
@@ -426,10 +448,65 @@ func _process(delta: float) -> void:
 	for i in _shells.size():
 		if _shell_time[i] > 0.0:
 			_shell_time[i] -= delta
-			if _shell_time[i] <= 0.0:
-				_shells[i].visible = false
-				_shells[i].freeze = true
+			var b := _shells[i]
+			var still := SHELL_LIFETIME - _shell_time[i] > 0.5 and (b.sleeping
+				or (b.linear_velocity.length() < 0.04 and b.angular_velocity.length() < 0.5))
+			if still or _shell_time[i] <= 0.0:
+				_settle_shell(i)
+	_update_rest(delta)
 	_draw_trajectories(delta)
+
+
+## Casquillo quieto: deja de ser un cuerpo físico y pasa a la lista del piso.
+func _settle_shell(i: int) -> void:
+	var b := _shells[i]
+	_shell_time[i] = 0.0
+	if b.global_position.y > -20.0:
+		var list: Array = _rest[1 if _shell_big[i] else 0]
+		if list.size() >= MAX_REST:
+			list.pop_front()
+		list.append([b.global_transform, REST_LIFETIME])
+		_rest_dirty = true
+	b.visible = false
+	b.freeze = true
+
+
+## Casquillos en el piso: vencen a los REST_LIFETIME segundos y solo se dibujan
+## cerca del jugador (se revisa dos veces por segundo).
+func _update_rest(delta: float) -> void:
+	_rest_cull_t -= delta
+	for list: Array in _rest:
+		var k := 0
+		while k < list.size() and float(list[k][1]) - delta <= 0.0:
+			k += 1
+		if k > 0:
+			for j in k:
+				list.pop_front()
+			_rest_dirty = true
+		for e: Array in list:
+			e[1] = float(e[1]) - delta
+	if not _rest_dirty and _rest_cull_t > 0.0:
+		return
+	_rest_cull_t = 0.5
+	_rest_dirty = false
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	var eye := cam.global_position if cam != null else Vector3.ZERO
+	for t in 2:
+		var list: Array = _rest[t]
+		var mm := _rest_mm[t].multimesh
+		var shown: Array[Transform3D] = []
+		for e: Array in list:
+			var xf: Transform3D = e[0]
+			if cam == null or xf.origin.distance_squared_to(eye) < REST_RANGE * REST_RANGE:
+				shown.append(xf)
+		mm.instance_count = shown.size()
+		for j in shown.size():
+			mm.set_instance_transform(j, shown[j])
+
+
+## Casquillos en el piso (para los tests).
+func resting_shells() -> int:
+	return (_rest[0] as Array).size() + (_rest[1] as Array).size()
 
 
 func _draw_trajectories(delta: float) -> void:
@@ -556,6 +633,11 @@ func _build_pools() -> void:
 	base.radial_segments = 10
 	base.material = sm
 	_shell_time.resize(MAX_SHELLS)
+	_shell_big.resize(MAX_SHELLS)
+	# Rebotan poco y casi no ruedan (salvo en pendiente)
+	var shell_phys := PhysicsMaterial.new()
+	shell_phys.friction = 0.95
+	shell_phys.bounce = 0.15
 	for i in MAX_SHELLS:
 		var b := RigidBody3D.new()
 		b.collision_layer = 1 << (SHELL_LAYER - 1)
@@ -564,6 +646,9 @@ func _build_pools() -> void:
 		b.freeze = true
 		b.visible = false
 		b.continuous_cd = true
+		b.physics_material_override = shell_phys
+		b.angular_damp = 4.0
+		b.linear_damp = 0.35
 		var mi := MeshInstance3D.new()
 		mi.mesh = shell_mesh
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -587,6 +672,24 @@ func _build_pools() -> void:
 		add_child(b)
 		_shells.append(b)
 		_shell_time[i] = 0.0
+		_shell_big[i] = false
+	# Casquillos en el piso: un MultiMesh por tipo
+	var big_mesh := ArrayMesh.new()
+	for part: Array in [[hull, Vector3(0, 0.008, 0)], [base, Vector3(0, -0.024, 0)]]:
+		var st := SurfaceTool.new()
+		st.append_from(part[0] as Mesh, 0, Transform3D(Basis.IDENTITY, part[1]))
+		st.commit(big_mesh)
+		big_mesh.surface_set_material(big_mesh.get_surface_count() - 1, (part[0] as PrimitiveMesh).material)
+	for m: Mesh in [shell_mesh, big_mesh]:
+		var mmi := MultiMeshInstance3D.new()
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = m
+		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mmi.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+		add_child(mmi)
+		_rest_mm.append(mmi)
 
 	for i in 12:
 		var a := AudioStreamPlayer3D.new()

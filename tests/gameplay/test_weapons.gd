@@ -251,6 +251,22 @@ func test_ammo_crate_refills() -> void:
 	assert_gt(float(weapons.current().reserve), float(before), "más munición en la mochila")
 
 
+func test_shells_settle_and_stay_on_the_floor() -> void:
+	await _ready_at(Vector3(CX, 0.05, LINE_Z))
+	var cw := CombatWorld.get_for(player)
+	var before := cw.resting_shells()
+	for i in 3:
+		await _shoot_once()
+	await physics_frames(240)
+	assert_eq(cw.resting_shells(), before + 3, "las vainas quedan en el piso (sin física)")
+	for list: Array in cw._rest:
+		for e: Array in list:
+			var xf: Transform3D = e[0]
+			assert_lt(xf.origin.y, 0.1, "están apoyadas en el piso")
+			assert_lt(xf.origin.distance_to(player.global_position), 4.0, "no rodaron lejos")
+	assert_gt(CombatWorld.REST_LIFETIME, 239.0, "duran 4–5 minutos")
+
+
 func test_paper_target_reports_drop_at_100m() -> void:
 	var t := level.get_node("Geometry/Target100m") as PaperTarget
 	await _ready_at(Vector3(t.global_position.x, 0.05, LINE_Z))

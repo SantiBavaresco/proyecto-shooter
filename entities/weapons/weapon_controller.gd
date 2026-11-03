@@ -19,6 +19,8 @@ const INTERACT_RANGE := 2.6
 const DOUBLE_BARREL_GAP := 0.15
 ## Apertura de los caños de las escopetas al recargar (grados).
 const BREAK_OPEN_DEG := 62.0
+## Escopetas: momento del quiebre (fracción) en que el expulsor tira las vainas.
+const BREAK_EJECT_T := 0.16
 ## Cada muesca de la rueda multiplica el aumento por esto (visor variable).
 const ZOOM_STEP := 1.26
 ## Desgaste por disparo según el mecanismo (fracción del estado).
@@ -449,10 +451,10 @@ func _advance_state(delta: float) -> void:
 			view.kick_pos += Vector3(0, -0.004, 0.003)
 	if state == State.RELOADING:
 		# Escopeta: expulsa las vainas al quebrarse
-		if c.data.reload_type == "break" and not _reload_fx_done and break_time(state_time / maxf(state_duration, 0.001)).x >= 0.22:
+		if c.data.reload_type == "break" and not _reload_fx_done \
+				and break_time(state_time / maxf(state_duration, 0.001)).x >= BREAK_EJECT_T:
 			_reload_fx_done = true
-			var spent := c.data.mag_size - c.mag
-			for i in spent:
+			for i in _break_spent:
 				_eject_shell(c, true, i, _break_shell_pos(c, i))
 		# Revólver: la varilla expulsa todas las vainas juntas
 		if c.data.reload_type == "cylinder" and not _reload_fx_done and break_time(state_time / maxf(state_duration, 0.001)).x >= 0.27:
@@ -934,13 +936,21 @@ func _eject_shell(_c: WeaponSlot, shotgun_shell: bool, index: int, from := Vecto
 	var cam := player.camera.global_transform
 	# Fuera del centro de la vista: a la derecha y adelante (fusil/pistola). Las vainas
 	# de la escopeta salen de donde las dejó el extractor, hacia arriba y atrás.
-	var local := Vector3(0.28, -0.12, -0.45) if not shotgun_shell else Vector3(-0.04 + index * 0.08, -0.32, -0.35)
+	var local := Vector3(0.28, -0.12, -0.45) if not shotgun_shell else Vector3(-0.03 + index * 0.06, -0.2, -0.4)
 	if from != Vector3.INF:
 		local = from
 	var pos := cam * local
-	var vel := cam.basis * (Vector3(1.6, 1.4, 0.4) if not shotgun_shell else Vector3(-0.25 + index * 0.5, 3.6, 0.35))
+	var vel: Vector3
+	var basis := cam.basis
+	if shotgun_shell:
+		# Saltan hacia arriba y hacia atrás, por encima de la cabeza, y caen detrás
+		vel = cam.basis * Vector3((index * 2.0 - 1.0) * _rng.randf_range(0.25, 0.45), _rng.randf_range(3.2, 3.8),
+			_rng.randf_range(2.0, 2.6))
+		basis = cam.basis * Basis(Vector3.RIGHT, -PI * 0.5)  # culote hacia la cámara, como salen
+	else:
+		vel = cam.basis * Vector3(1.6, 1.4, 0.4)
 	vel += player.velocity
-	CombatWorld.get_for(player).spawn_shell(Transform3D(cam.basis, pos), vel, shotgun_shell)
+	CombatWorld.get_for(player).spawn_shell(Transform3D(basis, pos), vel, shotgun_shell, player)
 
 
 ## Dónde está (en el espacio de la cámara) la vaina "i" de la escopeta al saltar.

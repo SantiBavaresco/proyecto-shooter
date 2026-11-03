@@ -338,3 +338,8 @@
 ## 2.0.3 — Ajustes (2026-11-03)
 - ST-2 y AC-9: el giro de muñeca de la 2.0.2 dejaba la mano dada vuelta hacia arriba. Ahora es un giro de 35° hacia el otro lado (la mano agarra el cargador por detrás), configurable por arma (`side_mag_wrist` en model_params).
 - R-700 SR: vidrio del visor 1 mm más abajo; ya queda centrado en el ocular.
+
+## 2.0.4 — Agarre del cargador lateral, vainas que quedan y expulsión de escopeta nueva (2026-11-03)
+- ST-2 y AC-9: la mano agarra el cargador por arriba (nudillos arriba, dedos envolviéndolo), con el antebrazo viniendo de atrás a la izquierda. La orientación se calculó para esa pose y es configurable por arma (`side_mag_hand`, euler YXZ).
+- Vainas: rebotan poco y casi no ruedan (más fricción y frenado del giro; en pendiente siguen bajando). Cuando quedan quietas dejan de ser cuerpos físicos y pasan a una lista que se dibuja de una sola vez (MultiMesh): duran 4,5 minutos y se ven hasta 150 m. Máximo 600 por tipo (las más viejas se van). Costo casi nulo.
+- Escopetas: la expulsión se rehízo. Antes las vainas se animaban dentro de la vista del arma y subían 20 cm delante de la cámara (se veían enormes, flotando) y además salían las vainas físicas. Ahora el extractor las saca un poco al abrir y enseguida saltan como vainas reales hacia arriba y atrás, por encima de la cabeza, y caen detrás. No chocan con el jugador.

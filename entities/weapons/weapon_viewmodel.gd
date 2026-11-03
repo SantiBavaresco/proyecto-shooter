@@ -543,7 +543,12 @@ func _animate_hands(c: WeaponController.WeaponSlot, t: float) -> Vector3:
 				var smag := m.get_node_or_null("Mag") as Node3D
 				if smag != null and float(smag.get_meta("roll", 0.0)) < -45.0:
 					var kw := smooth(clampf(off_l.length() / 0.05, 0.0, 1.0))
-					wrist = Basis(Vector3.BACK, deg_to_rad(float(w.model_params.get("side_mag_wrist", 0.0))) * kw)
+					# Agarre por arriba: palma sobre el cargador, nudillos arriba, el antebrazo
+					# viene de atrás a la izquierda (euler YXZ en grados, por arma)
+					var e: Array = w.model_params.get("side_mag_hand", [25.0, -85.0, 170.0])
+					var q := Basis.from_euler(Vector3(deg_to_rad(float(e[0])), deg_to_rad(float(e[1])),
+						deg_to_rad(float(e[2]))), EULER_ORDER_YXZ).get_rotation_quaternion()
+					wrist = Basis(Quaternion.IDENTITY.slerp(q, kw))
 			var b := Basis(Vector3.BACK, -_reload_roll * 0.85 * on_hg) * wrist * bw
 			hl.transform = Transform3D(b, part_base[hl] + c0 - b * c0 + off_l)
 	return mag_follow
@@ -746,14 +751,11 @@ func _animate_break(br: Node3D, t_real: float) -> void:
 			sh.visible = false
 			sh.position = base + seat
 		elif t < 0.34 and spent:
-			# Vaina vieja: el extractor la saca un poco al abrir y el expulsor la tira
-			# hacia arriba, rápido y casi vertical (a 0.25 sigue como vaina física)
-			var ex := 0.03 * smooth(clampf((t - 0.09) / 0.06, 0.0, 1.0))
-			var k := clampf((t - 0.16) / 0.06, 0.0, 1.0)
-			var fly := inv * (Vector3((i * 2.0 - 1.0) * 0.015, 0.2, 0.025) * k)
-			sh.visible = t > 0.08 and t < 0.22
-			sh.position = base + seat + Vector3(0, 0, ex) + fly
-			sh.rotation = Vector3(-deg_to_rad(90.0) * k, 0, 0)
+			# Vaina vieja: el extractor la saca un poco al abrir; en EJECT_T el expulsor la
+			# tira y desde ahí es una vaina física del mundo (WeaponController)
+			var ex := 0.022 * smooth(clampf((t - 0.09) / 0.05, 0.0, 1.0))
+			sh.visible = t > 0.08 and t < WeaponController.BREAK_EJECT_T
+			sh.position = base + seat + Vector3(0, 0, ex)
 		elif not spent:
 			# Cartucho sin disparar: queda en la recámara (se ve con los caños abiertos)
 			sh.visible = t > 0.08 and t < 0.9
