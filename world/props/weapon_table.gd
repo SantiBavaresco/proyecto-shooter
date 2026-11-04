@@ -29,6 +29,7 @@ func interact(player: Node) -> void:
 	if p == null or p.weapons == null:
 		return
 	var slot := p.weapons.take_weapon(data)
+	Foley.play(get_tree(), "pickup_weapon", -4.0)
 	EventBus.toast.emit(tr("interact.weapon_taken") % [tr(data.name_key), slot])
 
 
@@ -82,9 +83,13 @@ static func _local_aabb(model: Node3D) -> AABB:
 		var mi := c as MeshInstance3D
 		var xf := Transform3D.IDENTITY
 		var n: Node = mi
+		var shown := true
 		while n != model:
+			shown = shown and (n as Node3D).visible
 			xf = (n as Node3D).transform * xf
 			n = n.get_parent()
+		if not shown:
+			continue  # las piezas ocultas no cuentan para apoyarla
 		var b := xf * mi.get_aabb()
 		box = b if first else box.merge(b)
 		first = false

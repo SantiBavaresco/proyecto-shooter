@@ -85,6 +85,33 @@ func _ready() -> void:
 	bot.press_quick(0)
 	await _frames(50)
 	await _shot("I8_usando_venda")
+
+	# Mesas de armas nuevas con el dron
+	var drone := level.find_child("Item_drone", true, false) as Node3D
+	if drone != null:
+		player.teleport(drone.global_position + Vector3(-2.0, 0.05, 4.5), 0.0)
+		await _frames(10)
+		_aim_at(player, drone.global_position + Vector3(-2.0, 0.0, 0.0))
+		await _frames(40)
+		await _shot("I9_mesas_nuevas")
+
+	# Sombra del jugador vista desde afuera (el cuerpo solo da sombra)
+	player.teleport(Vector3(30, 0.05, 31.5), 0.0)
+	player.pitch_angle = 0.0
+	await _frames(20)
+	var cam := Camera3D.new()
+	level.add_child(cam)
+	cam.global_position = player.global_position + Vector3(3.5, 3.2, 3.5)
+	cam.look_at(player.global_position + Vector3(0, 0.2, 0))
+	cam.current = true
+	await _frames(20)
+	await _shot("I10_sombra_parado")
+	bot.move = Vector2(0, 1)
+	await _frames(25)
+	cam.global_position = player.global_position + Vector3(3.5, 3.2, 3.5)
+	cam.look_at(player.global_position + Vector3(0, 0.2, 0))
+	await _frames(1)
+	await _shot("I11_sombra_caminando")
 	get_tree().quit()
 
 

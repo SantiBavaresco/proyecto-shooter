@@ -19,6 +19,8 @@ extends RefCounted
 ##  - pose: pose de las manos (como ArmsBuilder.POSES).
 ##  - shift: [{"match": [textos], "by": [x, y, z]}]: corre piezas que vienen despegadas.
 ##  - scope_lens: {"pos", "d"}: ocular del visor. dot_lens: {"pos", "size"}: punto rojo.
+##  - shells: {"L": [x, y, z], "R": ...}: cartuchos de las escopetas de quiebre (relativos
+##    al grupo "Barrels", que gira sobre su origen = la bisagra).
 ##
 ## Las mallas con esqueleto (armas de juegos, con huesos por pieza) se pasan a mallas
 ## fijas por hueso al cargar (una vez por archivo).
@@ -81,6 +83,11 @@ static func build(data: WeaponData) -> Node3D:
 				g.add_child(mi)
 				mi.transform = g.transform.affine_inverse() * xf
 				break
+	# Escopetas de quiebre: cartuchos que se ven al recargar (en el grupo Barrels)
+	if p.has("shells") and root.has_node("Barrels"):
+		var shells: Dictionary = p["shells"]
+		for sn: String in shells:
+			ModelsShotguns._shell(root.get_node("Barrels") as Node3D, "Shell" + sn, _v(shells[sn]))
 	var metas: Dictionary = p.get("metas", {})
 	for part: String in metas:
 		var n := root.get_node_or_null(part) as Node3D
@@ -115,6 +122,10 @@ static func build(data: WeaponData) -> Node3D:
 		dot.mesh = q2
 		var lm := ShaderMaterial.new()
 		lm.shader = WeaponModelBuilder.RED_DOT_SHADER
+		if bool(dl.get("holo", false)):
+			# Holográfica: ventana rectangular, anillo y punto
+			lm.set_shader_parameter("holo", true)
+			lm.set_shader_parameter("dot_radius", 0.0012)
 		dot.material_override = lm
 		dot.position = _v(dl["pos"])
 		dot.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

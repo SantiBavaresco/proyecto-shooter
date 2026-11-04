@@ -5,7 +5,8 @@ extends CanvasLayer
 ##    ranuras rápidas (5–8);
 ##  - centro: la mochila en grilla, con el peso y la plata; abajo, la ficha del ítem
 ##    (con comparación contra lo equipado);
-##  - derecha (al revisar algo): el contenedor o el cuerpo, con "Tomar todo".
+##  - derecha (al revisar algo): el contenedor o el cuerpo, con "Tomar todo" (las tres
+##    secciones a la vez, con las grillas del mismo tamaño que solo con la mochila).
 ##
 ## Mouse: arrastrar para mover (R gira mientras se arrastra), soltar afuera para
 ## tirar, clic derecho para acciones, doble clic para usar / equipar / pasar,
@@ -14,10 +15,10 @@ extends CanvasLayer
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 ## Celda de la grilla (px, en la resolución base 1920×1080) y unidad de las casillas
 ## de equipo.
-const CELL := 92.0
-const EQ := 60.0
+const CELL := 66.0
+const EQ := 48.0
 ## Filas de la grilla que se ven a la vez (el resto, con la rueda).
-const VISIBLE_ROWS := 6.4
+const VISIBLE_ROWS := 9.0
 const DRAG_START_PX := 5.0
 
 enum Act { USE, EQUIP, UNEQUIP, UNLOAD, SPLIT, DROP, TAKE, STORE, CLEAR_QUICK, QUICK_1 = 20 }
@@ -100,14 +101,12 @@ func open(c: Object = null) -> void:
 		_loot_grid.setup(ci, CELL)
 		_loot_title.text = tr(String(container.get("title_key"))).to_upper()
 		_loot_panel.visible = true
-		# Revisando algo: mochila y contenedor lado a lado (como en STALKER 2)
-		_equip_panel.visible = false
+		# Revisando algo: equipo, mochila y contenedor, con las grillas del mismo tamaño
 		(_loot_grid.get_parent() as ScrollContainer).scroll_vertical = 0
 		if container.has_method("on_loot_opened"):
 			container.call("on_loot_opened")
 	else:
 		_loot_panel.visible = false
-		_equip_panel.visible = true
 	_selected = null
 	_info_stack = null
 	_refresh()

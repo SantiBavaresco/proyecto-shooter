@@ -28,6 +28,8 @@
 			"carry_bonus": 20},
 		{"id": "cash", "kind": "money", "size": [1, 1], "weight": 0.0, "stack": 100000, "price": 1},
 		{"id": "scrap_electronics", "kind": "misc", "size": [2, 1], "weight": 0.8, "stack": 4, "price": 140},
+		{"id": "drone", "kind": "misc", "size": [3, 3], "weight": 1.1, "stack": 1, "price": 900,
+			"model": "res://assets/models/props/drone/drone.glb", "model_scale": 0.55},
 		{"id": "tools_basic", "kind": "misc", "size": [2, 2], "weight": 2.2, "stack": 1, "price": 500}
 	]
 }

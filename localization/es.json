@@ -261,5 +261,11 @@
 	"action.inv_sort": "Ordenar la mochila",
 	"action.inv_use": "Usar / equipar el ítem señalado",
 	"action.inv_quick_move": "Pasar al otro lado (mantener + clic)",
-	"options.keybinds_inventory": "PANTALLA DE INVENTARIO"
+	"options.keybinds_inventory": "PANTALLA DE INVENTARIO",
+	"weapon.chukavin": "Fusil de tirador CK-21",
+	"weapon.mark23": "Pistola M-23 .45",
+	"weapon.coachgun": "Escopeta corta ZC-75",
+	"greybox.new_weapons": "ARMAS NUEVAS",
+	"item.drone": "Dron civil",
+	"item.drone.desc": "Dron de cuatro hélices. Por ahora se lleva y se vende; usarlo para explorar llega más adelante."
 }

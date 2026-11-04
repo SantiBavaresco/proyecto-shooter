@@ -1,0 +1,128 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 3
+model = "pistol"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/mark23/mark23.glb",
+"rot": [
+0,
+180,
+0
+],
+"scale": 0.009,
+"offset": [
+-0.0995,
+-1.3695,
+0.055
+],
+"hide": [
+"hand",
+"arm1",
+"shoulder",
+"spine"
+],
+"parts": {
+"Slide": [
+"side_j"
+],
+"Mag": [
+"mag_j"
+]
+},
+"pivots": {
+"Slide": [
+0,
+0,
+0
+],
+"Mag": [
+0,
+-0.06,
+0.03
+]
+},
+"sight": [
+0,
+0.0175,
+-0.105
+],
+"eye_relief": 0.6,
+"muzzle": [
+0,
+0,
+-0.128
+],
+"ejection": [
+0.012,
+0.01,
+-0.02
+],
+"pose": {
+"top": [
+0,
+-0.03,
+0.062
+],
+"bottom": [
+0,
+-0.112,
+0.078
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.047,
+0.012
+],
+"left": "pistol"
+}
+}
+sight = "iron"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = ".45 ACP"
+reload_type = "magazine"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi")
+rpm = 380.0
+damage = 35.0
+pellets = 1
+muzzle_velocity = 255.0
+drag = 0.0014
+max_ricochets = 2
+tracer_every = 0
+mag_size = 12
+start_reserve = 48
+spread_hip = 2.0
+spread_ads = 0.36
+pellet_spread = 0.0
+spread_move_mult = 1.6
+spread_air_mult = 2.5
+spread_crouch_mult = 0.8
+recoil_pitch = 2.1
+recoil_yaw = 0.6
+recoil_recovery = 0.7
+kick_back = 0.045
+kick_rot = 8.0
+recoil_ads_mult = 0.75
+reload_time = 1.6
+reload_time_empty = 2.0
+ads_time = 0.17
+draw_time = 0.3
+holster_time = 0.18
+ads_fov_mult = 0.9
+eye_relief = 0.0
+sfx_tail = 0.3
+sfx_body_hz = 82.0
+sfx_volume_db = -2.0
+id = "mark23"
+name_key = "weapon.mark23"

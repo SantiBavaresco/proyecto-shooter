@@ -7,16 +7,105 @@ script = ExtResource("1_wd")
 slot = 1
 model = "smg"
 model_params = {
-"recv_len": 0.28,
-"recv_h": 0.055,
-"barrel": 0.22,
-"hg": 0.05,
-"hg_style": "none",
-"stock": "folding",
-"mag": "helical",
-"muzzle_dev": "none",
-"iron_h": 0.05,
-"rear_z": -0.05
+"shape": "glb",
+"scene": "res://assets/models/weapons/bizon/bizon.glb",
+"rot": [
+0,
+90,
+0
+],
+"scale": 0.048,
+"offset": [
+0,
+-0.052,
+0.034
+],
+"parts": {
+"Mag": [
+"mag_"
+],
+"Charging": [
+"__ninguna__"
+]
+},
+"pivots": {
+"Mag": [
+0,
+-0.025,
+-0.1
+],
+"Charging": [
+0.022,
+0.012,
+-0.1
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0.006,
+0,
+0
+]
+},
+"Mag": {
+"grab": [
+0,
+-0.017,
+-0.107
+]
+}
+},
+"dot_lens": {
+"pos": [
+0,
+0.074,
+-0.04
+],
+"size": 0.03,
+"holo": true
+},
+"sight": [
+0,
+0.074,
+-0.04
+],
+"eye_relief": 0.24,
+"muzzle": [
+0,
+0,
+-0.382
+],
+"ejection": [
+0.015,
+0.01,
+-0.06
+],
+"pose": {
+"top": [
+0,
+-0.05,
+0.022
+],
+"bottom": [
+0,
+-0.128,
+0.045
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.056,
+-0.038
+],
+"left": "forend",
+"lc": [
+0,
+-0.03,
+-0.24
+],
+"lr": 0.034
+}
 }
 sight = "iron"
 scope_mag = 0.0

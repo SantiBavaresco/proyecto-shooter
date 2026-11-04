@@ -30,6 +30,9 @@ var effects: Dictionary = {}
 ## Equipo: protección (para F3) y kg extra que deja cargar.
 var protection: float = 0.0
 var carry_bonus: float = 0.0
+## Modelo .glb propio (si no, se arma por código) y su escala.
+var model_path: String = ""
+var model_scale: float = 1.0
 
 var _weapon: WeaponData
 

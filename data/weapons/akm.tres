@@ -51,7 +51,7 @@ model_params = {
 },
 "sight": [
 0,
-0.045,
+0.054,
 -0.514
 ],
 "eye_relief": 0.63,

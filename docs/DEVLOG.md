@@ -346,3 +346,14 @@
 
 ## 2.0.5 — Objetos del piso más grandes (2026-11-03)
 - Los ítems sueltos en el mundo (vendas, botiquines, comida, munición, equipo, plata) se ven al doble y su caja para agarrarlos también; las armas siguen a escala real. Los íconos del inventario no cambian.
+
+## 2.0.6 — Armas nuevas, saqueo en tres secciones, sonidos de foley y sombra del jugador (2026-11-04)
+- Modelos nuevos: PP-B (PP-19 Bizon) y VK-19 (PP-19-01, reemplaza al modelo por código), las dos con mira holográfica.
+- Mesas aparte al fondo de la armería ("ARMAS NUEVAS"): fusil de tirador CK-21 (Chukavin), pistola M-23 .45 (Mark 23) y escopeta corta ZC-75 (Zastava M75), más un dron de consumo como ítem. La Mark 23 trae animaciones propias, pero sin reposo y con otros brazos: usa nuestras animaciones (corredera y cargador por hueso).
+- GlbWeapon: soporte "shells" (vainas visibles en las recámaras de las escopetas de quiebre) y mira holográfica en "dot_lens".
+- AR-M: línea de mira corregida. SK-45: carga bala a bala unas tres veces más lenta.
+- Pan más chico. Ítems con modelo .glb propio ("model" y "model_scale" en items.json).
+- Inventario: celdas de 66 px; al revisar una caja se ven equipo, mochila y caja a la vez, con grillas del mismo tamaño.
+- Foley (WAV generados por `tools/audio/gen_foley.py`): pasos según la superficie (hormigón, tierra, madera, metal), abrir cajas/alijos, equipar, agarrar ítems y armas, tirar.
+- Mesas: las escopetas flotaban 27 cm sobre la mesa (contaban las vainas ocultas para apoyarlas); arreglado y con prueba.
+- Sombra del jugador: un cuerpo de cápsulas que solo proyecta sombra (piernas que caminan, agacharse, inclinarse, brazos con el arma) en lugar del cilindro.

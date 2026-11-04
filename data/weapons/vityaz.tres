@@ -7,10 +7,98 @@ script = ExtResource("1_wd")
 slot = 1
 model = "smg"
 model_params = {
-"shape": "vityaz",
-"barrel": 0.237,
-"hg": 0.15,
-"mag_len": 0.19
+"shape": "glb",
+"scene": "res://assets/models/weapons/pp1901/pp1901.glb",
+"rot": [
+0,
+90,
+0
+],
+"scale": 0.048,
+"offset": [
+0,
+-0.046,
+0.03
+],
+"parts": {
+"Mag": [
+"mag_"
+],
+"Charging": [
+"__ninguna__"
+]
+},
+"pivots": {
+"Mag": [
+0,
+-0.05,
+-0.13
+],
+"Charging": [
+0.022,
+0.012,
+-0.12
+]
+},
+"metas": {
+"Charging": {
+"knob": [
+0.006,
+0,
+0
+]
+}
+},
+"dot_lens": {
+"pos": [
+0,
+0.066,
+-0.05
+],
+"size": 0.03,
+"holo": true
+},
+"sight": [
+0,
+0.066,
+-0.05
+],
+"eye_relief": 0.24,
+"muzzle": [
+0,
+0,
+-0.395
+],
+"ejection": [
+0.015,
+0.01,
+-0.06
+],
+"pose": {
+"top": [
+0,
+-0.05,
+0.017
+],
+"bottom": [
+0,
+-0.135,
+0.036
+],
+"r": 0.016,
+"trigger": [
+0,
+-0.05,
+-0.038
+],
+"left": "forend",
+"lc": [
+0,
+-0.01,
+-0.205
+],
+"lr": 0.03
+}
 }
 sight = "red_dot"
 scope_mag = 0.0

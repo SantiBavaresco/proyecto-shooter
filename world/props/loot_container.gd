@@ -44,6 +44,7 @@ func get_interact_text() -> String:
 
 
 func interact(_player: Node) -> void:
+	Foley.play(get_tree(), {"crate": "crate_open", "stash": "stash_open"}.get(kind, "box_open"), -4.0)
 	if kind == "ammo":
 		_restock_ammo()
 	EventBus.loot_requested.emit(self)

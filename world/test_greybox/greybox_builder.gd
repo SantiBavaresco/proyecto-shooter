@@ -29,6 +29,8 @@ const WorldItemScript := preload("res://world/props/world_item.gd")
 
 ## Polígono: línea de tiro y franja que ocupa (x de 18 a 42).
 const RANGE_LINE_Z := 30.0
+## Armas recién agregadas: mesas aparte, separadas de la armería.
+const NEW_WEAPONS := ["chukavin", "mark23", "coachgun"]
 const RANGE_X_MIN := 18.0
 const RANGE_X_MAX := 42.0
 const RANGE_END_Z := 260.0
@@ -219,6 +221,12 @@ func _build_loot_area(geo: Node3D) -> void:
 ## Armería: una mesa por arma del catálogo, en filas detrás de la línea de tiro.
 func _build_armory(geo: Node3D) -> void:
 	var catalog: Array = JSON.parse_string(FileAccess.get_file_as_string("res://data/weapons/catalog.json"))
+	# Las recién llegadas van en una fila aparte, para probarlas por separado
+	var fresh: Array = []
+	for id: String in NEW_WEAPONS:
+		if catalog.has(id):
+			catalog.erase(id)
+			fresh.append(id)
 	var cols := 6
 	var x0 := RANGE_X_MIN + 2.6
 	var dx := (RANGE_X_MAX - RANGE_X_MIN - 5.2) / float(cols - 1)
@@ -232,6 +240,20 @@ func _build_armory(geo: Node3D) -> void:
 		geo.add_child(t)
 	var rows := ceili(catalog.size() / float(cols))
 	_sign(geo, Vector3((RANGE_X_MIN + RANGE_X_MAX) * 0.5, 3.6, z0 - (rows - 1) * 2.8 - 2.5), tr("greybox.armory"))
+	# Fila aparte con las armas nuevas (y el dron en el piso)
+	var zf := z0 - rows * 2.8 - 3.2
+	for i in fresh.size():
+		var t := WeaponTable.new()
+		t.name = "Table_%s" % fresh[i]
+		t.weapon_path = "res://data/weapons/%s.tres" % fresh[i]
+		t.position = Vector3(x0 + i * dx, 0, zf)
+		t.rotation = Vector3(0, PI, 0)
+		geo.add_child(t)
+	var drone := WorldItemScript.make("drone", 1) as WorldItem
+	drone.name = "Item_drone"
+	drone.position = Vector3(x0 + fresh.size() * dx, 0.3, zf)
+	geo.add_child(drone)
+	_sign(geo, Vector3(x0 + fresh.size() * dx * 0.5, 3.2, zf - 1.6), tr("greybox.new_weapons"))
 
 
 ## Polígono de tiro, detrás del punto de aparición.

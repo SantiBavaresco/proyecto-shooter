@@ -76,4 +76,5 @@ func interact(player: Node) -> void:
 		EventBus.toast.emit(tr("inv.no_room"))
 		return
 	EventBus.toast.emit(tr("inv.picked") % ItemDB.display_name(stack.item))
+	Foley.play(get_tree(), "pickup_weapon" if stack.item.kind == "weapon" else "pickup_item", -4.0)
 	queue_free()

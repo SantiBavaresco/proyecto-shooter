@@ -49,6 +49,11 @@ var is_dead: bool = false
 ## Alambre de púas de la zona de prueba: ya cortó al entrar.
 var _hurt_inside: bool = false
 const HURT_DPS := 6.0
+## Pasos: metros entre pisadas (caminando, corriendo, agachado) y volumen.
+const STRIDE := {"walk": 0.78, "sprint": 1.05, "crouch": 0.55}
+const STEP_DB := {"walk": -13.0, "sprint": -8.0, "crouch": -21.0}
+var _step_dist: float = 0.0
+var _step_player: AudioStreamPlayer
 const RESTART_AFTER_DEATH := 4.0
 ## Rotación de mirada aplicada en el último frame (la usa el balanceo del arma).
 var last_look: Vector2 = Vector2.ZERO
@@ -107,6 +112,13 @@ func _ready() -> void:
 	add_child(weapons)
 	weapons.setup(self, false)
 	inventory.give_start_kit()
+	# Sombra con forma de persona (la cápsula queda solo como respaldo, sin sombra)
+	body_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	body_shadow.visible = false
+	var sb := ShadowBody.new()
+	sb.name = "ShadowBody"
+	sb.player = self
+	add_child(sb)
 	var ov := StressOverlay.new()
 	ov.name = "StressOverlay"
 	ov.player = self
@@ -316,6 +328,9 @@ func _physics_process(delta: float) -> void:
 	var now_on_floor := is_on_floor()
 	if now_on_floor and not _was_on_floor:
 		EventBus.player_landed.emit(-_prev_vel_y)
+		if -_prev_vel_y > 2.0:
+			_play_step(-6.0 if -_prev_vel_y > 5.0 else -10.0)
+	_update_steps(delta, now_on_floor)
 	_was_on_floor = now_on_floor
 
 	if weapons != null:
@@ -452,6 +467,45 @@ func _has_headroom() -> bool:
 	if needed <= 0.001:
 		return true
 	return not test_move(global_transform, Vector3(0.0, needed, 0.0))
+
+
+# --- Pasos ------------------------------------------------------------------
+
+func _update_steps(delta: float, on_floor: bool) -> void:
+	var hs := Vector2(velocity.x, velocity.z).length()
+	if not on_floor or hs < 0.4 or stance == Stance.SLIDING:
+		_step_dist = minf(_step_dist, 0.3)
+		return
+	var mode := "sprint" if is_sprinting else ("crouch" if stance == Stance.CROUCHING else "walk")
+	_step_dist += hs * delta
+	if _step_dist >= float(STRIDE[mode]):
+		_step_dist = 0.0
+		_play_step(float(STEP_DB[mode]))
+
+
+## Una pisada: el sonido depende del piso (rayo hacia abajo desde los pies).
+func _play_step(volume_db: float) -> void:
+	if not is_inside_tree():
+		return
+	if _step_player == null:
+		_step_player = AudioStreamPlayer.new()
+		_step_player.bus = "SFX_World"
+		_step_player.max_polyphony = 2
+		add_child(_step_player)
+	var q := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 0.1, 0), global_position + Vector3(0, -0.4, 0))
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	var surf := "concrete"
+	if not hit.is_empty():
+		var n := hit["collider"] as Node
+		if n != null and n.has_meta("surface"):
+			surf = Foley.step_surface(String(n.get_meta("surface")))
+	var s := Foley.step(surf)
+	if s == null:
+		return
+	_step_player.stream = s
+	_step_player.volume_db = volume_db
+	_step_player.play()
 
 
 # --- Salud ------------------------------------------------------------------

@@ -48,7 +48,7 @@ func _equip(id: String) -> WeaponData:
 
 func test_catalog_has_26_valid_weapons() -> void:
 	var cat := _catalog()
-	assert_eq(cat.size(), 32)
+	assert_eq(cat.size(), 35)
 	for id: String in cat:
 		var d := _load(id)
 		assert_true(d != null, "%s carga" % id)
@@ -337,19 +337,19 @@ func test_glb_models_have_parts_and_hands() -> void:
 		m.free()
 
 
-func test_vk19_is_procedural_with_holo() -> void:
-	var d := _load("vityaz")
-	assert_eq(String(d.model_params.get("shape", "")), "vityaz")
-	var m := WeaponModelBuilder.build(d)
-	assert_true(m.has_node("Lens"), "vidrio de la holográfica")
-	var lm := (m.get_node("Lens") as MeshInstance3D).material_override as ShaderMaterial
-	assert_true(bool(lm.get_shader_parameter("holo")), "retícula holográfica")
-	var sight := (m.get_node("Sight") as Node3D).position
-	var muzzle := (m.get_node("Muzzle") as Node3D).position
-	assert_true(absf(sight.x) < 0.001 and absf(muzzle.x) < 0.001, "mira y boca sobre el eje")
-	assert_gt(sight.y, 0.06, "la ventana queda por encima del alza y del guion")
-	assert_true(m.has_node("Mag") and m.has_node("Charging"), "cargador y manija animables")
-	m.free()
+func test_vk19_and_ppb_have_holo_sights() -> void:
+	for id: String in ["vityaz", "pp19"]:
+		var d := _load(id)
+		assert_eq(String(d.model_params.get("shape", "")), "glb", "%s: modelo .glb" % id)
+		var m := WeaponModelBuilder.build(d)
+		assert_true(m.has_node("Lens"), "%s: vidrio de la holográfica" % id)
+		var lm := (m.get_node("Lens") as MeshInstance3D).material_override as ShaderMaterial
+		assert_true(bool(lm.get_shader_parameter("holo")), "%s: retícula holográfica" % id)
+		var sight := (m.get_node("Sight") as Node3D).position
+		assert_true(absf(sight.x) < 0.001, "%s: mira sobre el eje" % id)
+		assert_gt(sight.y, 0.05, "%s: la ventana queda arriba del cajón" % id)
+		assert_true(m.has_node("Mag"), "%s: cargador animable" % id)
+		m.free()
 
 
 func test_revolver_reloads_all_at_once() -> void:
@@ -382,3 +382,20 @@ func test_npc_falls_stiff_and_gets_up() -> void:
 	await get_tree().create_timer(NpcDummy.RESPAWN_TIME + 1.5).timeout
 	assert_lt(npc._ang, 0.05, "se vuelve a parar")
 	assert_false(npc.down)
+
+
+## Cada arma queda apoyada sobre su mesa (ni flotando ni metida en la tabla).
+func test_weapons_rest_on_their_tables() -> void:
+	var tables := level.find_children("*", "StaticBody3D", true, false).filter(func(n: Node) -> bool: return n is WeaponTable)
+	assert_true(tables.size() >= 35, "hay una mesa por arma")
+	for t: Node in tables:
+		var wt := t as WeaponTable
+		var top := wt.global_position.y + WeaponTable.TABLE_HEIGHT + WeaponTable.TABLE_SIZE.y * 0.5
+		var low := INF
+		for c in wt._model.find_children("*", "MeshInstance3D", true, false):
+			var mi := c as MeshInstance3D
+			if not mi.is_visible_in_tree():
+				continue
+			var b := mi.global_transform * mi.get_aabb()
+			low = minf(low, b.position.y)
+		assert_true(absf(low - top) < 0.03, "%s: apoyada en la mesa (%.3f m de la tabla)" % [wt.name, low - top])

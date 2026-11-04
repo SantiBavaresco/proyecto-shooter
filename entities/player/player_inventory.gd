@@ -201,8 +201,14 @@ func equip(s: ItemStack, slot: String, from: Inventory = null) -> bool:
 	equipment[slot] = s
 	if WEAPON_SLOT.has(slot):
 		player.weapons.equip_weapon(s.item.weapon(), WEAPON_SLOT[slot], s.state, false, s, false)
+	_foley("equip")
 	_on_changed()
 	return true
+
+
+func _foley(sound: String) -> void:
+	if player != null and player.is_inside_tree():
+		Foley.play(player.get_tree(), sound, -6.0)
 
 
 ## Saca lo equipado en una ranura a "to" (en "at" si se da y entra). Devuelve la pila
@@ -223,6 +229,7 @@ func unequip(slot: String, to: Inventory = null, at := Vector2i(-1, -1), rotated
 		return null
 	_uninstall(slot)
 	equipment[slot] = null
+	_foley("equip")
 	_on_changed()
 	return s
 
@@ -399,6 +406,8 @@ func transfer(s: ItemStack, from: Inventory, to: Inventory) -> bool:
 		s.count = left
 		if not from.place(s, pos, rot):
 			from.add(s)
+	if left < before:
+		_foley("pickup_item")
 	return left < before
 
 
@@ -475,6 +484,7 @@ func drop(s: ItemStack) -> WorldItem:
 	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
 	var pos := player.global_position + fwd * 0.7 + Vector3(0, 1.1, 0)
 	var parent := player.get_tree().current_scene if player.get_tree().current_scene != null else player.get_parent()
+	_foley("drop_item")
 	return WorldItem.spawn(parent, s, pos, fwd * 1.6 + Vector3(0, 1.0, 0))
 
 

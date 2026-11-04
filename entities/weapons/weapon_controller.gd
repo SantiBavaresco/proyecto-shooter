@@ -621,7 +621,7 @@ func _load_rounds(c: WeaponSlot) -> void:
 ## Parte de la recarga (inicio, largo) en que entran los cartuchos: de a uno a mano,
 ## o empujados del peine (más rápido, después de calzarlo).
 func rounds_window() -> Vector2:
-	return Vector2(0.3, 0.45) if _clip_load else Vector2(0.16, 0.7)
+	return Vector2(0.22, 0.62) if _clip_load else Vector2(0.16, 0.7)
 
 
 ## Cortar la carga cartucho a cartucho (gatillo): cierra el cerrojo con lo que ya entró.

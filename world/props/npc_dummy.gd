@@ -87,6 +87,7 @@ func get_interact_text() -> String:
 
 func interact(_player: Node) -> void:
 	if down:
+		Foley.play(get_tree(), "pickup_item", -6.0)
 		EventBus.loot_requested.emit(self)
 
 

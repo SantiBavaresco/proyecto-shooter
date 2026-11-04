@@ -19,6 +19,13 @@ Antes de sumar uno, verificar la licencia (ver prompt maestro, sección 4).
 | `npc_swat_remaster` | `assets/models/npc/swat_remaster/swat_remaster.glb` | [Sketchfab: "S.W.A.T. Operator- Remastered"](https://sketchfab.com/3d-models/swat-operator-remastered-732d2eec5a0c456bafedd08af35134c3) | Mateusz Woliński | Sketchfab Standard | Sí (no se redistribuye suelto) | Personaje de prueba |
 | `npc_swat_special` | `assets/models/npc/swat_special/swat_special.glb` | [Sketchfab: "S.W.A.T. Operator- 4k Followers Special Remaster"](https://sketchfab.com/3d-models/swat-operator-4k-followers-special-remaster-f6923917c8014578b1c1cb2b4c249268) | Mateusz Woliński | CC-BY 4.0 | Sí, con atribución | Personaje de prueba |
 | `props_crates_barrels` | `assets/models/props/crates_barrels/crates_barrels.glb` | [Sketchfab: "Crates And Barrels"](https://sketchfab.com/3d-models/crates-and-barrels-5ae3c72285474862a89d69c2f2ad2246) | Mateusz Woliński | CC-BY 4.0 | Sí, con atribución | Cajas y barriles en la pista |
+| `weapon_bizon` | `assets/models/weapons/bizon/bizon.glb` | [Sketchfab: "PP-19 Bizon"](https://sketchfab.com/3d-models/pp-19-bizon-1d10dc8adab04c35bac40307ae7f6e23) | FamousUnityHubSoldier | Sketchfab Standard | Sí (no se redistribuye suelto) | Subfusil PP-B (2.0.6) |
+| `weapon_pp1901` | `assets/models/weapons/pp1901/pp1901.glb` | [Sketchfab: "PP-19-01"](https://sketchfab.com/3d-models/pp-19-01-08ec649560ac4607b285aec04c241060) | FamousUnityHubSoldier | Sketchfab Standard | Sí (no se redistribuye suelto) | Subfusil VK-19 (reemplaza al modelo por código) |
+| `weapon_chukavin` | `assets/models/weapons/chukavin/chukavin.glb` | [Sketchfab: "Chukavin Sniper Rifle"](https://sketchfab.com/3d-models/chukavin-sniper-rifle-b3bb922bdf1a481a96b9e2940b2d26fc) | FamousUnityHubSoldier | Sketchfab Standard | Sí (no se redistribuye suelto) | Fusil de tirador CK-21 |
+| `weapon_mark23` | `assets/models/weapons/mark23/mark23.glb` | [Sketchfab: "Mark 23 Animated (Free)"](https://sketchfab.com/3d-models/mark-23-animated-free-7abebe340aca4f46b36368417b3ca920) | BarcodeGames | Sketchfab Standard | Sí (no se redistribuye suelto) | Pistola M-23 .45 (se usan solo el arma y sus huesos de corredera y cargador; las animaciones del archivo no) |
+| `weapon_zastava` | `assets/models/weapons/zastava/zastava.glb` | [Sketchfab: "Zastava M75 Coach Gun"](https://sketchfab.com/3d-models/zastava-m75-coach-gun-4464f3e94c134959ad52ea06cf391c82) | thecalcman | Sketchfab Standard | Sí (no se redistribuye suelto) | Escopeta corta ZC-75 |
+| `prop_drone` | `assets/models/props/drone/drone.glb` | [Sketchfab: "non-military consumer UAV drone"](https://sketchfab.com/3d-models/non-military-consumer-uav-drone-7558fc3a77d4412dad2a02d9d7c3fbb7) | FamousUnityHubSoldier | Sketchfab Standard | Sí (no se redistribuye suelto) | Ítem "Dron de consumo" (objeto de valor, todavía no vuela) |
+| `sfx_foley` | `assets/audio/foley/*.wav` | Generados por código (`tools/audio/gen_foley.py`) | Propio | — | Sí | Pasos (4 superficies × 4), abrir cajas, equipar, agarrar y tirar |
 
 ## Placeholders pendientes (`TODO-ASSET` en el código)
 
@@ -26,7 +33,7 @@ Antes de sumar uno, verificar la licencia (ver prompt maestro, sección 4).
 |---|---|
 | `title_background` | `ui/title/title_background.gd` |
 | `loading_background` | `ui/loading/loading_screen.gd` |
-| `player_body` | `entities/player/player.gd` |
+| `player_body` | `entities/player/shadow_body.gd` (cuerpo de cápsulas que solo da sombra; reemplazable por un personaje con huesos) |
 | Un modelo real por arma (25, ver `data/weapons/catalog.json`) | `entities/weapons/models_*.gd` (geometría por código con la silueta del arma real; reemplazables por .glb respetando marcadores y piezas) |
 | `fps_arms` | `entities/weapons/arms_builder.gd` (brazos por código con dedos; reemplazable por un modelo con huesos) |
 | `vfx_muzzle_flash` | `entities/weapons/weapon_controller.gd` |

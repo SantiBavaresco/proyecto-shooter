@@ -261,5 +261,11 @@
 	"action.inv_sort": "Sort backpack",
 	"action.inv_use": "Use / equip hovered item",
 	"action.inv_quick_move": "Transfer (hold + click)",
-	"options.keybinds_inventory": "INVENTORY SCREEN"
+	"options.keybinds_inventory": "INVENTORY SCREEN",
+	"weapon.chukavin": "CK-21 marksman rifle",
+	"weapon.mark23": "M-23 .45 pistol",
+	"weapon.coachgun": "ZC-75 coach gun",
+	"greybox.new_weapons": "NEW WEAPONS",
+	"item.drone": "Consumer drone",
+	"item.drone.desc": "Quadcopter drone. For now you can carry and sell it; flying it to scout comes later."
 }

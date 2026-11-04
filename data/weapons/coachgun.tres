@@ -1,0 +1,133 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://core/resources/weapon_data.gd" id="1_wd"]
+
+[resource]
+script = ExtResource("1_wd")
+slot = 2
+model = "shotgun_sxs"
+model_params = {
+"shape": "glb",
+"scene": "res://assets/models/weapons/zastava/zastava.glb",
+"rot": [
+0,
+180,
+0
+],
+"scale": 0.18,
+"offset": [
+0,
+-0.0926,
+-0.013
+],
+"parts": {
+"Barrels": [
+"barrel"
+]
+},
+"pivots": {
+"Barrels": [
+0,
+-0.02,
+-0.055
+]
+},
+"shells": {
+"L": [
+-0.0122,
+0.02,
+0.025
+],
+"R": [
+0.0122,
+0.02,
+0.025
+]
+},
+"sight": [
+0,
+0.0125,
+-0.6
+],
+"eye_relief": 0.707,
+"muzzle": [
+0,
+0,
+-0.613
+],
+"ejection": [
+0,
+0.02,
+-0.05
+],
+"pose": {
+"top": [
+0,
+-0.04,
+0.06
+],
+"bottom": [
+0,
+-0.1,
+0.12
+],
+"r": 0.02,
+"trigger": [
+0,
+-0.063,
+-0.04
+],
+"left": "forend",
+"left_in": "Barrels",
+"lc": [
+0,
+-0.025,
+-0.25
+],
+"lr": 0.028
+}
+}
+sight = "bead"
+scope_mag = 0.0
+scope_mag_max = 0.0
+reticle = "duplex"
+caliber = "12/70"
+reload_type = "break"
+round_time = 0.4
+clip_reload = false
+bolt_action = false
+cycle_time = 0.8
+fire_modes = PackedStringArray("semi")
+rpm = 400.0
+damage = 11.0
+pellets = 9
+muzzle_velocity = 400.0
+drag = 0.0095
+max_ricochets = 1
+tracer_every = 0
+mag_size = 2
+start_reserve = 24
+spread_hip = 1.6
+spread_ads = 1.0
+pellet_spread = 2.2
+spread_move_mult = 1.4
+spread_air_mult = 2.0
+spread_crouch_mult = 0.9
+recoil_pitch = 5.0
+recoil_yaw = 1.2
+recoil_recovery = 0.7
+kick_back = 0.09
+kick_rot = 10.0
+recoil_ads_mult = 0.8
+reload_time = 1.6
+reload_time_empty = 2.3
+ads_time = 0.23
+draw_time = 0.4
+holster_time = 0.22
+ads_fov_mult = 0.88
+eye_relief = 0.88
+sfx_tail = 0.6
+sfx_body_hz = 55.0
+sfx_volume_db = 1.0
+id = "coachgun"
+name_key = "weapon.coachgun"

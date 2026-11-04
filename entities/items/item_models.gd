@@ -44,6 +44,13 @@ static func build(item: ItemData) -> Node3D:
 				g.position = Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
 		"ammo":
 			_ammo(root, item)
+		_ when item.model_path != "" and ResourceLoader.exists(item.model_path):
+			# Modelo .glb: apoyado en el piso y centrado
+			var g := (GlbWeapon.scene(item.model_path).instantiate() as Node3D)
+			g.scale = Vector3.ONE * item.model_scale
+			root.add_child(g)
+			var box := local_aabb(root)
+			g.position = Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
 		_:
 			match item.id:
 				"knife":
@@ -77,7 +84,7 @@ static func build(item: ItemData) -> Node3D:
 					_cyl(root, 0.042, 0.075, Vector3(0, 0.0375, 0), _m(Color(0.6, 0.6, 0.62), 0.35, 0.8))
 					_cyl(root, 0.0425, 0.05, Vector3(0, 0.0375, 0), _m(Color(0.65, 0.2, 0.12), 0.6))
 				"bread":
-					_box(root, Vector3(0.24, 0.08, 0.11), Vector3(0, 0.045, 0), _m(Color(0.66, 0.44, 0.22), 0.9), 0.03)
+					_box(root, Vector3(0.15, 0.055, 0.075), Vector3(0, 0.03, 0), _m(Color(0.66, 0.44, 0.22), 0.9), 0.02)
 				"helmet_steel":
 					var h := MeshInstance3D.new()
 					var sm := SphereMesh.new()

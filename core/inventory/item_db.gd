@@ -40,7 +40,7 @@ const WEAPON_FAMILY := {
 ## Excepciones por arma: [ancho, alto, kg].
 const WEAPON_OVERRIDE := {
 	"sawedoff": [3, 2, 2.1], "svd": [6, 2, 4.3], "pp19": [4, 2, 2.7], "ak74u": [4, 2, 2.7],
-	"revolver45": [2, 2, 1.1], "p22": [2, 2, 0.9], "sr22": [4, 2, 2.4], "bolt22": [5, 2, 2.6],
+	"revolver45": [2, 2, 1.1], "chukavin": [6, 2, 4.6], "mark23": [2, 2, 1.2], "coachgun": [5, 2, 3.0], "p22": [2, 2, 0.9], "sr22": [4, 2, 2.4], "bolt22": [5, 2, 2.6],
 }
 
 static var _items: Dictionary = {}
@@ -102,6 +102,8 @@ static func _ensure() -> void:
 		it.effects = e.get("effects", {})
 		it.protection = float(e.get("protection", 0.0))
 		it.carry_bonus = float(e.get("carry_bonus", 0.0))
+		it.model_path = String(e.get("model", ""))
+		it.model_scale = float(e.get("model_scale", 1.0))
 		_items[it.id] = it
 
 
