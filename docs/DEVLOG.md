@@ -368,3 +368,10 @@
 - 3 cargadores llenos al lado de cada mesa de arma con cargador. Las armas de las mesas vienen con el cargador puesto (sin munición extra).
 - Disparo accidental al montar el arma y doble disparo en semiautomáticas (raro; más con el arma gastada).
 - Equipo inicial: chaleco táctico mediano con 4 cargadores del AR-74K y los de la pistola, mochila mediana y 60 cartuchos sueltos de 5,45.
+
+## 2.1.1 — Fallas solo en armas gastadas, cajas con cargadores casi vacíos y equipo más lindo (2026-11-04)
+- Disparo al montar y doble disparo: solo en la zona de armas gastadas.
+- Caja de armas: los cargadores vienen vacíos o con muy pocas balas (hasta 1/5).
+- Miras sacadas de otros modelos: el negro de su textura se oscurece y gana brillo para combinar con el pavonado de las armas (en su arma de origen quedan como estaban).
+- Chalecos tácticos, chalecos antibalas y mochilas rehechos (`GearModels`): piezas blandas, porta-cargadores con solapa y MOLLE, bolsillos con cierre, tirantes, hebillas, faldones, tapas, cintas de compresión y bolsa de dormir en la de expedición.
+- Herramienta: `tests/screenshots/_icons.gd` arma una hoja con los íconos del inventario.

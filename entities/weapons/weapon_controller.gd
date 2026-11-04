@@ -924,9 +924,11 @@ func _finish_reload(c: WeaponSlot) -> void:
 	_emit_state()
 
 
-## Al montar (cerrar la corredera sobre un cartucho) a veces se escapa un tiro: más
-## probable con el arma gastada.
+## Al montar (cerrar la corredera sobre un cartucho) a veces se escapa un tiro. Solo
+## con armas gastadas (por ahora: en la zona de armas gastadas).
 func _roll_slam(c: WeaponSlot) -> void:
+	if not worn_zone():
+		return
 	if _rng.randf() < fault_risk(effective_condition(c), reliability(c.data))["slam"]:
 		_slam_pending = true
 		EventBus.toast.emit(tr("weapon.slam_fire"))
@@ -1012,7 +1014,7 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 		else:
 			_eject_shell(c, false, 0)
 			# Doble disparo: el martillo sigue a la corredera y sale otro tiro solo
-			if not accidental and c.mag > 0 and c.mode() == "semi" and _rng.randf() < risk["doubling"]:
+			if not accidental and c.mag > 0 and c.mode() == "semi" and worn_zone() and _rng.randf() < risk["doubling"]:
 				_slam_pending = true
 	EventBus.weapon_fired.emit(w.id)
 	_emit_state()
@@ -1046,6 +1048,11 @@ func breath_sway_factor() -> float:
 	var calm := 0.12 if player.stress.level() < 2 else 0.5
 	var f := lerpf(1.0, calm, breath_hold)
 	return f * (1.0 + 1.2 * clampf(out_of_breath / BREATH_PENALTY, 0.0, 1.0))
+
+
+## El jugador está en la zona de armas gastadas (las fallas graves solo pasan ahí).
+func worn_zone() -> bool:
+	return player != null and player.zone_kinds.has("worn")
 
 
 ## Estado con el que se comporta el arma (la zona de armas gastadas lo baja).

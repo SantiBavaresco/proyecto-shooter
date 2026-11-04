@@ -48,7 +48,8 @@ static func apply_model(root: Node3D, base: WeaponData, sight_id: String, muzzle
 	if opt != null and not mt.is_empty():
 		var a := opt.attach
 		var rail := GlbWeapon._v(mt["rail"])
-		var node := optic_node(sight_id)
+		# En su arma de origen la mira queda con el tono original (combina con esa arma)
+		var node := optic_node(sight_id, String(a.get("source", "")) != base.id)
 		node.position = rail
 		root.add_child(node)
 		# Soporte entre el cajón y la mira
@@ -79,13 +80,13 @@ static func apply_model(root: Node3D, base: WeaponData, sight_id: String, muzzle
 ## Modelo de una mira, con la base en el origen. Se arma cada vez (duplicar un nodo
 ## que viene de un .glb lo vuelve a instanciar entero, con las piezas que se sacaron);
 ## lo caro (pasar las mallas con huesos a mallas fijas) ya queda guardado.
-static func optic_node(id: String) -> Node3D:
-	var n := _build_optic(id)
+static func optic_node(id: String, tinted := true) -> Node3D:
+	var n := _build_optic(id, tinted)
 	n.name = "Optic"
 	return n
 
 
-static func _build_optic(id: String) -> Node3D:
+static func _build_optic(id: String, tinted := true) -> Node3D:
 	var it := ItemDB.get_item(id)
 	var a := it.attach
 	var root := Node3D.new()
@@ -112,6 +113,8 @@ static func _build_optic(id: String) -> Node3D:
 				mi.free()
 			else:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				if tinted:
+					_tint(mi, float(a.get("tint", 1.0)), float(a.get("rough", 1.0)))
 		for n in inst.find_children("*", "Skeleton3D", true, false):
 			if n.find_children("*", "MeshInstance3D", true, false).is_empty():
 				n.get_parent().remove_child(n)
@@ -149,6 +152,28 @@ static func _build_optic(id: String) -> Node3D:
 		lens.set_meta("lens_d", d)
 		root.add_child(lens)
 	return root
+
+
+## Oscurece la textura de una mira para que el negro combine con el pavonado de las
+## armas (las texturas de los modelos vienen con negros más grises y mates).
+static var _tinted: Dictionary = {}
+
+
+static func _tint(mi: MeshInstance3D, k: float, rough: float) -> void:
+	if is_equal_approx(k, 1.0) and rough >= 1.0:
+		return
+	for i in mi.mesh.get_surface_count():
+		var mat := mi.get_active_material(i) as BaseMaterial3D
+		if mat == null:
+			continue
+		var key := "%d|%.2f|%.2f" % [mat.get_instance_id(), k, rough]
+		if not _tinted.has(key):
+			var m2 := mat.duplicate() as BaseMaterial3D
+			m2.albedo_color = Color(m2.albedo_color.r * k, m2.albedo_color.g * k, m2.albedo_color.b * k, m2.albedo_color.a)
+			m2.roughness = minf(m2.roughness, rough)
+			m2.metallic = maxf(m2.metallic, 0.3)
+			_tinted[key] = m2
+		mi.set_surface_override_material(i, _tinted[key])
 
 
 ## Silenciador: cilindro con anillos, desde la boca hacia adelante (−Z).

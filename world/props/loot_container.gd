@@ -116,8 +116,8 @@ func _state_for(id: String) -> Dictionary:
 	return {"rounds": it.capacity} if it != null and it.kind == "mag" else {}
 
 
-## Caja de armas: algunos accesorios, cargadores de 2 a 4 familias (a veces de más
-## capacidad, a veces a medio llenar) y munición.
+## Caja de armas: algunos accesorios, cargadores (vacíos o con muy pocas balas) y
+## munición suelta.
 func _fill_weapons(rng: RandomNumberGenerator) -> void:
 	var mags: Array = []
 	for id: String in ItemDB.all_ids():
@@ -127,7 +127,8 @@ func _fill_weapons(rng: RandomNumberGenerator) -> void:
 	for i in rng.randi_range(3, 6):
 		var id: String = mags[rng.randi_range(0, mags.size() - 1)]
 		var it := ItemDB.get_item(id)
-		var r := it.capacity if rng.randf() < 0.6 else rng.randi_range(0, it.capacity)
+		# Vacíos o con muy poco: la munición se busca aparte
+		var r := 0 if rng.randf() < 0.45 else rng.randi_range(1, maxi(1, it.capacity / 5))
 		inventory.add_item(id, 1, {"rounds": r})
 	for e: Array in WEAPONS_LOOT:
 		if rng.randf() < float(e[3]):

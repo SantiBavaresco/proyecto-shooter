@@ -52,7 +52,11 @@ static func build(item: ItemData) -> Node3D:
 			var box2 := local_aabb(root)
 			g2.position = Vector3(-box2.get_center().x, -box2.position.y, -box2.get_center().z)
 		"rig":
-			_rig(root, item)
+			GearModels.rig(root, item)
+		"backpack":
+			GearModels.backpack(root, item)
+		"armor":
+			GearModels.vest(root, item)
 		_ when item.model_path != "" and ResourceLoader.exists(item.model_path):
 			# Modelo .glb: apoyado en el piso y centrado
 			var g := (GlbWeapon.scene(item.model_path).instantiate() as Node3D)

@@ -457,6 +457,15 @@ func test_slam_fire_when_chambering_a_worn_weapon() -> void:
 	await _equip("ar15")
 	var c := weapons.current()
 	c.condition = 0.0
+	# Fuera de la zona de armas gastadas no pasa nunca
+	weapons._rng.seed = 3
+	assert_false(weapons.worn_zone())
+	weapons._roll_slam(c)
+	assert_false(weapons._slam_pending, "fuera de la zona, nunca")
+	var z := level.find_child("Zone_worn", true, false) as Node3D
+	player.teleport(z.global_position + Vector3(0, 0.05, 0), PI)
+	await physics_frames(30)
+	assert_true(weapons.worn_zone())
 	var fired := 0
 	for i in 60:
 		weapons._rng.seed = i
