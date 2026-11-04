@@ -1,10 +1,11 @@
 class_name InventoryScreen
 extends CanvasLayer
-## Pantalla de inventario (Tab), estilo STALKER 2:
-##  - izquierda: equipo (2 armas largas, pistola, casco, chaleco, mochila) y las 4
-##    ranuras rápidas (5–8);
-##  - centro: la mochila en grilla, con el peso y la plata; abajo, la ficha del ítem
-##    (con comparación contra lo equipado);
+## Pantalla de inventario (Tab):
+##  - izquierda: equipo (2 armas largas, pistola, arma blanca, casco, chaleco, chaleco
+##    táctico, mochila), las 4 ranuras rápidas (5–8) y la ficha del ítem (con
+##    comparación contra lo equipado);
+##  - centro: lo que lleva el jugador: bolsillos, las grillas del chaleco táctico (con
+##    su forma) y la de la mochila, con el peso y la plata;
 ##  - derecha (al revisar algo): el contenedor o el cuerpo, con "Tomar todo" (las tres
 ##    secciones a la vez, con las grillas del mismo tamaño que solo con la mochila).
 ##
@@ -17,11 +18,16 @@ const UiTheme := preload("res://ui/theme/ui_theme.gd")
 ## de equipo.
 const CELL := 66.0
 const EQ := 48.0
-## Filas de la grilla que se ven a la vez (el resto, con la rueda).
+## Filas de la grilla que se ven a la vez (el resto, con la rueda): la mochila y el
+## contenedor.
 const VISIBLE_ROWS := 9.0
+const BAG_ROWS := 6.0
+## Separación entre las grillas del chaleco y los bolsillos.
+const GAP := 6.0
 const DRAG_START_PX := 5.0
 
-enum Act { USE, EQUIP, UNEQUIP, UNLOAD, SPLIT, DROP, TAKE, STORE, CLEAR_QUICK, QUICK_1 = 20 }
+enum Act { USE, EQUIP, UNEQUIP, UNLOAD, SPLIT, DROP, TAKE, STORE, CLEAR_QUICK, FILL_MAG, EMPTY_MAG, DETACH_SIGHT,
+	DETACH_MUZZLE, QUICK_1 = 20, ATTACH_1 = 40 }
 
 var player: Player
 var pinv: PlayerInventory
@@ -31,6 +37,15 @@ var is_open: bool = false
 
 var _root: Control
 var _bag_grid: InvGrid
+var _bag_scroll: ScrollContainer
+var _bag_title: Label
+var _pocket_grids: Array[InvGrid] = []
+var _rig_grids: Array[InvGrid] = []
+var _rig_box: Control
+var _rig_title: Label
+## Chaleco y mochila que se están mostrando (para rearmar las grillas si cambian).
+var _shown_rig: ItemStack = null
+var _shown_bag: Object = null
 var _loot_grid: InvGrid
 var _loot_panel: Control
 var _loot_title: Label
@@ -91,7 +106,9 @@ func open(c: Object = null) -> void:
 	is_open = true
 	visible = true
 	GameState.set_ui_open(true)
-	_bag_grid.setup(pinv.bag, CELL)
+	_shown_rig = null
+	_shown_bag = null
+	_sync_storage_grids()
 	for k: String in _slots:
 		(_slots[k] as InvSlot).pinv = pinv
 	for q in _quick:
@@ -228,6 +245,47 @@ func _grid_rect(g: InvGrid) -> Rect2:
 	return r
 
 
+## Las grillas del jugador (bolsillos, chaleco, mochila) según lo que tenga puesto.
+func _sync_storage_grids() -> void:
+	if pinv == null:
+		return
+	for i in _pocket_grids.size():
+		if _pocket_grids[i].inv != pinv.pockets[i]:
+			_pocket_grids[i].setup(pinv.pockets[i], CELL)
+	var rig := pinv.equipment.get("rig") as ItemStack
+	if rig != _shown_rig:
+		_shown_rig = rig
+		for g in _rig_grids:
+			g.queue_free()
+		_rig_grids.clear()
+		var size := Vector2.ZERO
+		if rig != null:
+			for i in rig.contents.size():
+				var lay: Array = rig.item.grids[i]
+				var g := InvGrid.new()
+				g.setup(rig.contents[i], CELL)
+				g.position = Vector2(float(lay[0]), float(lay[1])) * (CELL + GAP)
+				_rig_box.add_child(g)
+				_rig_grids.append(g)
+				size = size.max(g.position + g.size)
+		_rig_box.custom_minimum_size = size
+		_rig_title.text = tr("inv.rig") + (" · " + tr(rig.item.name_key) if rig != null else "  —  " + tr("inv.no_rig"))
+	var bag_stack := pinv.equipment.get("backpack") as ItemStack
+	if bag_stack != _shown_bag or _bag_grid.inv != pinv.bag:
+		_shown_bag = bag_stack
+		_bag_grid.setup(pinv.bag, CELL)
+		_bag_scroll.visible = bag_stack != null
+		_bag_scroll.custom_minimum_size = Vector2(maxi(pinv.bag.width, 4) * CELL + 16,
+			CELL * minf(BAG_ROWS, float(maxi(pinv.bag.height, 1))))
+		_bag_scroll.scroll_vertical = 0
+		_bag_title.text = tr("inv.backpack") + (" · " + tr(bag_stack.item.name_key) if bag_stack != null else "  —  " + tr("inv.no_backpack"))
+
+
+## Grilla del jugador (no la del contenedor).
+func _is_player_grid(g: Variant) -> bool:
+	return g is InvGrid and g != _loot_grid
+
+
 ## Arrastrando cerca del borde de arriba o de abajo de una grilla: se desplaza sola.
 func _autoscroll(m: Vector2) -> void:
 	for g: InvGrid in _grids():
@@ -244,7 +302,11 @@ func _autoscroll(m: Vector2) -> void:
 
 
 func _grids() -> Array[InvGrid]:
-	var out: Array[InvGrid] = [_bag_grid]
+	var out: Array[InvGrid] = []
+	out.append_array(_pocket_grids)
+	out.append_array(_rig_grids)
+	if _bag_scroll.visible:
+		out.append(_bag_grid)
 	if _loot_panel.visible:
 		out.append(_loot_grid)
 	return out
@@ -355,6 +417,20 @@ func _drop(m: Vector2) -> void:
 	_clear_drag_marks()
 	if s == null:
 		return
+	var src_inv: Inventory = (from as InvGrid).inv if from is InvGrid else null
+	# Un accesorio sobre un arma (en una grilla o equipada) o munición sobre un cargador
+	if src_inv != null and (s.item.is_attachment() or s.item.kind == "ammo"):
+		var tgt := _hit(m)
+		var ts := tgt[0] as ItemStack
+		if ts != null and ts != s:
+			if s.item.is_attachment() and ts.item.kind == "weapon":
+				pinv.attach(ts, s, src_inv)
+				_refresh()
+				return
+			if s.item.kind == "ammo" and ts.item.kind == "mag":
+				pinv.load_mag_from(ts, s, src_inv)
+				_refresh()
+				return
 	# Sobre una casilla de equipo o rápida
 	for sl: InvSlot in _all_slots():
 		if sl.get_global_rect().has_point(m):
@@ -423,9 +499,9 @@ func _cancel_drag() -> void:
 
 
 func _clear_drag_marks() -> void:
-	for g: InvGrid in [_bag_grid, _loot_grid]:
-		if g == null:
-			continue
+	if _bag_grid == null:
+		return
+	for g: InvGrid in _all_grids():
 		g.dragging = null
 		g.ghost_at = Vector2i(-1, -1)
 		g.queue_redraw()
@@ -461,20 +537,36 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 		elif pinv.unequip(sl.slot) == null:
 			EventBus.toast.emit(tr("inv.no_room"))
 	elif from == _loot_grid:
-		pinv.transfer(s, _loot_grid.inv, pinv.bag)
+		pinv.transfer(s, _loot_grid.inv, null)
 	elif s.item.is_consumable():
 		if not pinv.use(s):
 			EventBus.toast.emit(tr("inv.cant_now"))
 	elif s.item.is_equipment():
-		pinv.equip(s, pinv.slot_for(s), pinv.bag)
+		pinv.equip(s, pinv.slot_for(s), (from as InvGrid).inv)
+	elif s.item.kind == "mag":
+		pinv.fill_mag(s)
+	elif s.item.is_attachment():
+		var ws := _attach_targets(s)
+		if not ws.is_empty():
+			pinv.attach(ws[0], s, (from as InvGrid).inv)
 	_refresh()
+
+
+## Armas equipadas donde va este accesorio.
+func _attach_targets(att: ItemStack) -> Array[ItemStack]:
+	var out: Array[ItemStack] = []
+	for k: String in ["weapon1", "weapon2", "pistol"]:
+		var w := pinv.equipment.get(k) as ItemStack
+		if w != null and ItemDB.fits_weapon(att.item, w.item.weapon()):
+			out.append(w)
+	return out
 
 
 func _shift_transfer(s: ItemStack, g: InvGrid) -> void:
 	if g == _loot_grid:
-		pinv.transfer(s, _loot_grid.inv, pinv.bag)
+		pinv.transfer(s, _loot_grid.inv, null)
 	else:
-		pinv.transfer(s, pinv.bag, _loot_grid.inv)
+		pinv.transfer(s, g.inv, _loot_grid.inv)
 	_refresh()
 
 
@@ -482,7 +574,7 @@ func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
 	_menu.clear()
 	_menu_stack = s
 	_menu_from = from
-	var in_bag: bool = from == _bag_grid
+	var in_bag: bool = _is_player_grid(from)
 	var in_loot: bool = from == _loot_grid
 	var equipped: bool = from is InvSlot and (from as InvSlot).slot != "quick"
 	var quick_slot: bool = from is InvSlot and (from as InvSlot).slot == "quick"
@@ -494,6 +586,21 @@ func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
 		_menu.add_item(tr("inv.unequip"), Act.UNEQUIP)
 	if s.item.kind == "weapon" and int(s.state.get("mag", 0)) > 0 and not in_loot:
 		_menu.add_item(tr("inv.unload"), Act.UNLOAD)
+	if s.item.kind == "weapon" and not in_loot:
+		for k: String in ["sight", "muzzle"]:
+			var cur := pinv.attachment_of(s, k)
+			if cur != "":
+				_menu.add_item(tr("inv.detach") % ItemDB.display_name(ItemDB.get_item(cur)),
+					Act.DETACH_SIGHT if k == "sight" else Act.DETACH_MUZZLE)
+	if s.item.kind == "mag" and not in_loot:
+		if s.rounds() < s.item.capacity:
+			_menu.add_item(tr("inv.fill_mag"), Act.FILL_MAG)
+		if s.rounds() > 0:
+			_menu.add_item(tr("inv.empty_mag"), Act.EMPTY_MAG)
+	if s.item.is_attachment() and (in_bag or in_loot):
+		var targets := _attach_targets(s)
+		for i in targets.size():
+			_menu.add_item(tr("inv.attach") % ItemDB.display_name(targets[i].item), Act.ATTACH_1 + i)
 	if in_loot:
 		_menu.add_item(tr("inv.take"), Act.TAKE)
 	if in_bag and _loot_panel.visible:
@@ -525,6 +632,14 @@ func _on_menu(id: int) -> void:
 			var src: Inventory = (from as InvGrid).inv
 			if not pinv.equip(s, pinv.slot_for(s), src):
 				EventBus.toast.emit(tr("inv.no_room"))
+		Act.FILL_MAG:
+			pinv.fill_mag(s)
+		Act.EMPTY_MAG:
+			pinv.empty_mag(s)
+		Act.DETACH_SIGHT:
+			pinv.detach(s, "sight")
+		Act.DETACH_MUZZLE:
+			pinv.detach(s, "muzzle")
 		Act.UNEQUIP:
 			if pinv.unequip((from as InvSlot).slot) == null:
 				EventBus.toast.emit(tr("inv.no_room"))
@@ -535,14 +650,19 @@ func _on_menu(id: int) -> void:
 		Act.DROP:
 			_drop_to_ground(s, from)
 		Act.TAKE:
-			pinv.transfer(s, _loot_grid.inv, pinv.bag)
+			pinv.transfer(s, _loot_grid.inv, null)
 		Act.STORE:
-			pinv.transfer(s, pinv.bag, _loot_grid.inv)
+			pinv.transfer(s, (from as InvGrid).inv, _loot_grid.inv)
 		Act.CLEAR_QUICK:
 			pinv.set_quick((from as InvSlot).quick_index, "")
 		_:
 			if id >= Act.QUICK_1 and id < Act.QUICK_1 + 4:
 				pinv.set_quick(id - Act.QUICK_1, s.item.id)
+			elif id >= Act.ATTACH_1 and id < Act.ATTACH_1 + 3:
+				var targets := _attach_targets(s)
+				var k := id - Act.ATTACH_1
+				if k < targets.size():
+					pinv.attach(targets[k], s, (from as InvGrid).inv)
 	_menu_stack = null
 	_refresh()
 
@@ -587,7 +707,13 @@ static func item_sheet(s: ItemStack, p: PlayerInventory) -> String:
 		rows.append([tr_s("inv.stat.caliber"), w.caliber, ""])
 		rows.append([tr_s("inv.stat.damage"), "%d" % roundi(w.damage * w.pellets), _delta(w.damage * w.pellets, cmp.damage * cmp.pellets if cmp else NAN, 0)])
 		rows.append([tr_s("inv.stat.rpm"), "%d" % roundi(w.rpm), _delta(w.rpm, cmp.rpm if cmp else NAN, 0)])
-		rows.append([tr_s("inv.stat.mag"), "%d / %d" % [int(s.state.get("mag", 0)), w.mag_size], _delta(w.mag_size, cmp.mag_size if cmp else NAN, 0)])
+		rows.append([tr_s("inv.stat.mag"), "%d / %d" % [int(s.state.get("mag", 0)), InvGrid.weapon_cap(s)], _delta(w.mag_size, cmp.mag_size if cmp else NAN, 0)])
+		if not ItemDB.mount(w.id).is_empty():
+			var sg := WeaponAttach.sight_of(w, s.state)
+			rows.append([tr_s("inv.stat.sight"), ItemDB.display_name(ItemDB.get_item(sg)) if sg != "" else "—", ""])
+		if ItemDB.thread_of(w) != "":
+			var mz := WeaponAttach.muzzle_of(s.state)
+			rows.append([tr_s("inv.stat.muzzle"), ItemDB.display_name(ItemDB.get_item(mz)) if mz != "" else "—", ""])
 		rows.append([tr_s("inv.stat.accuracy"), "%d" % accuracy(w), _delta(accuracy(w), accuracy(cmp) if cmp else NAN, 0)])
 		rows.append([tr_s("inv.stat.condition"), "%d %%" % roundi(float(s.state.get("condition", 1.0)) * 100.0), ""])
 		if cmp != null:
@@ -595,6 +721,19 @@ static func item_sheet(s: ItemStack, p: PlayerInventory) -> String:
 	elif it.kind == "ammo":
 		rows.append([tr_s("inv.stat.caliber"), it.caliber, ""])
 		rows.append([tr_s("inv.stat.count"), "%d" % s.count, ""])
+	elif it.kind == "mag":
+		rows.append([tr_s("inv.stat.caliber"), it.caliber, ""])
+		rows.append([tr_s("inv.stat.rounds"), "%d / %d" % [s.rounds(), it.capacity], ""])
+		rows.append([tr_s("inv.stat.fits"), _fits_text(it), ""])
+	elif it.is_attachment():
+		rows.append([tr_s("inv.stat.fits"), _fits_text(it), ""])
+	elif it.is_container():
+		var dims: PackedStringArray = []
+		for g: Array in it.grids:
+			dims.append("%d×%d" % [int(g[2]), int(g[3])])
+		rows.append([tr_s("inv.stat.slots"), ", ".join(dims), ""])
+		if it.carry_bonus > 0.0:
+			rows.append([tr_s("inv.stat.carry"), "+%d kg" % int(it.carry_bonus), ""])
 	elif it.is_consumable():
 		var fx := it.effects
 		if fx.has("heal"):
@@ -623,6 +762,21 @@ static func item_sheet(s: ItemStack, p: PlayerInventory) -> String:
 
 static func tr_s(k: String) -> String:
 	return TranslationServer.translate(k)
+
+
+## Armas donde va un cargador o un accesorio (nombres cortos).
+static func _fits_text(it: ItemData) -> String:
+	var names: PackedStringArray = []
+	for wid: String in ItemDB.weapon_item_ids():
+		var w := ItemDB.get_item(wid).weapon()
+		if w == null:
+			continue
+		var ok := ItemDB.mag_family(w.id) == it.mag_family if it.kind == "mag" else ItemDB.fits_weapon(it, w)
+		if ok:
+			names.append(TranslationServer.translate(w.name_key))
+	if names.size() > 6:
+		return ", ".join(names.slice(0, 6)) + "…"
+	return ", ".join(names)
 
 
 ## Precisión 0–100 a partir de la dispersión apuntando (más chica, mejor).
@@ -660,6 +814,7 @@ func _refresh() -> void:
 	_take_btn.text = "%s  [%s]" % [tr("inv.take_all"), InputActions.event_label(InputActions.get_kbm_event("inv_take_all"))]
 	var v := player.vitals
 	_vitals_label.text = "%s %d   %s" % [tr("inv.stat.heal"), roundi(v.health), tr("hud.bleeding") if v.bleeding > 0 else ""]
+	_sync_storage_grids()
 	if _selected != null and not _stack_exists(_selected):
 		_selected = null
 	_info_stack = null
@@ -668,7 +823,7 @@ func _refresh() -> void:
 
 
 func _stack_exists(s: ItemStack) -> bool:
-	if pinv.bag.has_stack(s):
+	if pinv.storage_of(s) != null:
 		return true
 	if _loot_panel.visible and _loot_grid.inv != null and _loot_grid.inv.has_stack(s):
 		return true
@@ -676,11 +831,20 @@ func _stack_exists(s: ItemStack) -> bool:
 
 
 func _redraw_all() -> void:
-	for g: InvGrid in [_bag_grid, _loot_grid]:
+	for g: InvGrid in _all_grids():
 		g.selected = _selected
 		g.queue_redraw()
 	for sl: InvSlot in _all_slots():
 		sl.queue_redraw()
+
+
+func _all_grids() -> Array[InvGrid]:
+	var out: Array[InvGrid] = []
+	out.append_array(_pocket_grids)
+	out.append_array(_rig_grids)
+	out.append(_bag_grid)
+	out.append(_loot_grid)
+	return out
 
 
 static func _thousands(n: int) -> String:
@@ -717,10 +881,14 @@ func _build() -> void:
 	_root.add_child(main)
 	var panels: Array[Control] = []
 
-	# Equipo
+	# Equipo (y abajo, la ficha del ítem)
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 14)
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main.add_child(left)
 	var eq := _panel(tr("inv.equipment"))
 	_equip_panel = eq[0]
-	main.add_child(eq[0])
+	left.add_child(eq[0])
 	panels.append(eq[0])
 	var ev := eq[1] as VBoxContainer
 	# Tres columnas: Arma 2 y pistola a la izquierda, casco / chaleco / mochila al
@@ -729,10 +897,11 @@ func _build() -> void:
 	cols.add_theme_constant_override("separation", 8)
 	cols.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ev.add_child(cols)
-	var side := Vector2(EQ * 2.6, EQ * 6.6)
-	var small := Vector2(EQ * 2.6, EQ * 2.6)
+	var side := Vector2(EQ * 2.6, EQ * 6.9)
+	var small := Vector2(EQ * 2.6, EQ * 2.5)
+	var mid := Vector2(EQ * 3.0, EQ * 2.2)
 	var layout := [[["weapon2", side], ["pistol", small]],
-		[["helmet", Vector2(EQ * 3.0, EQ * 2.4)], ["armor", Vector2(EQ * 3.0, EQ * 3.4)], ["backpack", Vector2(EQ * 3.0, EQ * 3.4)]],
+		[["helmet", mid], ["armor", mid], ["rig", mid], ["backpack", mid]],
 		[["weapon1", side], ["melee", small]]]
 	for col: Array in layout:
 		var cv := VBoxContainer.new()
@@ -753,14 +922,22 @@ func _build() -> void:
 		_quick.append(q)
 	_vitals_label = _small_label("", UiTheme.TEXT, 20)
 	ev.add_child(_vitals_label)
+	var info_panel := PanelContainer.new()
+	info_panel.custom_minimum_size = Vector2(EQ * 9.0, 250)
+	left.add_child(info_panel)
+	panels.append(info_panel)
+	_info = RichTextLabel.new()
+	_info.bbcode_enabled = true
+	_info.fit_content = false
+	_info.scroll_active = false
+	_info.add_theme_font_size_override("normal_font_size", 18)
+	_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info_panel.add_child(_info)
 
-	# Mochila e info
-	var center := VBoxContainer.new()
-	center.add_theme_constant_override("separation", 14)
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	main.add_child(center)
-	var bag := _panel(tr("inv.backpack"))
-	center.add_child(bag[0])
+	# Lo que lleva: bolsillos, chaleco táctico y mochila
+	var bag := _panel(tr("inv.title"))
+	(bag[0] as Control).custom_minimum_size = Vector2(8.0 * (CELL + GAP) + 40.0, 0)
+	main.add_child(bag[0])
 	panels.append(bag[0])
 	var bv := bag[1] as VBoxContainer
 	var top := HBoxContainer.new()
@@ -768,7 +945,7 @@ func _build() -> void:
 	bv.add_child(top)
 	_weight_bar = ProgressBar.new()
 	_weight_bar.show_percentage = false
-	_weight_bar.custom_minimum_size = Vector2(220, 12)
+	_weight_bar.custom_minimum_size = Vector2(120, 12)
 	_weight_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var wfill := StyleBoxFlat.new()
 	wfill.bg_color = UiTheme.TEXT.darkened(0.3)
@@ -789,22 +966,39 @@ func _build() -> void:
 		if pinv != null:
 			pinv.bag.sort())
 	top.add_child(sort)
+	var fill := Button.new()
+	fill.text = tr("inv.fill_mags")
+	fill.add_theme_font_size_override("font_size", 19)
+	fill.focus_mode = Control.FOCUS_NONE
+	fill.pressed.connect(func() -> void:
+		if pinv != null:
+			pinv.fill_all_mags()
+			_refresh())
+	top.add_child(fill)
 	_weight_warn = _small_label("", UiTheme.ALERT, 18)
 	bv.add_child(_weight_warn)
+	bv.add_child(_small_label(tr("inv.pockets"), UiTheme.TEXT_DIM, 18))
+	var pocket_box := Control.new()
+	pocket_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bv.add_child(pocket_box)
+	for g: Array in PlayerInventory.POCKETS:
+		var pg := InvGrid.new()
+		pg.setup(Inventory.new(int(g[2]), int(g[3])), CELL)
+		pg.position = Vector2(float(g[0]), float(g[1])) * (CELL + GAP)
+		pocket_box.add_child(pg)
+		_pocket_grids.append(pg)
+	pocket_box.custom_minimum_size = Vector2(PlayerInventory.POCKETS.size() * (CELL + GAP), CELL)
+	_rig_title = _small_label(tr("inv.rig"), UiTheme.TEXT_DIM, 18)
+	bv.add_child(_rig_title)
+	_rig_box = Control.new()
+	_rig_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bv.add_child(_rig_box)
+	_bag_title = _small_label(tr("inv.backpack"), UiTheme.TEXT_DIM, 18)
+	bv.add_child(_bag_title)
 	_bag_grid = InvGrid.new()
-	_bag_grid.setup(Inventory.new(PlayerInventory.GRID.x, PlayerInventory.GRID.y), CELL)
-	bv.add_child(_scroller(_bag_grid, PlayerInventory.GRID.x))
-	var info_panel := PanelContainer.new()
-	info_panel.custom_minimum_size = Vector2(CELL * PlayerInventory.GRID.x + 52, 230)
-	center.add_child(info_panel)
-	panels.append(info_panel)
-	_info = RichTextLabel.new()
-	_info.bbcode_enabled = true
-	_info.fit_content = false
-	_info.scroll_active = false
-	_info.add_theme_font_size_override("normal_font_size", 19)
-	_info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	info_panel.add_child(_info)
+	_bag_grid.setup(Inventory.new(5, 6), CELL)
+	_bag_scroll = _scroller(_bag_grid, 6)
+	bv.add_child(_bag_scroll)
 
 	# Contenedor
 	var loot := _panel("")

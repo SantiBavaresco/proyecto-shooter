@@ -49,21 +49,15 @@ model_params = {
 ]
 }
 },
-"dot_lens": {
-"pos": [
-0,
-0.066,
--0.05
+"hide": [
+"holo"
 ],
-"size": 0.03,
-"holo": true
-},
 "sight": [
 0,
-0.066,
+0.048,
 -0.05
 ],
-"eye_relief": 0.24,
+"eye_relief": 0.3,
 "muzzle": [
 0,
 0,
@@ -100,7 +94,7 @@ model_params = {
 "lr": 0.03
 }
 }
-sight = "red_dot"
+sight = "iron"
 scope_mag = 0.0
 scope_mag_max = 0.0
 reticle = "duplex"

@@ -6,6 +6,8 @@ extends RefCounted
 ##  - el resto: data/items/items.json.
 
 const ITEMS_FILE := "res://data/items/items.json"
+const MAGS_FILE := "res://data/items/mags.json"
+const ATTACH_FILE := "res://data/items/attachments.json"
 const WEAPON_CATALOG := "res://data/weapons/catalog.json"
 
 ## Munición por calibre: [id, kg por cartucho, cartuchos por pila, USD por cartucho].
@@ -45,6 +47,12 @@ const WEAPON_OVERRIDE := {
 
 static var _items: Dictionary = {}
 static var _weapon_ids: Array[String] = []
+## Cargadores: familia → {caliber, ref, weapons}; arma → familia; familia → ids de cargador.
+static var _families: Dictionary = {}
+static var _weapon_family: Dictionary = {}
+static var _family_mags: Dictionary = {}
+## Accesorios: arma → montaje de mira {rail, riser, default}.
+static var _mounts: Dictionary = {}
 
 
 static func _ensure() -> void:
@@ -104,7 +112,48 @@ static func _ensure() -> void:
 		it.carry_bonus = float(e.get("carry_bonus", 0.0))
 		it.model_path = String(e.get("model", ""))
 		it.model_scale = float(e.get("model_scale", 1.0))
+		it.grids = e.get("grids", [])
 		_items[it.id] = it
+	# Cargadores
+	var mj: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(MAGS_FILE))
+	_families = mj["families"]
+	for fam: String in _families:
+		for wid: String in _families[fam]["weapons"]:
+			_weapon_family[wid] = fam
+	for e: Dictionary in mj["mags"]:
+		var it := ItemData.new()
+		it.id = e["id"]
+		it.name_key = "item.mag"
+		it.desc_key = "item.mag.desc"
+		it.kind = "mag"
+		it.mag_family = e["family"]
+		it.caliber = _families[it.mag_family]["caliber"]
+		it.capacity = int(e["capacity"])
+		var msz: Array = e["size"]
+		it.size = Vector2i(int(msz[0]), int(msz[1]))
+		it.weight = float(e["weight"])
+		it.price = int(e["price"])
+		_items[it.id] = it
+		if not _family_mags.has(it.mag_family):
+			_family_mags[it.mag_family] = []
+		_family_mags[it.mag_family].append(it.id)
+	# Miras y silenciadores
+	var aj: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ATTACH_FILE))
+	for group: String in ["optics", "muzzles"]:
+		for aid: String in aj[group]:
+			var d: Dictionary = aj[group][aid]
+			var it := ItemData.new()
+			it.id = aid
+			it.name_key = "item." + aid
+			it.desc_key = "item." + aid + ".desc"
+			it.kind = "sight" if group == "optics" else "muzzle"
+			var asz: Array = d.get("size", [1, 1])
+			it.size = Vector2i(int(asz[0]), int(asz[1]))
+			it.weight = float(d.get("weight", 0.2))
+			it.price = int(d.get("price", 100))
+			it.attach = d
+			_items[it.id] = it
+	_mounts = aj["mounts"]
 
 
 static func get_item(id: String) -> ItemData:
@@ -142,8 +191,82 @@ static func weapon_item_id(weapon_id: String) -> String:
 	return "w_" + weapon_id
 
 
-## Nombre para mostrar (la munición lleva el calibre).
+## Nombre para mostrar (la munición lleva el calibre; el cargador, su arma y capacidad).
 static func display_name(item: ItemData) -> String:
 	if item.kind == "ammo":
 		return TranslationServer.translate(item.name_key) % item.caliber
+	if item.kind == "mag":
+		return TranslationServer.translate("item.mag") % [mag_family_name(item.mag_family), item.capacity]
 	return TranslationServer.translate(item.name_key)
+
+
+# --- Cargadores ------------------------------------------------------------------
+
+## Familia de cargadores de un arma ("" = carga cartuchos sueltos).
+static func mag_family(weapon_id: String) -> String:
+	_ensure()
+	return _weapon_family.get(weapon_id, "")
+
+
+## Ids de los cargadores de una familia (el estándar primero).
+static func family_mags(family: String) -> Array:
+	_ensure()
+	return _family_mags.get(family, [])
+
+
+## Cargador estándar de un arma ("" si no usa).
+static func standard_mag(weapon_id: String) -> String:
+	var f := mag_family(weapon_id)
+	var l := family_mags(f)
+	return String(l[0]) if not l.is_empty() else ""
+
+
+## Arma de referencia de una familia (de ahí sale el modelo del cargador).
+static func family_ref(family: String) -> String:
+	_ensure()
+	return String(_families.get(family, {}).get("ref", ""))
+
+
+## Nombre corto de la familia para mostrar ("AR-74", "Pistola 9×19"...).
+static func mag_family_name(family: String) -> String:
+	if family.begins_with("pist_"):
+		return TranslationServer.translate("mag.pistol") % String(_families[family]["caliber"])
+	var ref := family_ref(family)
+	var wd := load("res://data/weapons/%s.tres" % ref) as WeaponData if ref != "" else null
+	if wd == null:
+		return family
+	# Nombre del arma sin el tipo ("Fusil AR-M" → "AR-M")
+	var n := TranslationServer.translate(wd.name_key)
+	var parts := n.split(" ")
+	return parts[parts.size() - 1] if parts.size() > 1 and parts[parts.size() - 1].length() > 2 else n
+
+
+# --- Accesorios ------------------------------------------------------------------
+
+## Montaje de mira de un arma ({} = no acepta miras).
+static func mount(weapon_id: String) -> Dictionary:
+	_ensure()
+	return _mounts.get(weapon_id, {})
+
+
+## Grupo de rosca para silenciador ("" = no acepta): por calibre.
+static func thread_of(w: WeaponData) -> String:
+	if w == null or w.reload_type in ["break", "cylinder"]:
+		return ""
+	match ammo_caliber(w.caliber):
+		"9×19", "9×18", ".45 ACP", ".22 LR":
+			return "pistol"
+		"5.45×39", "5.56×45":
+			return "545"
+	return "762"
+
+
+## ¿Este accesorio va en esta arma?
+static func fits_weapon(att: ItemData, w: WeaponData) -> bool:
+	if att == null or w == null:
+		return false
+	if att.kind == "sight":
+		return not mount(w.id).is_empty()
+	if att.kind == "muzzle":
+		return String(att.attach.get("thread", "")) == thread_of(w)
+	return false

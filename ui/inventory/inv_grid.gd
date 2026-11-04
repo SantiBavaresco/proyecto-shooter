@@ -83,8 +83,8 @@ func _draw_stack(s: ItemStack) -> void:
 	draw_icon(self, s, r, faded)
 	# Cantidad abajo a la derecha; estado (barra) abajo a la izquierda
 	var fs := int(clampf(cell * 0.22, 14.0, 22.0))
-	if s.count > 1 or s.item.kind == "ammo":
-		var t := "%d" % s.count
+	if s.count > 1 or s.item.kind in ["ammo", "mag"]:
+		var t := "%d" % s.count if s.item.kind != "mag" else "%d/%d" % [s.rounds(), s.item.capacity]
 		var tw := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 		draw_string(_font, Vector2(r.end.x - tw - 4, r.end.y - 4), t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 			UiTheme.TEXT if not faded else UiTheme.TEXT_DIM)
@@ -97,8 +97,17 @@ func _draw_stack(s: ItemStack) -> void:
 	if s.item.kind == "weapon":
 		var w := s.item.weapon()
 		if w != null:
-			var t2 := "%d/%d" % [int(s.state.get("mag", 0)), w.mag_size]
+			var t2 := "%d/%d" % [int(s.state.get("mag", 0)), weapon_cap(s)]
 			draw_string(_font, Vector2(r.position.x + 5, r.position.y + fs + 2), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, fs - 2, UiTheme.TEXT_DIM)
+
+
+## Capacidad del arma de una pila (la del cargador que tiene puesto).
+static func weapon_cap(s: ItemStack) -> int:
+	var mid := String(s.state.get("mag_id", ""))
+	if mid != "" and ItemDB.has(mid):
+		return ItemDB.get_item(mid).capacity
+	var w := s.item.weapon()
+	return w.mag_size if w != null else 0
 
 
 static func cond_color(c: float) -> Color:

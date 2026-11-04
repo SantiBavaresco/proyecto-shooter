@@ -310,7 +310,7 @@ func test_imported_reload_fumbles_with_stress() -> void:
 	assert_eq(weapons.imported_fumbles, 0, "sin estrés no le erra al brocal")
 	var calm_dur := weapons.state_duration
 	await physics_frames(int(calm_dur * 60.0) + 10)
-	assert_eq(c.mag, d.mag_size, "carga completa")
+	assert_eq(c.mag, d.mag_size + 1, "carga completa (+1 en la recámara)")
 	player.teleport(_zone_pos("stress_extreme"), PI)
 	await physics_frames(200)
 	var seen := {}
@@ -335,5 +335,5 @@ func test_imported_reload_fumbles_with_stress() -> void:
 			assert_gt(at.y, -0.5, "fase de intento")
 			assert_true(total > 0.0)
 		await physics_frames(int(weapons.state_duration * 60.0) + 10)
-		assert_eq(c.mag, d.mag_size, "igual termina cargando")
+		assert_eq(c.mag, d.mag_size + 1, "igual termina cargando")
 	assert_gt(float(seen.size()), 1.0, "los intentos varían")

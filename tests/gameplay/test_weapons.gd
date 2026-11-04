@@ -130,9 +130,11 @@ func test_reload_moves_ammo_from_reserve() -> void:
 	bot.press_fire()
 	await physics_frames(2)
 	assert_eq(weapons.current().mag, 17, "no dispara recargando")
-	await physics_frames(int(weapons.current_data().reload_time * 60.0) + 5)
-	assert_eq(weapons.current().mag, 20)
-	assert_eq(weapons.current().reserve, 97)
+	var before := weapons.current().reserve
+	await physics_frames(int(weapons.state_duration * 60.0) + 5)
+	# Cargador nuevo (20) + el de la recámara; el viejo vuelve con 16
+	assert_eq(weapons.current().mag, 21)
+	assert_eq(weapons.current().reserve, before + 16)
 
 
 func test_auto_mode() -> void:
@@ -245,10 +247,11 @@ func test_ammo_crate_refills() -> void:
 	# Ahora es un contenedor: se abre el inventario y se toma la munición
 	var scr := level.find_child("InventoryScreen", true, false) as InventoryScreen
 	assert_true(scr.is_open, "abre la caja")
-	var before := weapons.current().reserve
+	var cal := weapons.current_data().caliber
+	var before := player.inventory.ammo_count(cal)
 	scr.take_all()
 	scr.close()
-	assert_gt(float(weapons.current().reserve), float(before), "más munición en la mochila")
+	assert_gt(float(player.inventory.ammo_count(cal)), float(before), "más munición suelta (para llenar cargadores)")
 
 
 func test_shells_settle_and_stay_on_the_floor() -> void:

@@ -175,6 +175,9 @@ func _build_loot_area(geo: Node3D) -> void:
 			["ammo_9x19", 60], ["medkit_army", 1]], 0],
 		["LootStash", "stash", Vector3(12.5, 0, 11.0), [["backpack_large", 1], ["vest_plate", 1], ["tools_basic", 4],
 			["w_svd", 1], ["ammo_762x54r", 40], ["scrap_electronics", 4]], 0],
+		["LootWeapons", "weapons", Vector3(15.5, 0, 11.0), [], 0],
+		["LootGear", "metal", Vector3(18.5, 0, 11.0), [["rig_light", 1], ["rig_assault", 1], ["backpack_small", 1],
+			["backpack_expedition", 1], ["optic_holo_a", 1], ["optic_reddot", 1], ["supp_545", 1], ["supp_pistol", 1]], 0],
 	]
 	for b: Array in boxes:
 		var c := LootContainerScript.new() as LootContainer
@@ -254,6 +257,14 @@ func _build_armory(geo: Node3D) -> void:
 	drone.position = Vector3(x0 + fresh.size() * dx, 0.3, zf)
 	geo.add_child(drone)
 	_sign(geo, Vector3(x0 + fresh.size() * dx * 0.5, 3.2, zf - 1.6), tr("greybox.new_weapons"))
+	# Cajas de armas (miras, silenciadores, cargadores) a los costados de la armería
+	for k in 2:
+		var wc := LootContainerScript.new() as LootContainer
+		wc.name = "WeaponsCrate%d" % k
+		wc.kind = "weapons"
+		wc.position = Vector3(RANGE_X_MIN + 0.9 if k == 0 else RANGE_X_MAX - 0.9, 0, z0 - 1.0)
+		wc.rotation = Vector3(0, PI * 0.5, 0)
+		geo.add_child(wc)
 
 
 ## Polígono de tiro, detrás del punto de aparición.

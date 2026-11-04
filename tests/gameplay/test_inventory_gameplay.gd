@@ -56,21 +56,123 @@ func test_start_kit() -> void:
 	assert_lt(pinv.overload(), 0.001, "sin sobrecarga al empezar")
 
 
-func test_ammo_is_shared_by_caliber() -> void:
-	# Dos armas de 9×19: la pistola inicial y un subfusil en el slot 1
-	weapons.equip_weapon(load("res://data/weapons/mp5.tres") as WeaponData, 1, {}, false)
+func test_loose_ammo_is_shared_by_caliber() -> void:
+	# Dos escopetas de 12/70 (sin cargador): la munición suelta es la misma
+	weapons.equip_weapon(load("res://data/weapons/sawedoff.tres") as WeaponData, 1, {}, false)
 	await physics_frames(30)
-	pinv.set_ammo("9×19", 40)
-	var smg := weapons.current()
-	var pistol := weapons.slots[3] as WeaponController.WeaponSlot
-	assert_eq(smg.reserve, 40)
-	assert_eq(pistol.reserve, 40, "la pistola ve la misma munición")
-	smg.mag = 0
+	pinv.set_ammo("12/70", 10)
+	var a := weapons.current()
+	var b := weapons.slots[2] as WeaponController.WeaponSlot
+	assert_eq(a.reserve, 10)
+	assert_eq(b.reserve, 10, "la otra escopeta ve la misma munición")
+	a.mag = 0
 	bot.press_reload()
-	await physics_frames(int(weapons.reload_duration(smg) * 60.0) + 90)
-	assert_eq(smg.mag, 30)
-	assert_eq(pistol.reserve, 10, "la recarga la sacó de la mochila")
-	assert_eq(pinv.bag.count_of(ItemDB.ammo_id("9×19")), 10)
+	await physics_frames(int(weapons.reload_duration(a) * 60.0) + 90)
+	assert_eq(a.mag, 2)
+	assert_eq(b.reserve, 8, "la recarga la sacó de los contenedores")
+
+
+## Recarga con cargadores: entra el más lleno; el viejo vuelve a su lugar con lo que
+## le quedaba (menos el de la recámara).
+func _wait_ready() -> void:
+	for i in 200:
+		if weapons.state == WeaponController.State.READY:
+			return
+		await physics_frames(1)
+
+
+func test_reload_takes_fullest_mag_and_stows_the_old_one() -> void:
+	await _wait_ready()
+	var c := weapons.current()
+	assert_eq(c.family, "ak545")
+	var mags := pinv.mags_of("ak545", true)
+	assert_eq(mags.size(), 4, "4 cargadores en el chaleco")
+	(mags[0][0] as ItemStack).state["rounds"] = 12
+	c.mag = 5
+	bot.press_reload()
+	await physics_frames(int(weapons.reload_duration(c) * 60.0) + 60)
+	assert_eq(c.mag, 31, "30 del cargador nuevo + 1 en la recámara")
+	var rounds: Array = pinv.mags_of("ak545").map(func(e: Array) -> int: return (e[0] as ItemStack).rounds())
+	rounds.sort()
+	assert_eq(rounds, [4, 12, 30, 30], "el viejo (con 4) volvió; el de 12 sigue ahí")
+	assert_eq(c.reserve, 76)
+
+
+## R dos veces rápido: recarga más corta y el cargador viejo cae al piso.
+func test_fast_reload_drops_the_old_mag() -> void:
+	await _wait_ready()
+	var c := weapons.current()
+	c.mag = 9
+	var normal := weapons.reload_duration(c)
+	bot.press_reload()
+	await physics_frames(4)
+	bot.press_reload()
+	await physics_frames(3)
+	assert_true(weapons.fast_reload, "recarga rápida")
+	assert_lt(weapons.state_duration, normal * 0.8)
+	await physics_frames(int(weapons.state_duration * 60.0) + 40)
+	assert_eq(c.mag, 31)
+	assert_eq(pinv.mags_of("ak545").size(), 3, "el viejo no volvió al chaleco")
+	var dropped := get_tree().get_nodes_in_group("world_items").filter(func(n: Node) -> bool:
+		return n is WorldItem and (n as WorldItem).stack.item.id == "mag_ak545")
+	assert_eq(dropped.size(), 1, "quedó tirado")
+	assert_eq((dropped[0] as WorldItem).stack.rounds(), 8, "con sus 8 cartuchos")
+
+
+## Sin cargadores en el chaleco: los saca de la mochila, más lento.
+func test_reload_from_backpack_is_slower() -> void:
+	await _wait_ready()
+	var c := weapons.current()
+	for e: Array in pinv.mags_of("ak545"):
+		(e[1] as Inventory).remove(e[0])
+	pinv.bag.add_item("mag_ak545", 1, {"rounds": 30})
+	c.mag = 0
+	var base := weapons.reload_duration(c)
+	bot.press_reload()
+	await physics_frames(3)
+	assert_gt(weapons.state_duration, base * 1.3, "buscar en la mochila tarda")
+	await physics_frames(int(weapons.state_duration * 60.0) + 40)
+	assert_eq(c.mag, 30)
+
+
+func test_fill_mags_with_loose_ammo() -> void:
+	for e: Array in pinv.mags_of("ak545"):
+		(e[0] as ItemStack).state["rounds"] = 0
+	pinv.set_ammo("5.45×39", 70)
+	var n := pinv.fill_all_mags()
+	assert_eq(n, 70)
+	assert_eq(pinv.mag_rounds("ak545"), 70)
+	assert_eq(pinv.ammo_count("5.45×39"), 0)
+	# Arrastrar munición sobre un cargador lo llena con esa pila
+	var m := pinv.mags_of("ak545")[3][0] as ItemStack
+	m.state["rounds"] = 0
+	pinv.bag.add_item(ItemDB.ammo_id("5.45×39"), 20)
+	var ammo := pinv.first_stack(ItemDB.ammo_id("5.45×39"))
+	assert_eq(pinv.load_mag_from(m, ammo, pinv.storage_of(ammo)), 20)
+	assert_eq(m.rounds(), 20)
+
+
+func test_rig_backpack_and_pockets() -> void:
+	assert_eq(pinv.pockets.size(), 4, "4 bolsillos")
+	assert_eq(pinv.rig_grids().size(), 7, "chaleco mediano: 7 grillas")
+	assert_eq(Vector2i(pinv.bag.width, pinv.bag.height), Vector2i(5, 6), "mochila mediana 5×6")
+	# Con cosas adentro, la mochila no se guarda en otro contenedor del jugador
+	assert_true(pinv.unequip("backpack") == null, "no se guarda llena")
+	var crate := level.find_child("LootMetal", true, false) as LootContainer
+	crate.inventory.clear()
+	var b := pinv.unequip("backpack", crate.inventory)
+	assert_true(b != null and crate.inventory.has_stack(b), "a una caja sí (con todo adentro)")
+	assert_eq(pinv.bag.width, 0, "sin mochila no hay grilla")
+	assert_true(pinv.equip(b, "backpack", crate.inventory), "se vuelve a poner")
+	assert_gt(float(pinv.bag.count_of("bandage")), 0.0, "con sus cosas")
+	# Mochila más grande: lo de adentro se pasa a la nueva
+	crate.inventory.clear()
+	crate.inventory.add_item("backpack_expedition")
+	var exp := crate.inventory.stacks[0]
+	var n := pinv.bag.count_of("bandage")
+	assert_true(pinv.equip(exp, "backpack", crate.inventory))
+	assert_eq(Vector2i(pinv.bag.width, pinv.bag.height), Vector2i(6, 10))
+	assert_eq(pinv.bag.count_of("bandage"), n, "las cosas pasaron a la nueva")
 
 
 func test_unequip_and_equip_keep_weapon_state() -> void:
@@ -118,6 +220,8 @@ func test_overload_slows_and_blocks_sprint() -> void:
 	bot.move = Vector2(0, 1)
 	await physics_frames(60)
 	var normal := Vector2(player.velocity.x, player.velocity.z).length()
+	# Una mochila enorme (solo para la prueba) llena de placas
+	(pinv.equipment["backpack"] as ItemStack).contents[0] = Inventory.new(12, 16)
 	pinv.bag.add_item("tools_basic", 1)
 	for i in 14:
 		pinv.bag.add_item("vest_plate")
@@ -134,7 +238,7 @@ func test_overload_slows_and_blocks_sprint() -> void:
 	pinv.bag.add_item("backpack_large")
 	var lim := pinv.carry_limit()
 	pinv.equip(pinv.first_stack("backpack_large"), "backpack")
-	assert_near(pinv.carry_limit(), lim + 20.0, 0.001)
+	assert_near(pinv.carry_limit(), lim + 5.0, 0.001, "la grande deja 5 kg más que la mediana")
 
 
 func test_bandage_from_quick_slot_stops_bleeding() -> void:
@@ -260,9 +364,12 @@ func test_unload_weapon_returns_rounds() -> void:
 	var c := weapons.current()
 	var mag := c.mag
 	var before := c.reserve
+	var loose := pinv.ammo_count(c.data.caliber)
 	pinv.unload(pinv.equipment["weapon1"])
 	assert_eq(c.mag, 0)
-	assert_eq(c.reserve, before + mag)
+	assert_eq(c.mag_id, "", "sin cargador")
+	assert_eq(c.reserve, before + mag - 1, "el cargador sale con sus balas")
+	assert_eq(pinv.ammo_count(c.data.caliber), loose + 1, "la de la recámara, suelta")
 
 
 func test_inventory_blocks_player_input() -> void:

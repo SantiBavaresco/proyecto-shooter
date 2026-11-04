@@ -30,22 +30,42 @@ const BREATH_MAX := 5.0
 const BREATH_PENALTY := 3.0
 ## Estado que simula la zona de armas gastadas.
 const WORN_CONDITION := 0.35
+## Recarga rápida (R dos veces): ventana para el segundo toque y cuánto acorta.
+const FAST_RELOAD_WINDOW := 0.4
+const FAST_RELOAD_MULT := 0.72
+## Recarga con un cargador de la mochila: cuánto más tarda.
+const BACKPACK_RELOAD_MULT := 1.6
 
 
 ## Estado de un arma del jugador.
 class WeaponSlot:
+	## Datos con los accesorios puestos (base_data: los del arma sola).
 	var data: WeaponData
+	var base_data: WeaponData
+	## Cartuchos en el arma (cargador + recámara).
 	var mag: int = 0
-	## Munición de reserva: la del inventario para su calibre (compartida con las
-	## demás armas del mismo calibre). Sin inventario, un contador propio.
+	## Familia de cargadores ("" = carga cartuchos sueltos) y cargador puesto ("" = sin
+	## cargador).
+	var family: String = ""
+	var mag_id: String = ""
+	## Accesorios puestos (ids de ítem).
+	var sight: String = ""
+	var muzzle: String = ""
+	## Munición de reserva: con cargadores, lo que tienen los cargadores de su familia;
+	## si no, la munición suelta de su calibre (compartida con las demás armas). Sin
+	## inventario, un contador propio.
 	var reserve: int:
 		get:
-			return pool.ammo_count(data.caliber) if pool != null else _reserve
+			if pool == null:
+				return _reserve
+			return pool.mag_rounds(family) if family != "" else pool.ammo_count(data.caliber)
 		set(v):
-			if pool != null:
-				pool.set_ammo(data.caliber, v)
-			else:
+			if pool == null:
 				_reserve = v
+			elif family != "":
+				pool.set_mag_rounds(family, v)
+			else:
+				pool.set_ammo(data.caliber, v)
 	var _reserve: int = 0
 	var pool: PlayerInventory = null
 	## Ítem equipado al que corresponde (su estado se actualiza al desequipar).
@@ -64,6 +84,16 @@ class WeaponSlot:
 
 	func mode() -> String:
 		return data.fire_modes[mode_index] if data.fire_modes.size() > 0 else "semi"
+
+	## Capacidad del cargador puesto (o la del arma).
+	func capacity() -> int:
+		if family == "":
+			return data.mag_size
+		var it := ItemDB.get_item(mag_id) if mag_id != "" else null
+		return it.capacity if it != null else data.mag_size
+
+	func suppressed() -> bool:
+		return muzzle != ""
 
 
 var player: Player
@@ -92,6 +122,14 @@ var _rounds_planned: int = 0
 var _rounds_done: int = 0
 var _rounds_stop: bool = false
 var _clip_load: bool = false
+## Recarga con cargadores: el que se va a poner (sacado del inventario mientras dura),
+## de dónde salió y si es la recarga rápida (el viejo cae al piso).
+var _reload_mag: ItemStack = null
+var _reload_from: Inventory = null
+var _reload_at := Vector2i.ZERO
+var fast_reload: bool = false
+## Disparo accidental pendiente (al montar o por doble disparo).
+var _slam_pending: bool = false
 ## Escopetas con estrés: veces que los cartuchos pegan en el borde de la recámara antes
 ## de entrar, y cuánto alarga eso la recarga (en fracciones de la recarga normal).
 var break_fumbles: int = 0
@@ -143,9 +181,14 @@ func setup(p: Player, with_default_weapons := true) -> void:
 
 func _make_slot(data: WeaponData, st := {}) -> WeaponSlot:
 	var ws := WeaponSlot.new()
-	ws.data = data
+	ws.base_data = data
+	ws.sight = WeaponAttach.sight_of(data, st)
+	ws.muzzle = WeaponAttach.muzzle_of(st)
+	ws.data = WeaponAttach.apply_data(data, ws.sight)
 	ws.pool = inv
-	ws.mag = int(st.get("mag", data.mag_size))
+	ws.family = ItemDB.mag_family(data.id)
+	ws.mag_id = String(st.get("mag_id", ItemDB.standard_mag(data.id))) if ws.family != "" else ""
+	ws.mag = int(st.get("mag", ws.capacity()))
 	if inv == null:
 		ws.reserve = data.start_reserve
 	ws.zoom = float(st.get("zoom", data.scope_mag))
@@ -154,6 +197,7 @@ func _make_slot(data: WeaponData, st := {}) -> WeaponSlot:
 	ws.malfunction = String(st.get("malfunction", ""))
 	ws.case_stuck = bool(st.get("case_stuck", false))
 	ws.model = WeaponModelBuilder.build(data)
+	WeaponAttach.apply_model(ws.model, data, ws.sight, ws.muzzle)
 	ws.model.visible = false
 	view.add_model(ws.model)
 	return ws
@@ -174,7 +218,11 @@ func equip_weapon(data: WeaponData, slot: int, state := {}, top_up := true, stac
 	if inv != null:
 		ws.stack = inv.on_weapon_installed(slot, data, stack)
 		if top_up:
-			inv.ensure_ammo(data.caliber, data.start_reserve)
+			if ws.family != "":
+				if ws.reserve < data.start_reserve:
+					ws.reserve = data.start_reserve
+			else:
+				inv.ensure_ammo(data.caliber, data.start_reserve)
 	if slot == current_slot:
 		_equip(slot)
 	elif draw or (self.state != State.HOLSTER and current() == null):
@@ -208,8 +256,11 @@ func weapon_state(slot: int) -> Dictionary:
 	if not slots.has(slot):
 		return {}
 	var ws := slots[slot] as WeaponSlot
-	return {"mag": ws.mag, "condition": ws.condition, "mode_index": ws.mode_index, "zoom": ws.zoom,
-		"malfunction": ws.malfunction, "case_stuck": ws.case_stuck}
+	var st := {"mag": ws.mag, "condition": ws.condition, "mode_index": ws.mode_index, "zoom": ws.zoom,
+		"malfunction": ws.malfunction, "case_stuck": ws.case_stuck, "sight": ws.sight, "muzzle": ws.muzzle}
+	if ws.family != "":
+		st["mag_id"] = ws.mag_id
+	return st
 
 
 ## Saca los cartuchos del cargador. Devuelve cuántos.
@@ -220,6 +271,11 @@ func unload(slot: int) -> int:
 		return 0
 	var ws := slots[slot] as WeaponSlot
 	var n := ws.mag
+	if ws.family != "" and ws.mag_id != "" and inv != null:
+		# El cargador sale entero (con sus balas); queda suelta la de la recámara
+		n = mini(ws.mag, 1)
+		_stow_mag(ItemStack.make(ws.mag_id, 1, {"rounds": ws.mag - n}))
+		ws.mag_id = ""
 	ws.mag = 0
 	_emit_state()
 	return n
@@ -234,7 +290,8 @@ func can_lower() -> bool:
 ## largo que tengas en la mano, o al 1.
 func take_weapon(data: WeaponData) -> int:
 	var slot := 3 if data.slot == 3 else (current_slot if current_slot in [1, 2] else 1)
-	equip_weapon(data, slot)
+	# Las de cargador vienen con el suyo lleno (los de repuesto están al lado de la mesa)
+	equip_weapon(data, slot, {}, ItemDB.mag_family(data.id) == "")
 	return slot
 
 
@@ -315,7 +372,9 @@ func get_state_dict() -> Dictionary:
 		"caliber": c.data.caliber,
 		"cycling": state == State.CYCLING,
 		"mag": c.mag,
-		"mag_size": c.data.mag_size,
+		"mag_size": c.capacity(),
+		"has_mag": c.family == "" or c.mag_id != "",
+		"suppressed": c.suppressed(),
 		"reserve": c.reserve,
 		"mode": c.mode(),
 		"has_modes": c.data.fire_modes.size() > 1,
@@ -371,7 +430,11 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 			and not _rounds_stop and state_time < state_duration * 0.9:
 		_stop_loading_rounds()
 
-	if cmd.reload and state == State.READY and (c.malfunction != "" or _can_reload(c)):
+	# R dos veces rápido: recarga rápida (el cargador viejo cae al piso)
+	if cmd.reload and state == State.RELOADING and c.family != "" and not fast_reload \
+			and state_time < FAST_RELOAD_WINDOW and inv != null and not DebugTools.infinite_ammo:
+		_start_fast_reload(c)
+	elif cmd.reload and state == State.READY and (c.malfunction != "" or _can_reload(c)):
 		if c.malfunction != "":
 			_start_clear(c)
 		else:
@@ -395,6 +458,11 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 			_play_mech(SynthSfx.click("zoom", 1.8, 0.025), -14.0)
 			_emit_state()
 
+	# Disparo accidental pendiente (doble disparo o al montar)
+	if _slam_pending and state == State.READY:
+		_slam_pending = false
+		if c.mag > 0 and c.malfunction == "":
+			_fire(c, true)
 	if state == State.READY and _cooldown <= 0.0 and _sprint_block <= 0.0:
 		var wants := cmd.fire_pressed if c.mode() == "semi" else cmd.fire
 		if wants and c.malfunction != "":
@@ -491,6 +559,10 @@ func _advance_state(delta: float) -> void:
 
 
 func _set_state(s: State, duration: float) -> void:
+	if state == State.RELOADING and s != State.RELOADING and _reload_mag != null:
+		# Recarga cortada (cambio de arma): el cargador nuevo vuelve a su lugar
+		_stow_mag(_reload_mag, _reload_from, _reload_at)
+		_reload_mag = null
 	state = s
 	state_time = 0.0
 	state_duration = duration
@@ -523,12 +595,65 @@ func _start_holster(slot: int) -> void:
 
 
 func _can_reload(c: WeaponSlot) -> bool:
-	return c.mag < c.data.mag_size and (c.reserve > 0 or DebugTools.infinite_ammo)
+	if c.family != "" and inv != null and not DebugTools.infinite_ammo:
+		# Con cargadores: si hay uno con más balas que el que está puesto
+		var b := inv.best_mag(c.family)
+		return not b.is_empty() and (c.mag_id == "" or (b[0] as ItemStack).rounds() > c.mag - mini(c.mag, 1))
+	return c.mag < c.capacity() and (c.reserve > 0 or DebugTools.infinite_ammo)
+
+
+## Guarda un cargador en el inventario (en "at" de "where" si entra; si no, donde
+## entre; si no entra en ningún lado, al piso).
+func _stow_mag(m: ItemStack, where: Inventory = null, at := Vector2i(-1, -1)) -> void:
+	if inv == null or m == null:
+		return
+	if where != null and at.x >= 0 and inv.is_storage(where) and where.place(m, at, m.rotated):
+		return
+	if inv.receive(m) > 0:
+		_drop_mag(current(), m)
+
+
+## Tira un cargador al piso desde el arma (recarga rápida o sin lugar).
+func _drop_mag(c: WeaponSlot, m: ItemStack) -> void:
+	if player == null or not player.is_inside_tree():
+		return
+	var at := player.global_position + Vector3(0, 1.2, 0) - player.camera.global_basis.z * 0.3
+	if c != null and c.model != null and c.model.has_node("Mag"):
+		at = _vm_to_world((c.model.get_node("Mag") as Node3D).global_position)
+	var parent := player.get_tree().current_scene if player.get_tree().current_scene != null else player.get_parent()
+	WorldItem.spawn(parent, m, at, player.velocity * 0.5 + Vector3(0, -0.4, 0) - player.camera.global_basis.z * 0.3)
+
+
+## Recarga rápida: más corta y el cargador viejo (con lo que le quede) cae al piso.
+func _start_fast_reload(c: WeaponSlot) -> void:
+	fast_reload = true
+	var frac := state_time / maxf(state_duration, 0.001)
+	state_duration *= FAST_RELOAD_MULT
+	state_time = frac * state_duration
+	if c.mag_id != "":
+		var chamber := mini(c.mag, 1)
+		var old := ItemStack.make(c.mag_id, 1, {"rounds": c.mag - chamber})
+		c.mag = chamber
+		c.mag_id = ""
+		_drop_mag(c, old)
+	_emit_state()
 
 
 func _start_reload() -> void:
 	var c := current()
 	_reload_empty = c.mag == 0
+	fast_reload = false
+	_reload_mag = null
+	var from_backpack := false
+	if c.family != "" and inv != null and not DebugTools.infinite_ammo:
+		# Se saca el cargador más lleno (de la mochila si no hay en el chaleco)
+		var b := inv.best_mag(c.family)
+		if not b.is_empty():
+			_reload_mag = b[0]
+			_reload_from = b[1]
+			_reload_at = _reload_mag.pos
+			from_backpack = b[2]
+			_reload_from.remove(_reload_mag)
 	_reload_fx_done = false
 	_break_spent = c.data.mag_size - c.mag
 	_plan = null
@@ -574,7 +699,13 @@ func _start_reload() -> void:
 	_clip_load = c.data.reload_type == "rounds" and c.data.clip_reload and (c.mag == 0 or not c.data.bolt_action)
 	var needed := c.data.mag_size - c.mag
 	_rounds_planned = needed if DebugTools.infinite_ammo else mini(needed, c.reserve)
+	if from_backpack:
+		dur *= BACKPACK_RELOAD_MULT
+		EventBus.toast.emit(tr("weapon.from_backpack"))
+	var keep_mag := _reload_mag
+	_reload_mag = null  # (que _set_state no lo devuelva)
 	_set_state(State.RELOADING, dur)
+	_reload_mag = keep_mag
 	_play_mech(SynthSfx.click("reload_out", 0.6, 0.08), -6.0)
 	_emit_state()
 
@@ -669,6 +800,8 @@ func _start_clear(c: WeaponSlot) -> void:
 func _finish_clear(c: WeaponSlot) -> void:
 	if _clear_action in ["double_feed", "misfire"] and c.mag > 0 and not DebugTools.infinite_ammo:
 		c.mag -= 1  # el cartucho que no disparó (o el que se trabó) sale y se pierde
+	if _clear_action == "unchambered" and c.mag > 0 and c.data.reload_type == "magazine":
+		_roll_slam(c)
 	c.malfunction = ""
 	c.case_stuck = false
 	_clear_action = ""
@@ -761,6 +894,20 @@ func reload_duration(c: WeaponSlot) -> float:
 func _finish_reload(c: WeaponSlot) -> void:
 	if c.data.reload_type == "rounds":
 		_load_rounds(c)  # los que faltaban por tiempo (los cartuchos ya entraron de a uno)
+	elif c.family != "" and inv != null and not DebugTools.infinite_ammo:
+		# Cargadores: el viejo sale con lo que tenía (menos el de la recámara) y entra el nuevo
+		var chamber := mini(c.mag, 1)
+		var nm := _reload_mag
+		_reload_mag = null
+		if c.mag_id != "":
+			var old := ItemStack.make(c.mag_id, 1, {"rounds": c.mag - chamber})
+			_stow_mag(old, _reload_from, _reload_at)
+		if nm != null:
+			c.mag_id = nm.item.id
+			c.mag = chamber + nm.rounds()
+		else:
+			c.mag_id = ""
+			c.mag = chamber
 	else:
 		var needed := c.data.mag_size - c.mag
 		var take := needed if DebugTools.infinite_ammo else mini(needed, c.reserve)
@@ -770,17 +917,27 @@ func _finish_reload(c: WeaponSlot) -> void:
 	if (_plan != null and _plan.forgot_chamber) or imported_forgot:
 		# Con el apuro se olvidó de montar: la primera vez el gatillo hace "clic"
 		c.malfunction = "unchambered"
+	elif _reload_empty and c.mag > 0 and c.data.reload_type == "magazine":
+		_roll_slam(c)
 	_play_mech(SynthSfx.click("reload_in", 0.9, 0.06), -6.0)
 	_set_state(State.READY, 0.0)
 	_emit_state()
 
 
-func _fire(c: WeaponSlot) -> void:
+## Al montar (cerrar la corredera sobre un cartucho) a veces se escapa un tiro: más
+## probable con el arma gastada.
+func _roll_slam(c: WeaponSlot) -> void:
+	if _rng.randf() < fault_risk(effective_condition(c), reliability(c.data))["slam"]:
+		_slam_pending = true
+		EventBus.toast.emit(tr("weapon.slam_fire"))
+
+
+func _fire(c: WeaponSlot, accidental := false) -> void:
 	var w := c.data
 	var cond := effective_condition(c)
 	c.condition = maxf(0.0, c.condition - float(WEAR_PER_SHOT.get(w.reload_type, 1.0 / 4000.0)))
 	var risk := fault_risk(cond, reliability(w))
-	if _rng.randf() < risk["misfire"]:
+	if not accidental and _rng.randf() < risk["misfire"]:
 		# No disparó: el cartucho queda en la recámara (con cargador o cerrojo hay que
 		# destrabar y se descuenta al sacarlo; en la escopeta se pasa al otro caño)
 		if not DebugTools.infinite_ammo and w.reload_type == "break":
@@ -820,13 +977,16 @@ func _fire(c: WeaponSlot) -> void:
 		deg_to_rad(_rng.randf_range(-w.recoil_yaw, w.recoil_yaw) * mult), w.recoil_recovery)
 	view.kick(w, ads_amount, _rng.randf_range(-1.5, 1.5))
 
-	view.flash()
-	combat.muzzle_flash_light(muzzle_world)
+	if not c.suppressed():
+		view.flash()
+		combat.muzzle_flash_light(muzzle_world)
 	var shot_stream := SynthSfx.weapon_shot(w)
 	if _audio_shot.stream != shot_stream:
 		_audio_shot.stream = shot_stream
-	# Los archivos vienen normalizados: el volumen de cada arma se aplica encima
-	_audio_shot.volume_db = w.sfx_volume_db - 2.0
+	# Los archivos vienen normalizados: el volumen de cada arma se aplica encima. Con
+	# silenciador: más bajo y sin agudos (bus con filtro)
+	_audio_shot.bus = SUPPRESSED_BUS if c.suppressed() else "SFX_World"
+	_audio_shot.volume_db = w.sfx_volume_db - (16.0 if c.suppressed() else 2.0)
 	_audio_shot.pitch_scale = _rng.randf_range(0.98, 1.02)
 	_audio_shot.play()
 	if w.bolt_action:
@@ -851,6 +1011,9 @@ func _fire(c: WeaponSlot) -> void:
 			_eject_shell(c, false, 0)
 		else:
 			_eject_shell(c, false, 0)
+			# Doble disparo: el martillo sigue a la corredera y sale otro tiro solo
+			if not accidental and c.mag > 0 and c.mode() == "semi" and _rng.randf() < risk["doubling"]:
+				_slam_pending = true
 	EventBus.weapon_fired.emit(w.id)
 	_emit_state()
 
@@ -897,7 +1060,8 @@ func effective_condition(c: WeaponSlot) -> float:
 static func fault_risk(condition: float, mult := 1.0) -> Dictionary:
 	var k := pow(clampf((0.7 - condition) / 0.7, 0.0, 1.0), 2.0)
 	return {"misfire": (0.0004 + 0.055 * k) * mult, "stovepipe": (0.0003 + 0.06 * k) * mult,
-		"double_feed": (0.0001 + 0.018 * k) * mult}
+		"double_feed": (0.0001 + 0.018 * k) * mult, "slam": (0.002 + 0.06 * k) * mult,
+		"doubling": (0.0004 + 0.02 * k) * mult}
 
 
 ## Qué tan propensa a fallar es el arma (1 = normal): las de mecanismo tipo AK
@@ -1000,7 +1164,9 @@ func refill_all() -> void:
 		var ws := slots[k] as WeaponSlot
 		if ws.reserve < ws.data.start_reserve:
 			ws.reserve = ws.data.start_reserve
-		ws.mag = ws.data.mag_size
+		if ws.family != "" and ws.mag_id == "":
+			ws.mag_id = ItemDB.standard_mag(ws.data.id)
+		ws.mag = ws.capacity()
 	_emit_state()
 
 
@@ -1021,7 +1187,24 @@ func _play_mech(stream: AudioStream, volume_db: float) -> void:
 	_audio_mech.play()
 
 
+const SUPPRESSED_BUS := "SFX_Suppressed"
+
+
+## Bus de los disparos con silenciador: filtro que saca los agudos (va al del mundo).
+static func ensure_suppressed_bus() -> void:
+	if AudioServer.get_bus_index(SUPPRESSED_BUS) >= 0:
+		return
+	var i := AudioServer.bus_count
+	AudioServer.add_bus(i)
+	AudioServer.set_bus_name(i, SUPPRESSED_BUS)
+	AudioServer.set_bus_send(i, "SFX_World")
+	var lp := AudioEffectLowPassFilter.new()
+	lp.cutoff_hz = 1600.0
+	AudioServer.add_bus_effect(i, lp)
+
+
 func _build_audio() -> void:
+	ensure_suppressed_bus()
 	_audio_shot = AudioStreamPlayer.new()
 	_audio_shot.bus = "SFX_World"
 	_audio_shot.max_polyphony = 6

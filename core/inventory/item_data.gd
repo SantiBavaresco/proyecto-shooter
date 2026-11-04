@@ -5,12 +5,14 @@ extends RefCounted
 ## Ver ItemDB.
 
 ## Orden de los tipos al ordenar el inventario.
-const KIND_ORDER := ["weapon", "melee", "armor", "helmet", "backpack", "ammo", "medical", "drink", "food", "misc", "money"]
+const KIND_ORDER := ["weapon", "melee", "armor", "helmet", "rig", "backpack", "sight", "muzzle", "mag", "ammo", "medical", "drink",
+	"food", "misc", "money"]
 
 var id: String = ""
 var name_key: String = ""
 var desc_key: String = ""
-## "weapon", "melee", "ammo", "medical", "food", "drink", "armor", "helmet", "backpack", "misc", "money".
+## "weapon", "melee", "ammo", "mag", "sight", "muzzle", "medical", "food", "drink", "armor", "helmet",
+## "rig", "backpack", "misc", "money".
 var kind: String = "misc"
 ## Celdas que ocupa (ancho, alto) sin rotar.
 var size: Vector2i = Vector2i.ONE
@@ -33,6 +35,14 @@ var carry_bonus: float = 0.0
 ## Modelo .glb propio (si no, se arma por código) y su escala.
 var model_path: String = ""
 var model_scale: float = 1.0
+## Chalecos tácticos y mochilas: grillas que tiene adentro, [x, y, ancho, alto] (x, y:
+## dónde se dibujan, en celdas).
+var grids: Array = []
+## Cargadores: familia (qué armas lo aceptan) y capacidad.
+var mag_family: String = ""
+var capacity: int = 0
+## Miras y silenciadores: su definición (data/items/attachments.json).
+var attach: Dictionary = {}
 
 var _weapon: WeaponData
 
@@ -48,7 +58,16 @@ func is_consumable() -> bool:
 
 
 func is_equipment() -> bool:
-	return kind in ["weapon", "melee", "armor", "helmet", "backpack"]
+	return kind in ["weapon", "melee", "armor", "helmet", "rig", "backpack"]
+
+
+## Lleva cosas adentro (chaleco táctico, mochila).
+func is_container() -> bool:
+	return not grids.is_empty()
+
+
+func is_attachment() -> bool:
+	return kind in ["sight", "muzzle"]
 
 
 func stackable() -> bool:
@@ -69,6 +88,8 @@ func equip_slots() -> PackedStringArray:
 			return PackedStringArray(["helmet"])
 		"backpack":
 			return PackedStringArray(["backpack"])
+		"rig":
+			return PackedStringArray(["rig"])
 		"melee":
 			return PackedStringArray(["melee"])
 	return PackedStringArray()

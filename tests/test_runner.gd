@@ -19,6 +19,7 @@ const SUITES: Array[String] = [
 	"res://tests/gameplay/test_armory.gd",
 	"res://tests/gameplay/test_stress_faults.gd",
 	"res://tests/gameplay/test_inventory_gameplay.gd",
+	"res://tests/gameplay/test_zprobe.gd",
 ]
 
 var _passed: int = 0

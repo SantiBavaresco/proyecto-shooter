@@ -4,7 +4,7 @@ extends Control
 
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 
-## "weapon1", "weapon2", "pistol", "helmet", "armor", "backpack" o "quick".
+## "weapon1", "weapon2", "pistol", "melee", "helmet", "armor", "rig", "backpack" o "quick".
 var slot: String = ""
 var quick_index: int = -1
 var pinv: PlayerInventory
@@ -53,7 +53,7 @@ func _draw() -> void:
 			var it := ItemDB.get_item(id)
 			var tmp := ItemStack.new()
 			tmp.item = it
-			var n := pinv.bag.count_of(id)
+			var n := pinv.count_of(id)
 			InvGrid.draw_icon(self, tmp, r.grow(-4), n == 0, 0)
 			var t := "%d" % n
 			var tw := _font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 17).x
@@ -73,12 +73,16 @@ func _draw() -> void:
 			draw_rect(bar, Color(0, 0, 0, 0.6))
 			draw_rect(Rect2(bar.position, Vector2(bar.size.x * c, 3)), InvGrid.cond_color(c))
 		if s.item.kind == "weapon":
-			var w := s.item.weapon()
 			var mag := int(s.state.get("mag", 0))
 			if pinv != null and pinv.player != null and PlayerInventory.WEAPON_SLOT.has(slot):
 				var ws := pinv.player.weapons.weapon_state(PlayerInventory.WEAPON_SLOT[slot])
 				mag = int(ws.get("mag", mag))
-			var t2 := "%d/%d" % [mag, w.mag_size]
+			var cap := InvGrid.weapon_cap(s)
+			if pinv != null and pinv.player != null and PlayerInventory.WEAPON_SLOT.has(slot):
+				var wsl := pinv.player.weapons.slots.get(PlayerInventory.WEAPON_SLOT[slot]) as WeaponController.WeaponSlot
+				if wsl != null:
+					cap = wsl.capacity()
+			var t2 := "%d/%d" % [mag, cap]
 			var tw2 := _font.get_string_size(t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
 			draw_string(_font, Vector2(size.x - tw2 - 6, size.y - 6), t2, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, UiTheme.TEXT_DIM)
 	draw_string(_font, Vector2(6, 18), label.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, -1, 15,

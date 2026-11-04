@@ -95,7 +95,8 @@ func test_weapons_keep_their_state_and_do_not_stack() -> void:
 	var b := ItemStack.make("w_pistol")
 	assert_false(a.can_merge(b))
 	assert_eq(int(a.state["mag"]), 4)
-	assert_eq(int(b.state["mag"]), (load("res://data/weapons/pistol.tres") as WeaponData).mag_size, "nueva viene cargada")
+	assert_eq(int(b.state["mag"]), ItemDB.get_item(ItemDB.standard_mag("pistol")).capacity, "nueva viene cargada")
+	assert_eq(String(b.state["mag_id"]), "mag_pist_9x19", "con el cargador genérico de 9×19")
 	assert_lt(float(a.price()), float(b.price()), "gastada vale menos")
 
 

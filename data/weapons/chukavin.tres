@@ -24,7 +24,9 @@ model_params = {
 "object_52_",
 "object_53_",
 "mag_extended",
-"bullet"
+"bullet",
+"sight_scope",
+"zoom_wheel"
 ],
 "parts": {
 "Mag": [
@@ -57,20 +59,12 @@ model_params = {
 ]
 }
 },
-"scope_lens": {
-"pos": [
-0,
-0.09,
-0.0995
-],
-"d": 0.038
-},
 "sight": [
 0,
-0.09,
-0.091
+0.05,
+-0.1
 ],
-"eye_relief": 0.09,
+"eye_relief": 0.35,
 "muzzle": [
 0,
 0,
@@ -112,8 +106,8 @@ model_params = {
 "lr": 0.034
 }
 }
-sight = "scope"
-scope_mag = 4.0
+sight = "iron"
+scope_mag = 0.0
 scope_mag_max = 0.0
 reticle = "chevron"
 caliber = "7.62×54R"
@@ -149,7 +143,7 @@ reload_time_empty = 3.2
 ads_time = 0.3
 draw_time = 0.4
 holster_time = 0.22
-ads_fov_mult = 1.0
+ads_fov_mult = 0.85
 eye_relief = 0.0
 sfx_tail = 0.5
 sfx_body_hz = 62.0

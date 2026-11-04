@@ -342,6 +342,8 @@ func test_vk19_and_ppb_have_holo_sights() -> void:
 		var d := _load(id)
 		assert_eq(String(d.model_params.get("shape", "")), "glb", "%s: modelo .glb" % id)
 		var m := WeaponModelBuilder.build(d)
+		assert_false(m.has_node("Lens"), "%s: la mira es un accesorio aparte" % id)
+		WeaponAttach.apply_model(m, d, WeaponAttach.sight_of(d, {}), "")
 		assert_true(m.has_node("Lens"), "%s: vidrio de la holográfica" % id)
 		var lm := (m.get_node("Lens") as MeshInstance3D).material_override as ShaderMaterial
 		assert_true(bool(lm.get_shader_parameter("holo")), "%s: retícula holográfica" % id)

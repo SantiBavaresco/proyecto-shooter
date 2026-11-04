@@ -1,0 +1,36 @@
+{
+	"_doc": "Accesorios. optics: miras (modelo: un .glb con la misma alineación que el arma de donde salen y solo las piezas 'keep', o 'code' = por código). 'base' es el punto de apoyo en esas coordenadas; 'sight' (línea de mira) y 'lens' son relativos a la base. muzzles: silenciadores por grupo de rosca. mounts: dónde va la mira en cada arma (punto de apoyo en coordenadas del arma y altura del soporte que se dibuja debajo) y miras que trae de fábrica.",
+	"optics": {
+		"optic_holo_a": {"type": "red_dot", "scene": "res://assets/models/weapons/bizon/bizon.glb", "rot": [0, 90, 0], "scale": 0.048,
+			"offset": [0, -0.052, 0.034], "keep": ["holo"], "base": [0, 0.0415, -0.04], "sight": [0, 0.0325, 0],
+			"lens": {"pos": [0, 0.0325, 0], "size": 0.03, "holo": true}, "eye_relief": 0.24,
+			"size": [2, 1], "weight": 0.32, "price": 650},
+		"optic_holo_b": {"type": "red_dot", "scene": "res://assets/models/weapons/pp1901/pp1901.glb", "rot": [0, 90, 0], "scale": 0.048,
+			"offset": [0, -0.046, 0.03], "keep": ["holo"], "base": [0, 0.0397, -0.05], "sight": [0, 0.0263, 0],
+			"lens": {"pos": [0, 0.0263, 0], "size": 0.03, "holo": true}, "eye_relief": 0.24,
+			"size": [2, 1], "weight": 0.32, "price": 700},
+		"optic_reddot": {"type": "red_dot", "scene": "code", "base": [0, 0, 0], "sight": [0, 0.031, -0.015],
+			"eye_relief": 0.3,
+			"size": [1, 1], "weight": 0.15, "price": 380},
+		"optic_scope4x": {"type": "scope", "scene": "res://assets/models/weapons/chukavin/chukavin.glb", "rot": [0, -90, 0], "scale": 0.09,
+			"offset": [0, -0.1735, -0.197], "keep": ["sight_scope", "zoom_wheel"], "base": [0, 0.041, -0.107], "sight": [0, 0.049, 0.198],
+			"scope_lens": {"pos": [0, 0.049, 0.2065], "d": 0.038}, "eye_relief": 0.09, "mag": 4.0, "reticle": "chevron",
+			"size": [3, 1], "weight": 0.6, "price": 1400}
+	},
+	"muzzles": {
+		"supp_pistol": {"thread": "pistol", "radius": 0.016, "length": 0.16, "size": [2, 1], "weight": 0.2, "price": 450},
+		"supp_545": {"thread": "545", "radius": 0.019, "length": 0.17, "size": [2, 1], "weight": 0.45, "price": 800},
+		"supp_762": {"thread": "762", "radius": 0.022, "length": 0.2, "size": [3, 1], "weight": 0.6, "price": 950}
+	},
+	"mounts": {
+		"pp19": {"rail": [0, 0.0415, -0.04], "riser": 0.0, "default": "optic_holo_a"},
+		"vityaz": {"rail": [0, 0.0397, -0.05], "riser": 0.0, "default": "optic_holo_b"},
+		"chukavin": {"rail": [0, 0.041, -0.107], "riser": 0.0, "default": "optic_scope4x"},
+		"akm": {"rail": [0, 0.056, -0.09], "riser": 0.012},
+		"ak74": {"rail": [0, 0.05, -0.04], "riser": 0.022},
+		"mp5": {"rail": [0, 0.068, -0.05], "riser": 0.04},
+		"ar15": {"rail": [0, 0.058, -0.03], "riser": 0.0},
+		"g3": {"rail": [0, 0.072, -0.08], "riser": 0.045},
+		"sr22": {"rail": [0, 0.045, -0.09], "riser": 0.013}
+	}
+}

@@ -6,11 +6,15 @@ extends StaticBody3D
 ##  - "metal": caja metálica.
 ##  - "stash": alijo (bolso escondido), más grande.
 ##  - "ammo": caja de munición del laboratorio: al abrirla se repone de todo.
+##  - "weapons": caja de armas: miras, silenciadores, cargadores y munición.
 ##
 ## El contenido sale de "contents" ([[id, cantidad], ...]) o, si está vacío, de una
-## tabla al azar según el tipo.
+## tabla al azar según el tipo. La tabla al azar se tira la primera vez que alguien la
+## abre (no al cargar el nivel), con una semilla propia de la caja: en un mundo grande
+## no se genera todo de entrada y, en cooperativo, todos ven lo mismo.
 
-const SIZES := {"crate": Vector2i(8, 6), "metal": Vector2i(6, 5), "stash": Vector2i(8, 10), "ammo": Vector2i(8, 8)}
+const SIZES := {"crate": Vector2i(8, 6), "metal": Vector2i(6, 5), "stash": Vector2i(8, 10), "ammo": Vector2i(8, 8),
+	"weapons": Vector2i(8, 6)}
 ## Tabla al azar: [id, mínimo, máximo, probabilidad].
 const RANDOM_LOOT := [
 	["bandage", 1, 3, 0.6], ["medkit", 1, 1, 0.35], ["canned_meat", 1, 2, 0.45], ["water", 1, 1, 0.4],
@@ -23,9 +27,19 @@ const RANDOM_LOOT := [
 ## Semilla de la tabla al azar (0 = al azar de verdad).
 @export var loot_seed: int = 0
 
+## Caja de armas: [id, mínimo, máximo, probabilidad] (los cargadores, aparte).
+const WEAPONS_LOOT := [
+	["optic_reddot", 1, 1, 0.45], ["optic_holo_a", 1, 1, 0.25], ["optic_holo_b", 1, 1, 0.25], ["optic_scope4x", 1, 1, 0.2],
+	["supp_pistol", 1, 1, 0.35], ["supp_545", 1, 1, 0.3], ["supp_762", 1, 1, 0.3],
+	["ammo_545x39", 30, 60, 0.5], ["ammo_556x45", 30, 60, 0.4], ["ammo_762x39", 30, 60, 0.4], ["ammo_9x19", 30, 60, 0.5],
+	["ammo_762x51", 20, 40, 0.3], ["ammo_45acp", 20, 50, 0.3],
+]
+
 var inventory: Inventory
 var title_key: String = ""
 var _looting: bool = false
+## Ya se generó el contenido (las cajas al azar se llenan al abrirlas).
+var filled: bool = false
 
 
 func _ready() -> void:
@@ -35,7 +49,9 @@ func _ready() -> void:
 	inventory = Inventory.new(sz.x, sz.y)
 	title_key = "loot." + kind
 	inventory.title_key = title_key
-	_fill()
+	# Contenido fijo (o caja de munición): ya; al azar: la primera vez que se abre
+	if not contents.is_empty() or kind == "ammo":
+		ensure_filled()
 	_build()
 
 
@@ -44,6 +60,7 @@ func get_interact_text() -> String:
 
 
 func interact(_player: Node) -> void:
+	ensure_filled()
 	Foley.play(get_tree(), {"crate": "crate_open", "stash": "stash_open"}.get(kind, "box_open"), -4.0)
 	if kind == "ammo":
 		_restock_ammo()
@@ -58,6 +75,22 @@ func on_loot_closed() -> void:
 	_looting = false
 
 
+## Genera el contenido si todavía no se generó.
+func ensure_filled() -> void:
+	if filled:
+		return
+	filled = true
+	_fill()
+
+
+## Semilla de la caja: la que se le dio o una fija según dónde está.
+func seed_value() -> int:
+	if loot_seed != 0:
+		return loot_seed
+	var p := global_position if is_inside_tree() else position
+	return hash("%s|%.1f|%.1f|%.1f" % [kind, p.x, p.y, p.z])
+
+
 func _fill() -> void:
 	inventory.clear()
 	if kind == "ammo":
@@ -65,14 +98,38 @@ func _fill() -> void:
 		return
 	if not contents.is_empty():
 		for e: Array in contents:
-			inventory.add_item(String(e[0]), int(e[1]))
+			inventory.add_item(String(e[0]), int(e[1]), _state_for(String(e[0])))
 		return
 	var rng := RandomNumberGenerator.new()
-	if loot_seed != 0:
-		rng.seed = loot_seed
-	else:
-		rng.randomize()
+	rng.seed = seed_value()
+	if kind == "weapons":
+		_fill_weapons(rng)
+		return
 	for e: Array in RANDOM_LOOT:
+		if rng.randf() < float(e[3]):
+			inventory.add_item(String(e[0]), rng.randi_range(int(e[1]), int(e[2])))
+
+
+## Los cargadores sueltos vienen llenos.
+func _state_for(id: String) -> Dictionary:
+	var it := ItemDB.get_item(id)
+	return {"rounds": it.capacity} if it != null and it.kind == "mag" else {}
+
+
+## Caja de armas: algunos accesorios, cargadores de 2 a 4 familias (a veces de más
+## capacidad, a veces a medio llenar) y munición.
+func _fill_weapons(rng: RandomNumberGenerator) -> void:
+	var mags: Array = []
+	for id: String in ItemDB.all_ids():
+		if ItemDB.get_item(id).kind == "mag":
+			mags.append(id)
+	mags.sort()
+	for i in rng.randi_range(3, 6):
+		var id: String = mags[rng.randi_range(0, mags.size() - 1)]
+		var it := ItemDB.get_item(id)
+		var r := it.capacity if rng.randf() < 0.6 else rng.randi_range(0, it.capacity)
+		inventory.add_item(id, 1, {"rounds": r})
+	for e: Array in WEAPONS_LOOT:
 		if rng.randf() < float(e[3]):
 			inventory.add_item(String(e[0]), rng.randi_range(int(e[1]), int(e[2])))
 
@@ -98,6 +155,9 @@ func _build() -> void:
 		"ammo":
 			size = Vector3(0.9, 0.5, 0.5)
 			col = Color(0.3, 0.33, 0.2)
+		"weapons":
+			size = Vector3(1.2, 0.42, 0.5)
+			col = Color(0.2, 0.25, 0.19)
 	var cs := CollisionShape3D.new()
 	var sh := BoxShape3D.new()
 	sh.size = size
@@ -124,6 +184,11 @@ func _build() -> void:
 			WeaponModelBuilder.rbox(self, "Slat", Vector3(0.06, size.y, size.z + 0.015), Vector3(x, size.y * 0.5, 0), dark, 0.005)
 	for s: float in [-1.0, 1.0]:
 		WeaponModelBuilder.rbox(self, "Handle", Vector3(0.025, 0.03, 0.14), Vector3(s * (size.x * 0.5 + 0.015), size.y * 0.65, 0), dark, 0.006)
+	if kind == "weapons":
+		var band := StandardMaterial3D.new()
+		band.albedo_color = Color(0.85, 0.85, 0.8)
+		WeaponModelBuilder.rbox(self, "Band", Vector3(0.08, size.y + 0.006, size.z + 0.006), Vector3(-size.x * 0.3, size.y * 0.5, 0), band, 0.004)
+		WeaponModelBuilder.rbox(self, "Band", Vector3(0.08, size.y + 0.006, size.z + 0.006), Vector3(size.x * 0.3, size.y * 0.5, 0), band, 0.004)
 	if kind == "ammo":
 		var stripe := StandardMaterial3D.new()
 		stripe.albedo_color = Color(0.79, 0.64, 0.15)

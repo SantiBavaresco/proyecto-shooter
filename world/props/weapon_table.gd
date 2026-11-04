@@ -2,10 +2,11 @@ class_name WeaponTable
 extends StaticBody3D
 ## Mesa de la armería del laboratorio: muestra un arma con su nombre y calibre.
 ## Mirarla + [F] la equipa en su slot (pistolas al 3; largas al slot largo en uso).
-## Reemplazo provisorio del inventario hasta la F2.
+## Al lado, en el piso, 3 cargadores llenos de repuesto (las armas con cargador).
 
 const TABLE_SIZE := Vector3(1.3, 0.05, 0.6)
 const TABLE_HEIGHT := 0.85
+const SPARE_MAGS := 3
 
 @export var weapon_path: String = ""
 
@@ -17,6 +18,20 @@ func _ready() -> void:
 	set_meta("surface", "wood")
 	data = load(weapon_path) as WeaponData
 	_build()
+	_spare_mags.call_deferred()
+
+
+## Cargadores de repuesto en el piso, al costado de la mesa.
+func _spare_mags() -> void:
+	var id := ItemDB.standard_mag(data.id)
+	if id == "" or get_parent() == null:
+		return
+	for i in SPARE_MAGS:
+		var w := WorldItem.make(id, 1)
+		w.stack.state["rounds"] = ItemDB.get_item(id).capacity
+		w.name = "Mag_%s_%d" % [data.id, i]
+		get_parent().add_child(w)
+		w.global_position = global_transform * Vector3(TABLE_SIZE.x * 0.5 + 0.35, 0.12, -0.18 + i * 0.18)
 
 
 func get_interact_text() -> String:

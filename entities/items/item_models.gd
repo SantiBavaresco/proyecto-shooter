@@ -44,6 +44,15 @@ static func build(item: ItemData) -> Node3D:
 				g.position = Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
 		"ammo":
 			_ammo(root, item)
+		"mag":
+			_mag(root, item)
+		"sight", "muzzle":
+			var g2 := WeaponAttach.item_model(item)
+			root.add_child(g2)
+			var box2 := local_aabb(root)
+			g2.position = Vector3(-box2.get_center().x, -box2.position.y, -box2.get_center().z)
+		"rig":
+			_rig(root, item)
 		_ when item.model_path != "" and ResourceLoader.exists(item.model_path):
 			# Modelo .glb: apoyado en el piso y centrado
 			var g := (GlbWeapon.scene(item.model_path).instantiate() as Node3D)
@@ -102,13 +111,23 @@ static func build(item: ItemData) -> Node3D:
 					_box(root, Vector3(0.3, 0.035, 0.34), Vector3(0, 0.075, 0.02), _m(c.darkened(0.15), 0.9), 0.015)
 					for i in 3:
 						_box(root, Vector3(0.09, 0.03, 0.12), Vector3(-0.11 + i * 0.11, 0.105, 0.14), _m(c.darkened(0.25), 0.9), 0.01)
-				"backpack_small", "backpack_large":
-					var big := item.id == "backpack_large"
-					var c2 := Color(0.33, 0.32, 0.22)
-					_box(root, Vector3(0.3, 0.16, 0.4 if big else 0.32), Vector3(0, 0.08, 0), _m(c2, 0.95), 0.04)
-					_box(root, Vector3(0.24, 0.07, 0.16), Vector3(0, 0.19, 0.06), _m(c2.darkened(0.12), 0.95), 0.03)
-					_box(root, Vector3(0.05, 0.03, 0.3 if big else 0.24), Vector3(-0.09, 0.17, -0.04), _m(Color(0.12, 0.12, 0.1), 0.9), 0.01)
-					_box(root, Vector3(0.05, 0.03, 0.3 if big else 0.24), Vector3(0.09, 0.17, -0.04), _m(Color(0.12, 0.12, 0.1), 0.9), 0.01)
+				"backpack_small", "backpack_medium", "backpack_large", "backpack_expedition":
+					# Más grande cuanto más grilla tiene
+					var g: Array = item.grids[0] if not item.grids.is_empty() else [0, 0, 4, 5]
+					var k := sqrt(float(g[2]) * float(g[3]) / 30.0)
+					var c2: Color = {"backpack_small": Color(0.33, 0.32, 0.22), "backpack_medium": Color(0.28, 0.3, 0.22),
+						"backpack_large": Color(0.3, 0.27, 0.2), "backpack_expedition": Color(0.22, 0.26, 0.24)}[item.id]
+					var L := 0.34 * k
+					var W := 0.3 * minf(k, 1.2)
+					_box(root, Vector3(W, 0.16, L), Vector3(0, 0.08, 0), _m(c2, 0.95), 0.04)
+					_box(root, Vector3(W * 0.8, 0.07, L * 0.4), Vector3(0, 0.19, L * 0.15), _m(c2.darkened(0.12), 0.95), 0.03)
+					for sx: float in [-1.0, 1.0]:
+						_box(root, Vector3(0.05, 0.03, L * 0.75), Vector3(sx * W * 0.3, 0.17, -L * 0.1), _m(Color(0.12, 0.12, 0.1), 0.9), 0.01)
+					if k > 1.1:
+						# Bolsillos laterales y bolsa de dormir arriba
+						for sx2: float in [-1.0, 1.0]:
+							_box(root, Vector3(0.06, 0.12, L * 0.45), Vector3(sx2 * (W * 0.5 + 0.03), 0.07, 0), _m(c2.darkened(0.08), 0.95), 0.02)
+						_cyl(root, 0.06, W * 0.95, Vector3(0, 0.12, -L * 0.5 - 0.05), _m(Color(0.18, 0.2, 0.17), 0.95), Vector3(0, 0, PI * 0.5))
 				"cash":
 					for i in 3:
 						_box(root, Vector3(0.156, 0.012, 0.066), Vector3(0, 0.006 + i * 0.012, 0), _m(Color(0.45, 0.55, 0.38), 0.85), 0.002)
@@ -125,6 +144,67 @@ static func build(item: ItemData) -> Node3D:
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		mi.layers = 1
 	return root
+
+
+## Cargador: el del arma de referencia de su familia (los de más capacidad, más
+## largos), acostado.
+static var _mag_models: Dictionary = {}
+
+
+static func _mag(root: Node3D, item: ItemData) -> void:
+	var fam := item.mag_family
+	if not _mag_models.has(fam):
+		var mag_node: Node3D = null
+		var ref := ItemDB.family_ref(fam)
+		var wd := load("res://data/weapons/%s.tres" % ref) as WeaponData if ref != "" else null
+		if wd != null:
+			var wm := WeaponModelBuilder.build(wd)
+			var mn := wm.get_node_or_null("Mag") as Node3D
+			if mn != null and not mn.find_children("*", "MeshInstance3D", true, false).is_empty():
+				mag_node = Node3D.new()
+				for mi: MeshInstance3D in mn.find_children("*", "MeshInstance3D", true, false):
+					var copy := mi.duplicate() as MeshInstance3D
+					copy.transform = GlbWeapon._rel(mi, mn)
+					mag_node.add_child(copy)
+			wm.free()
+		_mag_models[fam] = mag_node
+	var src := _mag_models[fam] as Node3D
+	var g := Node3D.new()
+	root.add_child(g)
+	if src != null:
+		var m := src.duplicate() as Node3D
+		# Los de más capacidad, más largos (a lo alto del cargador)
+		var std := ItemDB.get_item(String(ItemDB.family_mags(fam)[0]))
+		m.scale = Vector3(1.0, pow(float(item.capacity) / float(std.capacity), 0.55), 1.0)
+		g.add_child(m)
+	else:
+		_box(g, Vector3(0.025, 0.16, 0.06), Vector3(0, 0, 0), _m(Color(0.15, 0.15, 0.14), 0.6, 0.4), 0.004)
+	# Acostado de costado: lo largo (alto del cargador) a lo largo de X
+	g.rotation = Vector3(0, 0, PI * 0.5)
+	var box := local_aabb(root)
+	g.position = Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
+
+
+## Chaleco táctico: el chaleco con un porta-cargador por grilla de 1×2 y bolsillos.
+static func _rig(root: Node3D, item: ItemData) -> void:
+	var c: Color = {"rig_light": Color(0.36, 0.35, 0.25), "rig_medium": Color(0.27, 0.3, 0.22),
+		"rig_assault": Color(0.2, 0.22, 0.18)}.get(item.id, Color(0.3, 0.3, 0.24))
+	_box(root, Vector3(0.4, 0.04, 0.46), Vector3(0, 0.02, 0), _m(c, 0.95), 0.015)
+	var mags := 0
+	var pockets := 0
+	for g: Array in item.grids:
+		if int(g[2]) == 1 and int(g[3]) == 2:
+			mags += 1
+		else:
+			pockets += 1
+	var w := 0.36 / maxf(mags, 1)
+	for i in mags:
+		var x := -0.18 + w * (i + 0.5)
+		_box(root, Vector3(w * 0.85, 0.06, 0.15), Vector3(x, 0.07, 0.1), _m(c.darkened(0.15), 0.95), 0.008)
+		_box(root, Vector3(w * 0.85, 0.012, 0.05), Vector3(x, 0.105, 0.05), _m(c.darkened(0.3), 0.95), 0.004)
+	var pw := 0.36 / maxf(pockets, 1)
+	for i in pockets:
+		_box(root, Vector3(pw * 0.8, 0.05, 0.11), Vector3(-0.18 + pw * (i + 0.5), 0.06, -0.12), _m(c.darkened(0.22), 0.95), 0.01)
 
 
 ## Caja de cartuchos con una banda de color y algunos cartuchos encima.
@@ -185,6 +265,8 @@ static func display_weapon(data: WeaponData) -> Node3D:
 		d2.model_params["hg"] = 0.12
 		data = d2
 	var m := WeaponModelBuilder.build(data)
+	# Con la mira de fábrica (si es un accesorio)
+	WeaponAttach.apply_model(m, data, WeaponAttach.sight_of(data, {}), "")
 	for n in ["HandR", "HandL", "HookR", "HookL", "HookP", "Arms", "SkinnedArms"]:
 		var h := m.find_child(n, true, false)
 		if h != null:
