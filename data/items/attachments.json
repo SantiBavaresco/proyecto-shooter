@@ -12,13 +12,19 @@
 		"optic_reddot": {"type": "red_dot", "scene": "code", "base": [0, 0, 0], "sight": [0, 0.031, -0.015],
 			"eye_relief": 0.3,
 			"size": [1, 1], "weight": 0.15, "price": 380},
+		"optic_acog": {"type": "scope", "scene": "code_acog", "base": [0, 0, 0], "sight": [0, 0.032, 0.055],
+			"scope_lens": {"pos": [0, 0.032, 0.0585], "d": 0.028}, "eye_relief": 0.07, "mag": 4.0, "reticle": "chevron",
+			"size": [2, 1], "weight": 0.45, "price": 1600},
+		"optic_elcan": {"type": "scope", "scene": "code_elcan", "base": [0, 0, 0], "sight": [0, 0.035, 0.065],
+			"scope_lens": {"pos": [0, 0.035, 0.0705], "d": 0.034}, "eye_relief": 0.075, "mag": 4.0, "reticle": "cross",
+			"size": [2, 1], "weight": 0.6, "price": 1900},
 		"optic_scope4x": {"type": "scope", "scene": "res://assets/models/weapons/chukavin/chukavin.glb", "rot": [0, -90, 0], "scale": 0.09,
 			"offset": [0, -0.1735, -0.197], "source": "chukavin", "tint": 0.75, "rough": 0.6, "keep": ["sight_scope", "zoom_wheel"], "base": [0, 0.041, -0.107], "sight": [0, 0.049, 0.198],
 			"scope_lens": {"pos": [0, 0.049, 0.2065], "d": 0.038}, "eye_relief": 0.09, "mag": 4.0, "reticle": "chevron",
 			"size": [3, 1], "weight": 0.6, "price": 1400}
 	},
 	"muzzles": {
-		"supp_pistol": {"thread": "pistol", "radius": 0.016, "length": 0.16, "size": [2, 1], "weight": 0.2, "price": 450},
+		"supp_pistol": {"thread": "pistol", "shape": "osprey", "radius": 0.016, "length": 0.17, "size": [2, 1], "weight": 0.2, "price": 450},
 		"supp_545": {"thread": "545", "radius": 0.019, "length": 0.17, "size": [2, 1], "weight": 0.45, "price": 800},
 		"supp_762": {"thread": "762", "radius": 0.022, "length": 0.2, "size": [3, 1], "weight": 0.6, "price": 950}
 	},

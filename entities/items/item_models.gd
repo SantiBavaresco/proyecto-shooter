@@ -25,14 +25,15 @@ static func _m(c: Color, rough := 0.7, metal := 0.0) -> StandardMaterial3D:
 	return _mats[key]
 
 
-static func build(item: ItemData) -> Node3D:
+## "state": el de la pila (las armas, con su mira y silenciador).
+static func build(item: ItemData, state := {}) -> Node3D:
 	var root := Node3D.new()
 	root.name = item.id
 	match item.kind:
 		"weapon":
 			var w := item.weapon()
 			if w != null:
-				var g := display_weapon(w)
+				var g := display_weapon(w, WeaponAttach.sight_of(w, state), WeaponAttach.muzzle_of(state))
 				# Acostada de costado, caño hacia +X, apoyada en el piso
 				g.basis = Basis(Vector3(0, 1, 0), Vector3(0, 0, -1), Vector3(-1, 0, 0))
 				root.add_child(g)
@@ -227,7 +228,8 @@ static func _mag_box(root: Node3D, item: ItemData) -> void:
 		for i in 4:
 			_cyl(root, 0.0022, 0.004, Vector3(-width * 0.25, t + 0.0005, -length * 0.3 + i * length * 0.18), _m(Color(0.02, 0.02, 0.02), 0.9),
 				Vector3.ZERO)
-		_cyl(root, 0.0048, 0.018, Vector3(0, t * 0.55, -length * 0.5 - 0.004), brass, Vector3(PI * 0.5, 0, 0))
+		# La bala de arriba, acostada sobre los labios (como queda en el cargador)
+		_cyl(root, 0.0048, width * 0.75, Vector3(0, t * 0.62, -length * 0.5 - 0.003), brass, Vector3(0, 0, PI * 0.5))
 		return
 	# Fusil o subfusil: caja de chapa o polímero con nervaduras a lo largo
 	var t2 := 0.026
@@ -235,7 +237,7 @@ static func _mag_box(root: Node3D, item: ItemData) -> void:
 	for sx: float in [-0.22, 0.22]:
 		_box(root, Vector3(0.004, 0.003, length * 0.8), Vector3(width * sx, t2 + 0.001, 0.0), _m(col.darkened(0.25), 0.55, 0.5), 0.001)
 	_box(root, Vector3(width + 0.006, t2 + 0.004, 0.012), Vector3(0, t2 * 0.5, length * 0.5 + 0.004), _m(col.darkened(0.3), 0.6, 0.4), 0.002)
-	_cyl(root, 0.0045, 0.03, Vector3(-width * 0.15, t2 * 0.6, -length * 0.5 - 0.004), brass, Vector3(PI * 0.5, 0, 0))
+	_cyl(root, 0.0045, minf(width * 0.8, 0.05), Vector3(0, t2 * 0.65, -length * 0.5 - 0.003), brass, Vector3(0, 0, PI * 0.5))
 
 
 ## Chaleco táctico: el chaleco con un porta-cargador por grilla de 1×2 y bolsillos.
@@ -308,7 +310,7 @@ static func _cyl(parent: Node3D, r: float, h: float, pos: Vector3, m: Material, 
 
 
 ## Arma para mostrar (sin brazos ni manos, visor sin imagen).
-static func display_weapon(data: WeaponData) -> Node3D:
+static func display_weapon(data: WeaponData, sight := "__fabrica", muzzle := "") -> Node3D:
 	if String(data.model_params.get("shape", "")) == "imported":
 		# El .glb importado solo se ve bien animado (brazos y arma en un esqueleto):
 		# para mostrarlo quieto se usa el AR-74 por código acortado (tipo AKS-74U)
@@ -317,10 +319,10 @@ static func display_weapon(data: WeaponData) -> Node3D:
 		d2.model_params["barrel"] = 0.21
 		d2.model_params["hg"] = 0.12
 		data = d2
-	# Con la mira de fábrica (si es un accesorio)
-	var sg := WeaponAttach.sight_of(data, {})
+	# Con su mira (o la de fábrica) y su silenciador
+	var sg := WeaponAttach.sight_of(data, {}) if sight == "__fabrica" else sight
 	var m := WeaponModelBuilder.build(WeaponAttach.model_data(data, sg))
-	WeaponAttach.apply_model(m, data, sg, "")
+	WeaponAttach.apply_model(m, data, sg, muzzle)
 	for n in ["HandR", "HandL", "HookR", "HookL", "HookP", "Arms", "SkinnedArms"]:
 		var h := m.find_child(n, true, false)
 		if h != null:

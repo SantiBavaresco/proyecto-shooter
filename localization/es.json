@@ -317,5 +317,14 @@
 	"weapon.no_mags": "Sin cargadores con balas",
 	"weapon.from_backpack": "Buscando en la mochila…",
 	"weapon.slam_fire": "¡Disparo accidental!",
-	"inv.dropped_no_room": "No hay lugar: %s quedó en el piso"
+	"inv.dropped_no_room": "No hay lugar: %s quedó en el piso",
+	"greybox.floors": "PISOS (PASOS)",
+	"greybox.floor_concrete": "HORMIGÓN",
+	"greybox.floor_dirt": "TIERRA",
+	"greybox.floor_wood": "MADERA",
+	"greybox.floor_metal": "METAL",
+	"item.optic_acog": "Visor 4x AC-4 (tipo ACOG)",
+	"item.optic_acog.desc": "Visor compacto de 4 aumentos con fibra óptica arriba y retícula de chevrón.",
+	"item.optic_elcan": "Visor 4x SP-4 (tipo Elcan)",
+	"item.optic_elcan.desc": "Visor de 4 aumentos con alza de respaldo arriba y retícula de cruz."
 }

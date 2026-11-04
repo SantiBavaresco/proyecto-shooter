@@ -125,7 +125,7 @@ static func cond_color(c: float) -> Color:
 
 ## Ícono de una pila dentro de un rectángulo (girado si la pila está girada).
 static func draw_icon(ci: CanvasItem, s: ItemStack, r: Rect2, faded := false, force_rot := -1) -> void:
-	var tex := ItemIcons.icon(ci.get_tree(), s.item)
+	var tex := ItemIcons.icon(ci.get_tree(), s.item, s.state)
 	if tex == null:
 		return
 	var rot := s.rotated if force_rot < 0 else force_rot >= 1

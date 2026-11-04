@@ -850,6 +850,7 @@ func _refresh() -> void:
 	var o := pinv.overload()
 	fill.bg_color = UiTheme.ALERT if o > 1.0 else (UiTheme.ACCENT if o > 0.0 else UiTheme.TEXT.darkened(0.3))
 	_weight_warn.text = tr("inv.too_heavy") if o > 1.0 else (tr("inv.overloaded") if o > 0.0 else "")
+	_weight_warn.visible = _weight_warn.text != ""
 	_money_label.text = tr("inv.money") % _thousands(pinv.money)
 	_hint.text = _hint_text()
 	_take_btn.text = "%s  [%s]" % [tr("inv.take_all"), InputActions.event_label(InputActions.get_kbm_event("inv_take_all"))]

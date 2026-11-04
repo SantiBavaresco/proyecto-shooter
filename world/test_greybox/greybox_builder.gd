@@ -164,6 +164,30 @@ func _build() -> void:
 	_build_range(geo)
 	_build_armory(geo)
 	_build_loot_area(geo)
+	_build_floor_samples(geo)
+
+
+## Pisos para probar los pasos: hormigón, tierra, madera y metal (losas de 3,5 m).
+func _build_floor_samples(geo: Node3D) -> void:
+	var pads := [["concrete", Color(0.55, 0.55, 0.53), "greybox.floor_concrete"],
+		["dirt", Color(0.4, 0.31, 0.2), "greybox.floor_dirt"],
+		["wood", Color(0.5, 0.36, 0.22), "greybox.floor_wood"],
+		["metal", Color(0.36, 0.39, 0.42), "greybox.floor_metal"]]
+	for i in pads.size():
+		var m := StandardMaterial3D.new()
+		m.albedo_color = pads[i][1]
+		m.roughness = 0.9 if pads[i][0] != "metal" else 0.45
+		m.metallic = 0.6 if pads[i][0] == "metal" else 0.0
+		var x := -1.0 + i * 4.0
+		_box(geo, Vector3(x, 0.02, 24.0), Vector3(3.5, 0.04, 3.5), m, true, pads[i][0])
+		if pads[i][0] == "wood":
+			# Tablas
+			var dark := StandardMaterial3D.new()
+			dark.albedo_color = Color(0.32, 0.22, 0.13)
+			for k in 6:
+				_box(geo, Vector3(x - 1.75 + 0.58 * (k + 0.5), 0.041, 24.0), Vector3(0.02, 0.003, 3.5), dark, false)
+		_label(geo, Vector3(x, 0.6, 22.0), tr(pads[i][2]), 0.9)
+	_sign(geo, Vector3(5.0, 3.0, 24.0), tr("greybox.floors"))
 
 
 ## Inventario y saqueo: contenedores, ítems sueltos y alambre de púas.
@@ -177,7 +201,8 @@ func _build_loot_area(geo: Node3D) -> void:
 			["w_svd", 1], ["ammo_762x54r", 40], ["scrap_electronics", 4]], 0],
 		["LootWeapons", "weapons", Vector3(15.5, 0, 11.0), [], 0],
 		["LootGear", "stash", Vector3(18.5, 0, 11.0), [["rig_light", 1], ["rig_assault", 1], ["backpack_small", 1],
-			["backpack_expedition", 1], ["optic_holo_a", 1], ["optic_reddot", 1], ["supp_545", 1], ["supp_pistol", 1]], 0],
+			["backpack_expedition", 1], ["optic_holo_a", 1], ["optic_reddot", 1], ["optic_acog", 1], ["optic_elcan", 1], ["supp_545", 1],
+			["supp_pistol", 1], ["supp_762", 1]], 0],
 	]
 	for b: Array in boxes:
 		var c := LootContainerScript.new() as LootContainer

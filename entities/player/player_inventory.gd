@@ -470,7 +470,7 @@ func stow_or_drop(slot: String) -> void:
 	if unequip(slot) == null:
 		var t := take_equipped(slot)
 		if t != null:
-			drop(t)
+			drop(t, true)
 			EventBus.toast.emit(tr("inv.dropped_no_room") % ItemDB.display_name(t.item))
 
 
@@ -861,15 +861,21 @@ func place_equipped(s: ItemStack, slot: String) -> bool:
 
 
 ## Tira una pila al suelo delante del jugador (ya sacada del inventario).
-func drop(s: ItemStack) -> WorldItem:
+## Con "at_feet" cae a los pies (sin sonido): lo que no entró al agarrar otra cosa.
+func drop(s: ItemStack, at_feet := false) -> WorldItem:
 	if s == null or player == null or not player.is_inside_tree():
 		return null
 	var cam := player.camera
 	var fwd := -cam.global_basis.z
 	fwd.y = 0.0
 	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
-	var pos := player.global_position + fwd * 0.7 + Vector3(0, 1.1, 0)
 	var parent := player.get_tree().current_scene if player.get_tree().current_scene != null else player.get_parent()
+	if at_feet:
+		var side := fwd.cross(Vector3.UP)
+		var w := WorldItem.spawn(parent, s, player.global_position + fwd * 0.25 + side * 0.25 + Vector3(0, 0.35, 0))
+		w.add_collision_exception_with(player)
+		return w
+	var pos := player.global_position + fwd * 0.7 + Vector3(0, 1.1, 0)
 	_foley("drop_item")
 	return WorldItem.spawn(parent, s, pos, fwd * 1.6 + Vector3(0, 1.0, 0))
 

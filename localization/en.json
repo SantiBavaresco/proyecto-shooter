@@ -317,5 +317,14 @@
 	"weapon.no_mags": "No loaded magazines",
 	"weapon.from_backpack": "Digging through the backpack…",
 	"weapon.slam_fire": "Accidental discharge!",
-	"inv.dropped_no_room": "No room: %s was dropped"
+	"inv.dropped_no_room": "No room: %s was dropped",
+	"greybox.floors": "FLOORS (FOOTSTEPS)",
+	"greybox.floor_concrete": "CONCRETE",
+	"greybox.floor_dirt": "DIRT",
+	"greybox.floor_wood": "WOOD",
+	"greybox.floor_metal": "METAL",
+	"item.optic_acog": "AC-4 4x scope (ACOG type)",
+	"item.optic_acog.desc": "Compact 4x scope with a fiber optic on top and a chevron reticle.",
+	"item.optic_elcan": "SP-4 4x scope (Elcan type)",
+	"item.optic_elcan.desc": "4x scope with backup iron sights on top and a crosshair reticle."
 }

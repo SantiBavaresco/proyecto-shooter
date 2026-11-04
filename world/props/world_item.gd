@@ -36,7 +36,7 @@ func _ready() -> void:
 	collision_mask = 1
 	continuous_cd = true
 	set_meta("surface", "metal" if stack.item.kind in ["weapon", "ammo"] else "wood")
-	var model := ItemModels.build(stack.item)
+	var model := ItemModels.build(stack.item, stack.state)
 	add_child(model)
 	var box := ItemModels.local_aabb(model)
 	# En el piso se ven al doble (a escala real son muy chicos para encontrarlos y

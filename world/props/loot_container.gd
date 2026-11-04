@@ -30,6 +30,7 @@ const RANDOM_LOOT := [
 ## Caja de armas: [id, mínimo, máximo, probabilidad] (los cargadores, aparte).
 const WEAPONS_LOOT := [
 	["optic_reddot", 1, 1, 0.45], ["optic_holo_a", 1, 1, 0.25], ["optic_holo_b", 1, 1, 0.25], ["optic_scope4x", 1, 1, 0.2],
+	["optic_acog", 1, 1, 0.2], ["optic_elcan", 1, 1, 0.2],
 	["supp_pistol", 1, 1, 0.35], ["supp_545", 1, 1, 0.3], ["supp_762", 1, 1, 0.3],
 	["ammo_545x39", 30, 60, 0.5], ["ammo_556x45", 30, 60, 0.4], ["ammo_762x39", 30, 60, 0.4], ["ammo_9x19", 30, 60, 0.5],
 	["ammo_762x51", 20, 40, 0.3], ["ammo_45acp", 20, 50, 0.3],

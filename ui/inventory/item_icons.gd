@@ -11,19 +11,23 @@ static var _inst: ItemIcons
 var _cache: Dictionary = {}
 
 
-static func icon(tree: SceneTree, item: ItemData) -> Texture2D:
+## "state": el de la pila (las armas se dibujan con su mira y silenciador).
+static func icon(tree: SceneTree, item: ItemData, state := {}) -> Texture2D:
 	if item == null or tree == null:
 		return null
 	if _inst == null or not is_instance_valid(_inst):
 		_inst = ItemIcons.new()
 		_inst.name = "ItemIcons"
 		tree.root.add_child(_inst)
-	return _inst._icon_for(item)
+	return _inst._icon_for(item, state)
 
 
-func _icon_for(item: ItemData) -> Texture2D:
-	if _cache.has(item.id):
-		return _cache[item.id]
+func _icon_for(item: ItemData, state := {}) -> Texture2D:
+	var cache_key := item.id
+	if item.kind == "weapon":
+		cache_key += "|%s|%s" % [String(state.get("sight", "-")), String(state.get("muzzle", ""))]
+	if _cache.has(cache_key):
+		return _cache[cache_key]
 	var vp := SubViewport.new()
 	vp.size = Vector2i(item.size.x, item.size.y) * PX_PER_CELL
 	vp.transparent_bg = true
@@ -31,7 +35,7 @@ func _icon_for(item: ItemData) -> Texture2D:
 	vp.msaa_3d = Viewport.MSAA_4X
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(vp)
-	var model := ItemModels.build(item)
+	var model := ItemModels.build(item, state)
 	vp.add_child(model)
 	# Luz de estudio: principal desde arriba a la izquierda y relleno
 	var key := DirectionalLight3D.new()
@@ -60,7 +64,7 @@ func _icon_for(item: ItemData) -> Texture2D:
 	vp.add_child(cam)
 	cam.current = true
 	var tex := vp.get_texture()
-	_cache[item.id] = tex
+	_cache[cache_key] = tex
 	return tex
 
 

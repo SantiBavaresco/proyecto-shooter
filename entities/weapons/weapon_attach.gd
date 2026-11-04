@@ -108,6 +108,10 @@ static func _build_optic(id: String, tinted := true) -> Node3D:
 	var base := GlbWeapon._v(a.get("base", [0, 0, 0]))
 	if scene == "code":
 		WeaponModelBuilder.red_dot(root, 0.0, 0.0)
+	elif scene == "code_acog":
+		_acog(root)
+	elif scene == "code_elcan":
+		_elcan(root)
 	else:
 		# Las piezas "keep" del .glb, alineadas como en su arma
 		var model := Node3D.new()
@@ -189,6 +193,42 @@ static func _tint(mi: MeshInstance3D, k: float, rough: float) -> void:
 		mi.set_surface_override_material(i, _tinted[key])
 
 
+## Visor compacto tipo ACOG: tubo que se ensancha hacia adelante, carcasa arriba con
+## la fibra óptica verde, torretas y montura con tuerca.
+static func _acog(root: Node3D) -> void:
+	var m := WeaponModelBuilder.mat("anodized")
+	var y := 0.032
+	WeaponModelBuilder.rbox(root, "AcogMount", Vector3(0.026, 0.012, 0.05), Vector3(0, 0.006, 0.005), m, 0.002)
+	WeaponModelBuilder.cyl(root, "AcogNut", 0.006, 0.01, Vector3(0.018, 0.007, 0.005), m, 12, Vector3(0, PI * 0.5, 0), 0.002)
+	WeaponModelBuilder.rbox(root, "AcogNeck", Vector3(0.022, 0.02, 0.07), Vector3(0, 0.018, 0.0), m, 0.004)
+	WeaponModelBuilder.lathe(root, "AcogBody", [0.058, 0.0, 0.058, 0.0155, 0.05, 0.0165, 0.035, 0.016, 0.0, 0.0175,
+		-0.04, 0.0195, -0.058, 0.021, -0.062, 0.021, -0.062, 0.0], m, Vector3(0, y, 0), 24)
+	WeaponModelBuilder.rbox(root, "AcogTop", Vector3(0.03, 0.016, 0.075), Vector3(0, y + 0.013, -0.002), m, 0.006)
+	var fiber := StandardMaterial3D.new()
+	fiber.albedo_color = Color(0.2, 0.7, 0.2)
+	fiber.emission_enabled = true
+	fiber.emission = Color(0.15, 0.6, 0.1)
+	WeaponModelBuilder.cyl(root, "AcogFiber", 0.0035, 0.065, Vector3(0, y + 0.023, -0.005), fiber, 10)
+	for sx: float in [-1.0, 1.0]:
+		WeaponModelBuilder.cyl(root, "AcogTurret", 0.006, 0.008, Vector3(sx * 0.02, y, 0.0), m, 12, Vector3(0, PI * 0.5, 0), 0.0015)
+
+
+## Visor tipo Elcan Specter: objetivo grande, tapa plana arriba con alza y guion de
+## respaldo, palanca de aumento al costado y base larga.
+static func _elcan(root: Node3D) -> void:
+	var m := WeaponModelBuilder.mat("anodized")
+	var y := 0.035
+	WeaponModelBuilder.rbox(root, "ElcanBase", Vector3(0.032, 0.014, 0.08), Vector3(0, 0.007, 0.0), m, 0.003)
+	WeaponModelBuilder.rbox(root, "ElcanNeck", Vector3(0.024, 0.02, 0.09), Vector3(0, 0.02, 0.0), m, 0.004)
+	WeaponModelBuilder.lathe(root, "ElcanBody", [0.07, 0.0, 0.07, 0.019, 0.055, 0.02, 0.0, 0.02, -0.05, 0.021,
+		-0.065, 0.026, -0.08, 0.026, -0.08, 0.0], m, Vector3(0, y, 0), 24)
+	WeaponModelBuilder.rbox(root, "ElcanTop", Vector3(0.032, 0.01, 0.1), Vector3(0, y + 0.022, -0.005), m, 0.003)
+	WeaponModelBuilder.rbox(root, "ElcanPost", Vector3(0.004, 0.012, 0.004), Vector3(0, y + 0.033, -0.048), m, 0.001)
+	WeaponModelBuilder.rbox(root, "ElcanRear", Vector3(0.014, 0.01, 0.005), Vector3(0, y + 0.032, 0.04), m, 0.0015)
+	WeaponModelBuilder.rbox(root, "ElcanLever", Vector3(0.005, 0.012, 0.035), Vector3(0.023, y - 0.004, 0.01), m, 0.002,
+		Vector3(0, 0, 0.3))
+
+
 ## Silenciador: cilindro con anillos, desde la boca hacia adelante (−Z).
 static func suppressor_node(id: String) -> Node3D:
 	var a := ItemDB.get_item(id).attach
@@ -197,6 +237,17 @@ static func suppressor_node(id: String) -> Node3D:
 	var root := Node3D.new()
 	root.name = "Suppressor"
 	var m := WeaponModelBuilder.mat("anodized")
+	if String(a.get("shape", "")) == "osprey":
+		# Tipo Osprey: sección rectangular con bordes muy redondeados y el caño arriba
+		# (el cuerpo baja, así no tapa las miras)
+		var w := r * 2.1
+		var h := r * 2.7
+		WeaponModelBuilder.rbox(root, "SupBody", Vector3(w, h, length), Vector3(0, -h * 0.5 + r * 1.05, -length * 0.5 + 0.004),
+			m, w * 0.42)
+		WeaponModelBuilder.rbox(root, "SupCap", Vector3(w + 0.002, h + 0.002, 0.012), Vector3(0, -h * 0.5 + r * 1.05, -length + 0.01),
+			WeaponModelBuilder.mat("metal"), w * 0.42)
+		WeaponModelBuilder.cyl(root, "SupMount", r * 0.75, 0.02, Vector3(0, 0, 0.004), WeaponModelBuilder.mat("metal"), 14)
+		return root
 	WeaponModelBuilder.cyl(root, "SupBody", r, length, Vector3(0, 0, -length * 0.5 + 0.004), m, 18, Vector3.ZERO, r * 0.25)
 	for z: float in [-0.012, -length + 0.02]:
 		WeaponModelBuilder.cyl(root, "SupRing", r + 0.0012, 0.008, Vector3(0, 0, z), WeaponModelBuilder.mat("metal"), 18)

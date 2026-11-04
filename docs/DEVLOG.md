@@ -387,3 +387,14 @@
 - Cargadores de pistola con otra forma (acero redondeado, base ancha, agujeros testigo); los de fusil, con nervaduras; el de la Bizon, helicoidal.
 - Mochila más chica sacada de adentro de la puesta: la grande ya no desaparece (va a otro contenedor o al piso).
 - Agarrar un arma de la mesa: la que había en esa ranura va a la mochila o, si no entra, al piso.
+
+## 2.1.3 — Escopeta de vuelta, visores 4x, silenciador tipo Osprey y más correcciones (2026-11-04)
+- Escopeta doble caño: vuelve el modelo por código (con el de la Zastava los cartuchos de la recarga fallaban). El .glb queda sin uso.
+- Arma que no entra al agarrar otra de la mesa: cae a los pies, sin sonido.
+- Cargadores: la bala de arriba queda acostada sobre los labios.
+- Pasos más bajos (−19 dB caminando, −16 corriendo) y zona "PISOS (PASOS)" con losas de hormigón, tierra, madera y metal para probarlos.
+- Íconos del inventario: las armas se dibujan con su mira y su silenciador (en el equipo, la mochila y las cajas).
+- PP-B: la manija de carga (pieza "Reciever" del modelo) se mueve al disparar y al montar.
+- Visores 4x nuevos: AC-4 (tipo ACOG, con fibra óptica) y SP-4 (tipo Elcan, con alza de respaldo). En las cajas de armas y en la caja de equipo.
+- Silenciador de 9 mm/.45 tipo Osprey: sección rectangular redondeada con el caño arriba. M-23: modelo corrido 2,3 mm para que la boca quede en el eje.
+- Inventario: los bolsillos suben (el aviso de sobrecarga solo ocupa lugar cuando aparece).

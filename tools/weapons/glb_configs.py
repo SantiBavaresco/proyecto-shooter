@@ -48,7 +48,7 @@ C={
     "sight":[0,0.0413,-0.168],"eye_relief":0.568,"muzzle":[0,0.02,-0.171],"ejection":[0,0.02,-0.055],
     "pose":{"top":[0,-0.0103,0.0276],"bottom":[0,-0.117,0.0578],"r":0.016,"trigger":[0,-0.0512,-0.0418],"left":"pistol"}},
  "pp19": {"shape":"glb","scene":W+"bizon/bizon.glb","rot":[0,90,0],"scale":0.048,"offset":[0,-0.052,0.034],
-    "parts":{"Mag":["mag_"],"Charging":["__ninguna__"]},"pivots":{"Mag":[0,-0.025,-0.1],"Charging":[0.022,0.012,-0.1]},
+    "parts":{"Mag":["mag_"],"Charging":["reciever"]},"pivots":{"Mag":[0,-0.025,-0.1],"Charging":[0.03,0.006,-0.116]},
     "metas":{"Charging":{"knob":[0.006,0,0]},"Mag":{"grab":[0,-0.017,-0.107]}},
     "hide":["holo"],
     "sight":[0,0.05,-0.04],"eye_relief":0.3,"muzzle":[0,0,-0.382],"ejection":[0.015,0.01,-0.06],
@@ -65,16 +65,11 @@ C={
     "metas":{"Charging":{"knob":[0.006,0,0]}},
     "sight":[0,0.05,-0.1],"eye_relief":0.35,"muzzle":[0,0,-0.716],"ejection":[0.015,0.0,-0.02],"hip":[0.13,-0.15,-0.33],
     "pose":{"top":[0,-0.075,0.035],"bottom":[0,-0.15,0.07],"r":0.016,"trigger":[0,-0.087,-0.043],"left":"forend","lc":[0,0.0,-0.39],"lr":0.034}},
- "mark23": {"shape":"glb","scene":W+"mark23/mark23.glb","rot":[0,180,0],"scale":0.009,"offset":[-0.0995,-1.3695,0.055],
+ "mark23": {"shape":"glb","scene":W+"mark23/mark23.glb","rot":[0,180,0],"scale":0.009,"offset":[-0.0972,-1.3695,0.055],
     "hide":["hand","arm1","shoulder","spine"],
     "parts":{"Slide":["side_j"],"Mag":["mag_j"]},"pivots":{"Slide":[0,0,0],"Mag":[0,-0.06,0.03]},
     "sight":[0,0.0175,-0.105],"eye_relief":0.6,"muzzle":[0,0,-0.128],"ejection":[0.012,0.01,-0.02],
     "pose":{"top":[0,-0.03,0.062],"bottom":[0,-0.112,0.078],"r":0.016,"trigger":[0,-0.047,0.012],"left":"pistol"}},
- "shotgun": {"shape":"glb","scene":W+"zastava/zastava.glb","rot":[0,180,0],"scale":0.18,"offset":[0,-0.0926,-0.013],
-    "parts":{"Barrels":["barrel"]},"pivots":{"Barrels":[0,-0.02,-0.055]},
-    "shells":{"L":[-0.0122,0.02,0.025],"R":[0.0122,0.02,0.025]},
-    "sight":[0,0.0125,-0.6],"eye_relief":0.707,"muzzle":[0,0,-0.613],"ejection":[0,0.02,-0.05],
-    "pose":{"top":[0,-0.04,0.06],"bottom":[0,-0.1,0.12],"r":0.02,"trigger":[0,-0.063,-0.04],"left":"forend","left_in":"Barrels","lc":[0,-0.025,-0.25],"lr":0.028}},
 }
 if __name__=="__main__":
     ids = sys.argv[1].split(",") if len(sys.argv)>1 else list(C)

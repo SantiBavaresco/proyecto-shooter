@@ -7,85 +7,8 @@ script = ExtResource("1_wd")
 slot = 2
 model = "shotgun_sxs"
 model_params = {
-"shape": "glb",
-"scene": "res://assets/models/weapons/zastava/zastava.glb",
-"rot": [
-0,
-180,
-0
-],
-"scale": 0.18,
-"offset": [
-0,
--0.0926,
--0.013
-],
-"parts": {
-"Barrels": [
-"barrel"
-]
-},
-"pivots": {
-"Barrels": [
-0,
--0.02,
--0.055
-]
-},
-"shells": {
-"L": [
--0.0122,
-0.02,
-0.025
-],
-"R": [
-0.0122,
-0.02,
-0.025
-]
-},
-"sight": [
-0,
-0.0125,
--0.6
-],
-"eye_relief": 0.707,
-"muzzle": [
-0,
-0,
--0.613
-],
-"ejection": [
-0,
-0.02,
--0.05
-],
-"pose": {
-"top": [
-0,
--0.04,
-0.06
-],
-"bottom": [
-0,
--0.1,
-0.12
-],
-"r": 0.02,
-"trigger": [
-0,
--0.063,
--0.04
-],
-"left": "forend",
-"left_in": "Barrels",
-"lc": [
-0,
--0.025,
--0.25
-],
-"lr": 0.028
-}
+"barrel": 0.62,
+"stock": "full"
 }
 sight = "bead"
 scope_mag = 0.0
