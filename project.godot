@@ -8,7 +8,7 @@ config_version=5
 
 config/name="Medoreador"
 config/description="Shooter táctico de supervivencia en mundo abierto - Zona de Atucha / Delta del Paraná"
-config/version="0.2.4-f2"
+config/version="0.2.5-f2"
 run/main_scene="res://ui/boot/boot.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"

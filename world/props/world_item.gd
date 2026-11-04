@@ -3,6 +3,9 @@ extends RigidBody3D
 ## Ítem suelto en el mundo (tirado desde el inventario o puesto en el nivel).
 ## [F] lo agarra: va a la mochila si entra (la plata, al contador).
 
+## Escala de los ítems sueltos (no armas) en el mundo.
+const GROUND_SCALE := 2.0
+
 var stack: ItemStack
 var _ready_done: bool = false
 
@@ -36,13 +39,18 @@ func _ready() -> void:
 	var model := ItemModels.build(stack.item)
 	add_child(model)
 	var box := ItemModels.local_aabb(model)
+	# En el piso se ven al doble (a escala real son muy chicos para encontrarlos y
+	# agarrarlos); las armas quedan a escala real
+	if stack.item.kind != "weapon":
+		model.scale = Vector3.ONE * GROUND_SCALE
+		box = AABB(box.position * GROUND_SCALE, box.size * GROUND_SCALE)
 	var cs := CollisionShape3D.new()
 	var sh := BoxShape3D.new()
 	sh.size = Vector3(maxf(box.size.x, 0.04), maxf(box.size.y, 0.03), maxf(box.size.z, 0.04))
 	cs.shape = sh
 	cs.position = box.get_center()
 	add_child(cs)
-	mass = clampf(stack.weight(), 0.2, 6.0)
+	mass = clampf(stack.weight() * 2.0, 0.3, 8.0)
 	physics_material_override = PhysicsMaterial.new()
 	physics_material_override.friction = 0.9
 	physics_material_override.bounce = 0.05

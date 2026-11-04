@@ -343,3 +343,6 @@
 - ST-2 y AC-9: la mano agarra el cargador por arriba (nudillos arriba, dedos envolviéndolo), con el antebrazo viniendo de atrás a la izquierda. La orientación se calculó para esa pose y es configurable por arma (`side_mag_hand`, euler YXZ).
 - Vainas: rebotan poco y casi no ruedan (más fricción y frenado del giro; en pendiente siguen bajando). Cuando quedan quietas dejan de ser cuerpos físicos y pasan a una lista que se dibuja de una sola vez (MultiMesh): duran 4,5 minutos y se ven hasta 150 m. Máximo 600 por tipo (las más viejas se van). Costo casi nulo.
 - Escopetas: la expulsión se rehízo. Antes las vainas se animaban dentro de la vista del arma y subían 20 cm delante de la cámara (se veían enormes, flotando) y además salían las vainas físicas. Ahora el extractor las saca un poco al abrir y enseguida saltan como vainas reales hacia arriba y atrás, por encima de la cabeza, y caen detrás. No chocan con el jugador.
+
+## 2.0.5 — Objetos del piso más grandes (2026-11-03)
+- Los ítems sueltos en el mundo (vendas, botiquines, comida, munición, equipo, plata) se ven al doble y su caja para agarrarlos también; las armas siguen a escala real. Los íconos del inventario no cambian.

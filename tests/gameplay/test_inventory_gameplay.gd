@@ -212,6 +212,8 @@ func test_ammo_crate_restocks() -> void:
 func test_pick_up_and_drop_world_items() -> void:
 	var cash := level.find_child("Item_cash", true, false) as WorldItem
 	assert_true(cash != null, "hay plata suelta")
+	var cs := cash.get_children().filter(func(n: Node) -> bool: return n is CollisionShape3D)[0] as CollisionShape3D
+	assert_gt(((cs.shape as BoxShape3D).size.x), 0.25, "en el piso se ven al doble (fajo de 15,6 cm → 31 cm)")
 	var money := pinv.money
 	cash.interact(player)
 	await physics_frames(2)
