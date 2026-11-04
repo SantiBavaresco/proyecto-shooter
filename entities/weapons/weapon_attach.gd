@@ -8,9 +8,6 @@ extends RefCounted
 ##  - apply_model(): agrega al modelo la mira (con su soporte, vidrio y la línea de
 ##    mira en el marcador "Sight") y el silenciador (hijo del marcador "Muzzle").
 
-## Modelos de miras ya armados (se duplican).
-static var _optics: Dictionary = {}
-
 
 ## Mira y silenciador que tiene un arma según su estado (si el estado no dice nada,
 ## la mira de fábrica).
@@ -79,11 +76,11 @@ static func apply_model(root: Node3D, base: WeaponData, sight_id: String, muzzle
 			mz.add_child(suppressor_node(muzzle_id))
 
 
-## Modelo de una mira, con la base en el origen (se duplica de uno ya armado).
+## Modelo de una mira, con la base en el origen. Se arma cada vez (duplicar un nodo
+## que viene de un .glb lo vuelve a instanciar entero, con las piezas que se sacaron);
+## lo caro (pasar las mallas con huesos a mallas fijas) ya queda guardado.
 static func optic_node(id: String) -> Node3D:
-	if not _optics.has(id):
-		_optics[id] = _build_optic(id)
-	var n := (_optics[id] as Node3D).duplicate() as Node3D
+	var n := _build_optic(id)
 	n.name = "Optic"
 	return n
 

@@ -86,11 +86,21 @@ func _ready() -> void:
 	var dummy := level.get_node("Geometry/Dummy15m") as Node3D
 	player.teleport(Vector3(30, 0.05, 30), PI)
 	await _frames(20)
-	for id in ids:
+	for full_id in ids:
+		# "akm+optic_holo_a+supp_762": arma con accesorios
+		var parts := full_id.split("+")
+		var id := parts[0]
+		var st := {}
+		for k in range(1, parts.size()):
+			var it := ItemDB.get_item(parts[k])
+			if it != null:
+				st["sight" if it.kind == "sight" else "muzzle"] = parts[k]
 		var d := load("res://data/weapons/%s.tres" % id) as WeaponData
 		var slot := 3 if d.slot == 3 else 1
 		bot.aim = false
-		player.weapons.equip_weapon(d, slot)
+		player.weapons.equip_weapon(d, slot, st)
+		if parts.size() > 1:
+			id = full_id.replace("+", "_")
 		bot.select_slot(slot)
 		await _frames(50)
 		_aim_at(player, dummy.global_position + Vector3(0, 1.2, 0))

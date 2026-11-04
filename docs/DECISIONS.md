@@ -86,3 +86,12 @@ Hasta tener un modelo de brazos con huesos, los brazos se generan por arma con d
 - Las mesas de la armería quedan como banco de pruebas: equipan directo (el arma reemplazada vuelve a la mesa) y dan la munición inicial. El comercio llega en F6.
 - El inventario no pausa el mundo (como STALKER 2); el jugador no se mueve ni dispara con la pantalla abierta.
 - Sin guardado todavía: morir reinicia el nivel.
+
+## 2026-11-04 — Cargadores, accesorios e inventario por contenedores (2.1)
+- **Cargadores reales** por familia (cada uno con sus balas). Pistolas: genéricos por calibre (9×19 de 15, .45 de 10, .22 de 10). Únicos: Bizon (64), Vityaz, MP5, G3, FAL, M14, SR-25, SVD (lo comparte el CK-21). Comparten: STANAG (AR-15, HK416, SCAR-L), AK 5,45 (AR-74, AR-74K), AK 7,62, STEN (ST-2 y AC-9). De más capacidad: STANAG 40, AK 5,45 de 45, AK 7,62 de 40, 9×19 de 25.
+- Recarga: el más lleno del chaleco o los bolsillos; de la mochila tarda ×1,6. El viejo vuelve a donde estaba el nuevo con sus balas menos la de la recámara (30 + 1). R dos veces: ×0,72 y el viejo cae al piso.
+- Escopetas, revólver, cerrojos y SK-45 siguen con munición suelta.
+- **Lugar por equipo**: 4 bolsillos de 1×1, chaleco táctico con grillas chicas (liviano, mediano, de asalto) y mochila con una grilla (4×5, 5×6, 5×8, 6×10). Sin mochila no hay grilla grande. Una mochila o chaleco con cosas no entra en los contenedores del jugador; al cambiarla, lo de adentro pasa a la nueva.
+- **Accesorios**: miras sobre un montaje por arma (`data/items/attachments.json`: punto de apoyo y soporte); silenciadores por grupo de rosca según el calibre. Las holográficas de la PP-B y la VK-19 y el visor del CK-21 son ítems sacados de sus modelos (vienen puestos de fábrica). La mira de las armas por código con óptica fija (HK416, SCAR-L, SVD...) no se saca todavía.
+- **Disparo accidental**: al montar (recarga vacía o destrabado) y doble disparo en semiautomáticas; muy raro en un arma sana, más probable gastada.
+- **Muerte y cooperativo (diseño)**: una sola vida sin cargar partida: al morir, el cuerpo queda con todo y se reaparece en el último campamento neutral con lo del alijo general. La historia avanza por hechos del mundo (no se deshace al morir). Se programa para un jugador pero preparado para cooperativo PvE: el jugador ya se maneja por órdenes (PlayerCommand), los ítems se guardan como datos (to_dict) y el loot al azar se tira la primera vez que se abre la caja con una semilla propia (en red decide el anfitrión).

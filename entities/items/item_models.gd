@@ -151,8 +151,18 @@ static func build(item: ItemData) -> Node3D:
 static var _mag_models: Dictionary = {}
 
 
+## Cargadores por código (los que no salen bien del modelo del arma): [largo, ancho] (m).
+const MAG_SHAPES := {"pist_9x19": [0.13, 0.033], "pist_45": [0.12, 0.034], "pist_22": [0.11, 0.028],
+	"mp5": [0.2, 0.04], "sten": [0.24, 0.036], "p91": [0.22, 0.036], "vityaz": [0.21, 0.05], "stanag": [0.19, 0.062],
+	"fal": [0.17, 0.07], "g3": [0.18, 0.068], "m14": [0.16, 0.07], "sr25": [0.15, 0.07], "svd": [0.12, 0.085],
+	"sr22": [0.1, 0.045]}
+
+
 static func _mag(root: Node3D, item: ItemData) -> void:
 	var fam := item.mag_family
+	if MAG_SHAPES.has(fam):
+		_mag_box(root, item)
+		return
 	if not _mag_models.has(fam):
 		var mag_node: Node3D = null
 		var ref := ItemDB.family_ref(fam)
@@ -179,10 +189,25 @@ static func _mag(root: Node3D, item: ItemData) -> void:
 		g.add_child(m)
 	else:
 		_box(g, Vector3(0.025, 0.16, 0.06), Vector3(0, 0, 0), _m(Color(0.15, 0.15, 0.14), 0.6, 0.4), 0.004)
-	# Acostado de costado: lo largo (alto del cargador) a lo largo de X
-	g.rotation = Vector3(0, 0, PI * 0.5)
+	# Acostado de costado, con lo largo (alto del cargador) hacia Z
+	g.basis = Basis(Vector3.UP, PI * 0.5) * Basis(Vector3.BACK, PI * 0.5)
 	var box := local_aabb(root)
 	g.position = Vector3(-box.get_center().x, -box.position.y, -box.get_center().z)
+
+
+## Cargador recto acostado: cuerpo, base y los labios con un cartucho asomando.
+static func _mag_box(root: Node3D, item: ItemData) -> void:
+	var sh: Array = MAG_SHAPES[item.mag_family]
+	var std := ItemDB.get_item(String(ItemDB.family_mags(item.mag_family)[0]))
+	var length := float(sh[0]) * pow(float(item.capacity) / float(std.capacity), 0.55)
+	var width := float(sh[1])
+	var col := Color(0.2, 0.21, 0.22) if item.mag_family in ["stanag", "sr25", "sr22"] else Color(0.1, 0.105, 0.11)
+	var t := 0.026 if not item.mag_family.begins_with("pist") else 0.02
+	# Acostado con lo largo hacia Z (en el ícono queda parado, como su casilla)
+	_box(root, Vector3(width, t, length), Vector3(0, t * 0.5, 0), _m(col, 0.55, 0.5), 0.003)
+	_box(root, Vector3(width + 0.006, t + 0.004, 0.012), Vector3(0, t * 0.5, length * 0.5 + 0.004), _m(col.darkened(0.3), 0.6, 0.4), 0.002)
+	_cyl(root, 0.0045, 0.03, Vector3(-width * 0.15, t * 0.6, -length * 0.5 - 0.004), _m(Color(0.78, 0.6, 0.28), 0.35, 0.85),
+		Vector3(PI * 0.5, 0, 0))
 
 
 ## Chaleco táctico: el chaleco con un porta-cargador por grilla de 1×2 y bolsillos.

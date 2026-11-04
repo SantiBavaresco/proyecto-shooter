@@ -401,3 +401,98 @@ func test_weapons_rest_on_their_tables() -> void:
 			var b := mi.global_transform * mi.get_aabb()
 			low = minf(low, b.position.y)
 		assert_true(absf(low - top) < 0.03, "%s: apoyada en la mesa (%.3f m de la tabla)" % [wt.name, low - top])
+
+
+## Miras y silenciadores: se ponen desde el inventario, cambian la línea de mira, el
+## tipo de mira y el sonido, y se sacan.
+func test_attachments_on_weapons() -> void:
+	await _equip("akm")
+	var pinv := player.inventory
+	var stack := pinv.equipment["weapon1"] as ItemStack
+	var base_sight := (weapons.current().model.get_node("Sight") as Node3D).position
+	pinv.bag.clear()
+	pinv.bag.add_item("optic_holo_a")
+	pinv.bag.add_item("supp_762")
+	pinv.bag.add_item("supp_545")
+	assert_false(pinv.attach(stack, pinv.first_stack("supp_545"), pinv.bag), "el de 5,45 no va en 7,62")
+	assert_true(pinv.attach(stack, pinv.first_stack("optic_holo_a"), pinv.bag))
+	assert_true(pinv.attach(stack, pinv.first_stack("supp_762"), pinv.bag))
+	await physics_frames(60)
+	var c := weapons.current()
+	assert_eq(c.sight, "optic_holo_a")
+	assert_eq(c.data.sight, "red_dot", "con holográfica apunta por la ventana")
+	assert_true(c.model.has_node("Lens") and c.model.has_node("Optic"), "mira en el modelo")
+	assert_gt((c.model.get_node("Sight") as Node3D).position.y, base_sight.y + 0.02, "línea de mira más alta")
+	assert_true(c.suppressed() and c.model.has_node("Muzzle/Suppressor"), "silenciador puesto")
+	assert_eq(pinv.bag.count_of("optic_holo_a"), 0)
+	# Se sacan y vuelven al inventario
+	assert_true(pinv.detach(stack, "sight"))
+	assert_true(pinv.detach(stack, "muzzle"))
+	await physics_frames(60)
+	assert_eq(weapons.current().data.sight, "iron")
+	assert_false(weapons.current().suppressed())
+	assert_eq(pinv.count_of("optic_holo_a"), 1)
+	assert_eq(pinv.count_of("supp_762"), 1)
+
+
+## La PP-B trae su holográfica puesta y se le puede sacar.
+func test_factory_optic_is_removable() -> void:
+	await _equip("pp19")
+	var c := weapons.current()
+	assert_eq(c.sight, "optic_holo_a", "viene con la HX-1")
+	assert_eq(c.data.sight, "red_dot")
+	var stack := player.inventory.equipment["weapon1"] as ItemStack
+	assert_true(player.inventory.detach(stack, "sight"))
+	await physics_frames(60)
+	assert_false(weapons.current().model.has_node("Lens"), "sin mira")
+	assert_eq(player.inventory.count_of("optic_holo_a"), 1)
+
+
+## Al montar un arma gastada a veces se escapa un tiro.
+func test_slam_fire_when_chambering_a_worn_weapon() -> void:
+	var risk_new: float = WeaponController.fault_risk(1.0)["slam"]
+	var risk_worn: float = WeaponController.fault_risk(0.1)["slam"]
+	assert_lt(risk_new, 0.005, "muy raro en un arma sana")
+	assert_gt(risk_worn, 0.04, "más probable gastada")
+	await _equip("ar15")
+	var c := weapons.current()
+	c.condition = 0.0
+	var fired := 0
+	for i in 60:
+		weapons._rng.seed = i
+		c.mag = 0
+		c.malfunction = ""
+		c.reserve = 200
+		var shots := c.shots
+		bot.press_reload()
+		await physics_frames(2)
+		await physics_frames(int(weapons.state_duration * 60.0) + 12)
+		if c.shots > shots:
+			fired += 1
+		if fired > 0:
+			break
+	assert_gt(float(fired), 0.0, "con el arma destruida, alguna vez se escapó el tiro")
+
+
+## Mesas: 3 cargadores llenos al lado de cada arma con cargador.
+func test_spare_mags_next_to_tables() -> void:
+	var mags := get_tree().get_nodes_in_group("world_items").filter(func(n: Node) -> bool:
+		return String(n.name).begins_with("Mag_akm_"))
+	assert_eq(mags.size(), 3)
+	assert_eq((mags[0] as WorldItem).stack.rounds(), 30, "llenos")
+	assert_eq(get_tree().get_nodes_in_group("world_items").filter(func(n: Node) -> bool:
+		return String(n.name).begins_with("Mag_shotgun_")).size(), 0, "la escopeta no usa")
+
+
+## Caja de armas: se llena al abrirla, siempre igual (semilla de la caja).
+func test_weapons_crate_rolls_on_first_open() -> void:
+	var box := level.find_child("WeaponsCrate0", true, false) as LootContainer
+	assert_false(box.filled, "todavía no se tiró")
+	assert_true(box.inventory.is_empty())
+	box.ensure_filled()
+	var mags := box.inventory.stacks.filter(func(s: ItemStack) -> bool: return s.item.kind == "mag")
+	assert_gt(float(mags.size()), 2.0, "trae cargadores")
+	var ids := box.inventory.stacks.map(func(s: ItemStack) -> String: return s.item.id)
+	box.filled = false
+	box.ensure_filled()
+	assert_eq(box.inventory.stacks.map(func(s: ItemStack) -> String: return s.item.id), ids, "misma semilla, mismo contenido")

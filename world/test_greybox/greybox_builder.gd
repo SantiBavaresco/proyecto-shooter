@@ -176,7 +176,7 @@ func _build_loot_area(geo: Node3D) -> void:
 		["LootStash", "stash", Vector3(12.5, 0, 11.0), [["backpack_large", 1], ["vest_plate", 1], ["tools_basic", 4],
 			["w_svd", 1], ["ammo_762x54r", 40], ["scrap_electronics", 4]], 0],
 		["LootWeapons", "weapons", Vector3(15.5, 0, 11.0), [], 0],
-		["LootGear", "metal", Vector3(18.5, 0, 11.0), [["rig_light", 1], ["rig_assault", 1], ["backpack_small", 1],
+		["LootGear", "stash", Vector3(18.5, 0, 11.0), [["rig_light", 1], ["rig_assault", 1], ["backpack_small", 1],
 			["backpack_expedition", 1], ["optic_holo_a", 1], ["optic_reddot", 1], ["supp_545", 1], ["supp_pistol", 1]], 0],
 	]
 	for b: Array in boxes:

@@ -357,3 +357,14 @@
 - Foley (WAV generados por `tools/audio/gen_foley.py`): pasos según la superficie (hormigón, tierra, madera, metal), abrir cajas/alijos, equipar, agarrar ítems y armas, tirar.
 - Mesas: las escopetas flotaban 27 cm sobre la mesa (contaban las vainas ocultas para apoyarlas); arreglado y con prueba.
 - Sombra del jugador: un cuerpo de cápsulas que solo proyecta sombra (piernas que caminan, agacharse, inclinarse, brazos con el arma) en lugar del cilindro.
+
+## 2.1.0 — Cargadores, miras, silenciadores, chalecos tácticos y mochilas con grilla (2026-11-04)
+- Cargadores como ítems con sus balas (21 tipos, ver DECISIONS). Las armas con cargador recargan con el más lleno del chaleco o los bolsillos (de la mochila tarda más); el viejo vuelve con lo que le quedaba y queda una en la recámara (30 + 1).
+- R dos veces rápido: recarga rápida, el cargador viejo cae al piso.
+- Llenar cargadores: botón "Llenar cargadores", menú del cargador o arrastrar munición encima. Vaciar cargador.
+- Inventario por contenedores: bolsillos (4 × 1×1), chaleco táctico (3 modelos con grillas chicas, dibujadas con su forma) y mochila (4 modelos: 4×5, 5×6, 5×8, 6×10). Nueva ranura de equipo "Chaleco táctico". La ficha del ítem pasó abajo del equipo.
+- Miras (holográficas HX-1 y HX-3, punto rojo PR-2, visor 4x KV) y silenciadores (9 mm/.45, 5,45/5,56, 7,62). Se ponen arrastrándolos sobre el arma o desde el menú; se sacan desde el menú del arma. Montaje en AR-M, AR-74, MP5, AR-15, G-3A, SR-22, PP-B, VK-19 y CK-21. Silenciador: sonido más bajo y sin agudos, sin fogonazo.
+- Caja de armas (alijo nuevo): miras, silenciadores, cargadores y munición, generada al abrirla con una semilla de la caja. Una en la zona de saqueo y dos en la armería; otra caja con chalecos, mochilas y accesorios.
+- 3 cargadores llenos al lado de cada mesa de arma con cargador. Las armas de las mesas vienen con el cargador puesto (sin munición extra).
+- Disparo accidental al montar el arma y doble disparo en semiautomáticas (raro; más con el arma gastada).
+- Equipo inicial: chaleco táctico mediano con 4 cargadores del AR-74K y los de la pistola, mochila mediana y 60 cartuchos sueltos de 5,45.

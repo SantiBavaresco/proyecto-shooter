@@ -114,7 +114,8 @@ func test_fast_reload_drops_the_old_mag() -> void:
 	assert_eq(c.mag, 31)
 	assert_eq(pinv.mags_of("ak545").size(), 3, "el viejo no volvió al chaleco")
 	var dropped := get_tree().get_nodes_in_group("world_items").filter(func(n: Node) -> bool:
-		return n is WorldItem and (n as WorldItem).stack.item.id == "mag_ak545")
+		return n is WorldItem and (n as WorldItem).stack.item.id == "mag_ak545" \
+			and (n as Node3D).global_position.distance_to(player.global_position) < 3.0)
 	assert_eq(dropped.size(), 1, "quedó tirado")
 	assert_eq((dropped[0] as WorldItem).stack.rounds(), 8, "con sus 8 cartuchos")
 
@@ -293,6 +294,8 @@ func test_crate_loot_with_inventory_screen() -> void:
 	assert_eq(scr.container, crate, "con la caja al lado")
 	assert_true(GameState.ui_open)
 	assert_true(crate.inventory.count_of("vest_light") == 1)
+	# Mochila con lugar de sobra (solo para la prueba)
+	(pinv.equipment["backpack"] as ItemStack).contents[0] = Inventory.new(10, 12)
 	scr.take_all()
 	assert_true(crate.inventory.is_empty(), "tomó todo")
 	assert_eq(pinv.bag.count_of("vest_light"), 1)

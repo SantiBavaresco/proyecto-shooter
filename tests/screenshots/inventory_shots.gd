@@ -50,6 +50,18 @@ func _ready() -> void:
 	scr.open(stash)
 	await _frames(40)
 	await _shot("I3_revisando_alijo")
+	scr.close()
+	# Caja de armas y caja con chalecos y mochilas
+	for nm: String in ["LootWeapons", "LootGear"]:
+		var box := level.find_child(nm, true, false) as LootContainer
+		if box != null:
+			box.ensure_filled()
+			scr.open(box)
+			await _frames(30)
+			await _shot("I3b_%s" % nm)
+			scr.close()
+	scr.open(stash)
+	await _frames(20)
 	scr.take_all()
 	await _frames(20)
 	await _shot("I4_sobrecarga")
