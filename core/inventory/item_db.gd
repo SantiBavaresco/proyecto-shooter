@@ -42,7 +42,7 @@ const WEAPON_FAMILY := {
 ## Excepciones por arma: [ancho, alto, kg].
 const WEAPON_OVERRIDE := {
 	"sawedoff": [3, 2, 2.1], "svd": [6, 2, 4.3], "pp19": [4, 2, 2.7], "ak74u": [4, 2, 2.7],
-	"revolver45": [2, 2, 1.1], "chukavin": [6, 2, 4.6], "mark23": [2, 2, 1.2], "coachgun": [5, 2, 3.0], "p22": [2, 2, 0.9], "sr22": [4, 2, 2.4], "bolt22": [5, 2, 2.6],
+	"revolver45": [2, 2, 1.1], "chukavin": [6, 2, 4.6], "mark23": [2, 2, 1.2], "p22": [2, 2, 0.9], "sr22": [4, 2, 2.4], "bolt22": [5, 2, 2.6],
 }
 
 static var _items: Dictionary = {}

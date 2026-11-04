@@ -11,6 +11,8 @@ var pinv: PlayerInventory
 ## Resaltar como destino posible mientras se arrastra (1 entra, -1 no entra, 0 nada).
 var highlight: int = 0
 var hovered: bool = false
+## Va con lo señalado (se marca en verde).
+var compat: bool = false
 var _font: Font
 
 
@@ -45,6 +47,9 @@ func _draw() -> void:
 		bg = Color(0.13, 0.14, 0.11, 0.9)
 	draw_rect(r, bg)
 	draw_rect(r, UiTheme.PANEL_BORDER, false, 1.0)
+	if compat:
+		draw_rect(r, Color(0.3, 0.75, 0.3, 0.14))
+		draw_rect(r.grow(-1.0), Color(0.45, 0.9, 0.4), false, 2.0)
 	var label := ""
 	if slot == "quick":
 		label = "%d" % (quick_index + 5)

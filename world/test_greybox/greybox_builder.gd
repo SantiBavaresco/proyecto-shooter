@@ -30,7 +30,7 @@ const WorldItemScript := preload("res://world/props/world_item.gd")
 ## Polígono: línea de tiro y franja que ocupa (x de 18 a 42).
 const RANGE_LINE_Z := 30.0
 ## Armas recién agregadas: mesas aparte, separadas de la armería.
-const NEW_WEAPONS := ["chukavin", "mark23", "coachgun"]
+const NEW_WEAPONS := ["chukavin", "mark23"]
 const RANGE_X_MIN := 18.0
 const RANGE_X_MAX := 42.0
 const RANGE_END_Z := 260.0

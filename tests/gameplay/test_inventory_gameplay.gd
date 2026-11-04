@@ -392,3 +392,44 @@ func test_item_sheet_compares_weapons() -> void:
 	var t := InventoryScreen.item_sheet(s, pinv)
 	assert_true(t.contains(TranslationServer.translate("inv.stat.damage")), "muestra el daño")
 	assert_true(t.contains("(+") or t.contains("(-"), "compara con la equipada")
+
+
+## Mochila más chica sacada de adentro de la que está puesta: la grande no desaparece
+## (lo que no entra en la chica, con ella al piso).
+func test_smaller_backpack_from_inside_the_current_one() -> void:
+	pinv.bag.add_item("backpack_small")
+	var small := pinv.first_stack("backpack_small")
+	var old := pinv.equipment["backpack"] as ItemStack
+	assert_true(pinv.equip(small, "backpack", pinv.storage_of(small)))
+	assert_eq((pinv.equipment["backpack"] as ItemStack).item.id, "backpack_small")
+	var on_floor := get_tree().get_nodes_in_group("world_items").filter(func(n: Node) -> bool:
+		return (n as WorldItem).stack == old)
+	assert_true(pinv.storage_of(old) != null or on_floor.size() == 1, "la mediana quedó en el inventario o en el piso")
+	assert_false(old.contents.has(pinv.storage_of(old)), "no quedó adentro de sí misma")
+
+
+## Agarrar un arma de la mesa: la que había va a la mochila (o al piso si no entra).
+func test_table_weapon_stows_the_old_one() -> void:
+	var table := level.find_child("Table_akm", true, false) as WeaponTable
+	var old := pinv.equipment["weapon1"] as ItemStack
+	table.interact(player)
+	await physics_frames(40)
+	assert_eq(weapons.current_data().id, "akm")
+	assert_true(pinv.storage_of(old) != null, "la AR-74K fue a la mochila")
+	# Sin lugar: al piso
+	(pinv.equipment["backpack"] as ItemStack).contents[0] = Inventory.new(1, 1)
+	var akm := pinv.equipment["weapon1"] as ItemStack
+	(level.find_child("Table_ak74", true, false) as WeaponTable).interact(player)
+	await physics_frames(40)
+	var on_floor := get_tree().get_nodes_in_group("world_items").filter(func(n: Node) -> bool:
+		return (n as WorldItem).stack == akm)
+	assert_eq(on_floor.size(), 1, "la AR-M quedó en el piso")
+
+
+func test_compatible_items_are_marked() -> void:
+	var sup := ItemStack.make("supp_545")
+	assert_true(InventoryScreen.fits_together(sup, pinv.equipment["weapon1"]), "el de 5,45 va en la AR-74K")
+	assert_false(InventoryScreen.fits_together(sup, pinv.equipment["pistol"]))
+	var mag := ItemStack.make("mag_pist_9x19")
+	assert_true(InventoryScreen.fits_together(mag, pinv.equipment["pistol"]))
+	assert_true(InventoryScreen.fits_together(ItemStack.make("ammo_9x19", 10), mag), "munición con su cargador")

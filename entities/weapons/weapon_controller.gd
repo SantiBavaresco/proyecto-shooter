@@ -196,7 +196,7 @@ func _make_slot(data: WeaponData, st := {}) -> WeaponSlot:
 	ws.mode_index = clampi(int(st.get("mode_index", 0)), 0, maxi(0, data.fire_modes.size() - 1))
 	ws.malfunction = String(st.get("malfunction", ""))
 	ws.case_stuck = bool(st.get("case_stuck", false))
-	ws.model = WeaponModelBuilder.build(data)
+	ws.model = WeaponModelBuilder.build(WeaponAttach.model_data(data, ws.sight))
 	WeaponAttach.apply_model(ws.model, data, ws.sight, ws.muzzle)
 	ws.model.visible = false
 	view.add_model(ws.model)
@@ -614,14 +614,18 @@ func _stow_mag(m: ItemStack, where: Inventory = null, at := Vector2i(-1, -1)) ->
 
 
 ## Tira un cargador al piso desde el arma (recarga rápida o sin lugar).
-func _drop_mag(c: WeaponSlot, m: ItemStack) -> void:
+func _drop_mag(_c: WeaponSlot, m: ItemStack) -> void:
 	if player == null or not player.is_inside_tree():
 		return
-	var at := player.global_position + Vector3(0, 1.2, 0) - player.camera.global_basis.z * 0.3
-	if c != null and c.model != null and c.model.has_node("Mag"):
-		at = _vm_to_world((c.model.get_node("Mag") as Node3D).global_position)
+	# Aparece por debajo de las manos (fuera de cuadro) y cae a los pies: no se ve
+	# durante la animación de la recarga
+	var fwd := -player.camera.global_basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized() if fwd.length() > 0.01 else Vector3.FORWARD
+	var at := player.camera.global_position + Vector3(0, -0.85, 0) + fwd * 0.22
 	var parent := player.get_tree().current_scene if player.get_tree().current_scene != null else player.get_parent()
-	WorldItem.spawn(parent, m, at, player.velocity * 0.5 + Vector3(0, -0.4, 0) - player.camera.global_basis.z * 0.3)
+	var w := WorldItem.spawn(parent, m, at, player.velocity * 0.5 + Vector3(0, -0.6, 0) + fwd * 0.2)
+	w.add_collision_exception_with(player)
 
 
 ## Recarga rápida: más corta y el cargador viejo (con lo que le quede) cae al piso.
@@ -988,7 +992,7 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 	# Los archivos vienen normalizados: el volumen de cada arma se aplica encima. Con
 	# silenciador: más bajo y sin agudos (bus con filtro)
 	_audio_shot.bus = SUPPRESSED_BUS if c.suppressed() else "SFX_World"
-	_audio_shot.volume_db = w.sfx_volume_db - (16.0 if c.suppressed() else 2.0)
+	_audio_shot.volume_db = w.sfx_volume_db - (7.0 if c.suppressed() else 2.0)
 	_audio_shot.pitch_scale = _rng.randf_range(0.98, 1.02)
 	_audio_shot.play()
 	if w.bolt_action:
@@ -1206,7 +1210,7 @@ static func ensure_suppressed_bus() -> void:
 	AudioServer.set_bus_name(i, SUPPRESSED_BUS)
 	AudioServer.set_bus_send(i, "SFX_World")
 	var lp := AudioEffectLowPassFilter.new()
-	lp.cutoff_hz = 1600.0
+	lp.cutoff_hz = 2400.0
 	AudioServer.add_bus_effect(i, lp)
 
 

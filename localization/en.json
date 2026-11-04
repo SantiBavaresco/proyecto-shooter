@@ -264,7 +264,6 @@
 	"options.keybinds_inventory": "INVENTORY SCREEN",
 	"weapon.chukavin": "CK-21 marksman rifle",
 	"weapon.mark23": "M-23 .45 pistol",
-	"weapon.coachgun": "ZC-75 coach gun",
 	"greybox.new_weapons": "NEW WEAPONS",
 	"item.drone": "Consumer drone",
 	"item.drone.desc": "Quadcopter drone. For now you can carry and sell it; flying it to scout comes later.",
@@ -317,5 +316,6 @@
 	"loot.weapons": "Weapons crate",
 	"weapon.no_mags": "No loaded magazines",
 	"weapon.from_backpack": "Digging through the backpack…",
-	"weapon.slam_fire": "Accidental discharge!"
+	"weapon.slam_fire": "Accidental discharge!",
+	"inv.dropped_no_room": "No room: %s was dropped"
 }

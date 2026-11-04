@@ -97,7 +97,7 @@ func _process(delta: float) -> void:
 	var crouching := player.stance != Player.Stance.STANDING
 	_crouch = move_toward(_crouch, 1.0 if crouching else 0.0, delta * 5.0)
 	# Fase de la caminata: una vuelta cada dos pasos
-	var stride := 1.05 if player.is_sprinting else (0.55 if crouching else 0.78)
+	var stride := 2.35 if player.is_sprinting else (1.25 if crouching else 1.85)
 	if on_floor:
 		_phase = fmod(_phase + hs * delta / stride * PI, TAU)
 	# Caderas: bajan al agacharse; el cuerpo se inclina un poco al correr y al ir de costado

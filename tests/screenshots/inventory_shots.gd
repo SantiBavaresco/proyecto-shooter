@@ -35,6 +35,16 @@ func _ready() -> void:
 	scr.open(null)
 	await _frames(40)
 	await _shot("I1_inventario")
+	# Señalando un silenciador: se marcan en verde las armas donde va
+	pinv.receive(ItemStack.make("supp_545"))
+	pinv.receive(ItemStack.make("mag_pist_9x19", 1, {"rounds": 15}))
+	scr._refresh()
+	var sup := pinv.first_stack("supp_545")
+	scr._selected = sup
+	scr._mark_compat(sup)
+	scr._show_info(sup)
+	await _frames(20)
+	await _shot("I1b_compatibles")
 	# Ficha de un arma comparada: se agrega un AR-M a la mochila y se selecciona
 	pinv.bag.add_item("w_akm")
 	scr._selected = pinv.first_stack("w_akm")

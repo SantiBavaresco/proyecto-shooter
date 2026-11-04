@@ -70,7 +70,7 @@ C={
     "parts":{"Slide":["side_j"],"Mag":["mag_j"]},"pivots":{"Slide":[0,0,0],"Mag":[0,-0.06,0.03]},
     "sight":[0,0.0175,-0.105],"eye_relief":0.6,"muzzle":[0,0,-0.128],"ejection":[0.012,0.01,-0.02],
     "pose":{"top":[0,-0.03,0.062],"bottom":[0,-0.112,0.078],"r":0.016,"trigger":[0,-0.047,0.012],"left":"pistol"}},
- "coachgun": {"shape":"glb","scene":W+"zastava/zastava.glb","rot":[0,180,0],"scale":0.18,"offset":[0,-0.0926,-0.013],
+ "shotgun": {"shape":"glb","scene":W+"zastava/zastava.glb","rot":[0,180,0],"scale":0.18,"offset":[0,-0.0926,-0.013],
     "parts":{"Barrels":["barrel"]},"pivots":{"Barrels":[0,-0.02,-0.055]},
     "shells":{"L":[-0.0122,0.02,0.025],"R":[0.0122,0.02,0.025]},
     "sight":[0,0.0125,-0.6],"eye_relief":0.707,"muzzle":[0,0,-0.613],"ejection":[0,0.02,-0.05],

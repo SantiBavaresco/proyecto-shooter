@@ -627,9 +627,10 @@ static func mp5(data: WeaponData) -> Node3D:
 		z_fs + 0.006, ih - 0.007, 0.0], 0.012, m, 0.0015)
 	WeaponModelBuilder.tube(root, "FrontHood", 0.0078, 0.0098, 0.014, Vector3(0, ih, z_fs), m, 20)
 	WeaponModelBuilder.rbox(root, "FrontPost", Vector3(0.0028, 0.0085, 0.003), Vector3(0, ih - 0.004, z_fs), m, 0.0005)
-	WeaponModelBuilder.cyl(root, "RearDrum", 0.0085, 0.02, Vector3(0, ih - 0.0145, 0.04), m, 16, Vector3(0, PI * 0.5, 0), 0.002)
-	WeaponModelBuilder.rbox(root, "RearDrumBase", Vector3(0.02, ih - 0.03, 0.02), Vector3(0, (ih - 0.03) * 0.5 + 0.022, 0.04), m, 0.002)
-	WeaponModelBuilder.rear_aperture(root, 0.04, ih, m)
+	if not data.model_params.get("no_rear", false):  # (con mira montada no lleva alza)
+		WeaponModelBuilder.cyl(root, "RearDrum", 0.0085, 0.02, Vector3(0, ih - 0.0145, 0.04), m, 16, Vector3(0, PI * 0.5, 0), 0.002)
+		WeaponModelBuilder.rbox(root, "RearDrumBase", Vector3(0.02, ih - 0.03, 0.02), Vector3(0, (ih - 0.03) * 0.5 + 0.022, 0.04), m, 0.002)
+		WeaponModelBuilder.rear_aperture(root, 0.04, ih, m)
 	# Guardamanos delgado
 	# Guardamanos delgado: se afina hacia adelante y termina en un tope para la mano
 	WeaponModelBuilder.loft(root, "Handguard", poly, rf, -0.33, [[0.0, 0.0232, -0.036, 0.0065, 2.7], [0.2, 0.0228, -0.034, 0.0065, 2.4],
@@ -755,9 +756,10 @@ static func g3(data: WeaponData) -> Node3D:
 		0.012, m, 0.0015)
 	WeaponModelBuilder.tube(root, "FrontHood", 0.0078, 0.0098, 0.014, Vector3(0, ih, z_fs), m, 20)
 	WeaponModelBuilder.rbox(root, "FrontPost", Vector3(0.0028, 0.0085, 0.003), Vector3(0, ih - 0.004, z_fs), m, 0.0005)
-	WeaponModelBuilder.prism(root, "RearBase", [0.02, 0.022, 0.0, -0.02, 0.022, 0.0, -0.016, ih - 0.022, 0.003, 0.016, ih - 0.022, 0.003], 0.026, m, 0.002)
-	WeaponModelBuilder.cyl(root, "RearDrum", 0.0095, 0.022, Vector3(0, ih - 0.016, 0.0), m, 16, Vector3(0, PI * 0.5, 0), 0.002)
-	WeaponModelBuilder.rear_aperture(root, 0.004, ih, m)
+	if not data.model_params.get("no_rear", false):  # (con mira montada no lleva alza)
+		WeaponModelBuilder.prism(root, "RearBase", [0.02, 0.022, 0.0, -0.02, 0.022, 0.0, -0.016, ih - 0.022, 0.003, 0.016, ih - 0.022, 0.003], 0.026, m, 0.002)
+		WeaponModelBuilder.cyl(root, "RearDrum", 0.0095, 0.022, Vector3(0, ih - 0.016, 0.0), m, 16, Vector3(0, PI * 0.5, 0), 0.002)
+		WeaponModelBuilder.rear_aperture(root, 0.004, ih, m)
 	# Guardamanos delgado, grupo del disparador y empuñadura
 	var hf := -0.445
 	WeaponModelBuilder.loft(root, "Handguard", poly, rf, hf, [[0.0, 0.0245, -0.038, 0.014, 3.2], [0.1, 0.025, -0.035, 0.014, 2.7],

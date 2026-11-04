@@ -2,12 +2,12 @@
 	"_doc": "Accesorios. optics: miras (modelo: un .glb con la misma alineación que el arma de donde salen y solo las piezas 'keep', o 'code' = por código). 'base' es el punto de apoyo en esas coordenadas; 'sight' (línea de mira) y 'lens' son relativos a la base. muzzles: silenciadores por grupo de rosca. mounts: dónde va la mira en cada arma (punto de apoyo en coordenadas del arma y altura del soporte que se dibuja debajo) y miras que trae de fábrica.",
 	"optics": {
 		"optic_holo_a": {"type": "red_dot", "scene": "res://assets/models/weapons/bizon/bizon.glb", "rot": [0, 90, 0], "scale": 0.048,
-			"offset": [0, -0.052, 0.034], "source": "pp19", "tint": 0.5, "rough": 0.5, "keep": ["holo"], "base": [0, 0.0415, -0.04], "sight": [0, 0.0325, 0],
-			"lens": {"pos": [0, 0.0325, 0], "size": 0.03, "holo": true}, "eye_relief": 0.24,
+			"offset": [0, -0.052, 0.034], "source": "pp19", "tint": 0.5, "rough": 0.5, "keep": ["holo"], "base": [0, 0.0415, -0.04], "sight": [0, 0.0363, 0],
+			"lens": {"pos": [0, 0.0363, 0], "size": 0.03, "holo": true}, "eye_relief": 0.24,
 			"size": [2, 1], "weight": 0.32, "price": 650},
 		"optic_holo_b": {"type": "red_dot", "scene": "res://assets/models/weapons/pp1901/pp1901.glb", "rot": [0, 90, 0], "scale": 0.048,
-			"offset": [0, -0.046, 0.03], "source": "vityaz", "tint": 0.5, "rough": 0.5, "keep": ["holo"], "base": [0, 0.0397, -0.05], "sight": [0, 0.0263, 0],
-			"lens": {"pos": [0, 0.0263, 0], "size": 0.03, "holo": true}, "eye_relief": 0.24,
+			"offset": [0, -0.046, 0.03], "source": "vityaz", "tint": 0.5, "rough": 0.5, "keep": ["holo"], "base": [0, 0.0397, -0.05], "sight": [0, 0.0331, 0],
+			"lens": {"pos": [0, 0.0331, 0], "size": 0.03, "holo": true}, "eye_relief": 0.24,
 			"size": [2, 1], "weight": 0.32, "price": 700},
 		"optic_reddot": {"type": "red_dot", "scene": "code", "base": [0, 0, 0], "sight": [0, 0.031, -0.015],
 			"eye_relief": 0.3,
@@ -28,9 +28,9 @@
 		"chukavin": {"rail": [0, 0.041, -0.107], "riser": 0.0, "default": "optic_scope4x"},
 		"akm": {"rail": [0, 0.056, -0.09], "riser": 0.012},
 		"ak74": {"rail": [0, 0.05, -0.04], "riser": 0.022},
-		"mp5": {"rail": [0, 0.068, -0.05], "riser": 0.04},
+		"mp5": {"rail": [0, 0.04, -0.03], "riser": 0.013, "no_rear": true},
 		"ar15": {"rail": [0, 0.058, -0.03], "riser": 0.0},
-		"g3": {"rail": [0, 0.072, -0.08], "riser": 0.045},
+		"g3": {"rail": [0, 0.04, -0.06], "riser": 0.013, "no_rear": true},
 		"sr22": {"rail": [0, 0.062, -0.09], "riser": 0.03}
 	}
 }

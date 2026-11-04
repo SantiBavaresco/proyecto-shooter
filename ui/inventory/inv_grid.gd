@@ -15,6 +15,8 @@ var ghost_at := Vector2i(-1, -1)
 var ghost_size := Vector2i.ONE
 var ghost_ok := true
 var hovered: ItemStack = null
+## Pilas que van con lo señalado (se marcan en verde).
+var compat: Array = []
 var selected: ItemStack = null
 var _font: Font
 
@@ -80,6 +82,9 @@ func _draw_stack(s: ItemStack) -> void:
 		bg.a = 0.35
 	draw_rect(r, bg)
 	draw_rect(r, UiTheme.ACCENT.darkened(0.2) if s == selected else UiTheme.PANEL_BORDER, false, 1.0)
+	if compat.has(s):
+		draw_rect(r, Color(0.3, 0.75, 0.3, 0.16))
+		draw_rect(r.grow(-1.0), Color(0.45, 0.9, 0.4), false, 2.0)
 	draw_icon(self, s, r, faded)
 	# Cantidad abajo a la derecha; estado (barra) abajo a la izquierda
 	var fs := int(clampf(cell * 0.22, 14.0, 22.0))

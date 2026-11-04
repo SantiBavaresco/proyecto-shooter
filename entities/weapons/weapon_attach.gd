@@ -21,6 +21,19 @@ static func muzzle_of(st: Dictionary) -> String:
 	return String(st.get("muzzle", ""))
 
 
+## Datos con los que se arma el modelo: con mira montada, las armas que lo piden
+## ("no_rear" en el montaje) se arman sin el alza (si no, tapa la mira o la obliga
+## a ir muy alta).
+static func model_data(base: WeaponData, sight_id: String) -> WeaponData:
+	var mt := ItemDB.mount(base.id)
+	if sight_id == "" or not bool(mt.get("no_rear", false)):
+		return base
+	var d := base.duplicate() as WeaponData
+	d.model_params = base.model_params.duplicate(true)
+	d.model_params["no_rear"] = true
+	return d
+
+
 ## Datos del arma con la mira puesta.
 static func apply_data(base: WeaponData, sight_id: String) -> WeaponData:
 	var it := ItemDB.get_item(sight_id) if sight_id != "" else null

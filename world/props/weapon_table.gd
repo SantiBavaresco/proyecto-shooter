@@ -43,6 +43,12 @@ func interact(player: Node) -> void:
 	var p := player as Player
 	if p == null or p.weapons == null:
 		return
+	# El arma que había en esa ranura va a la mochila (o al piso si no entra)
+	if p.inventory != null:
+		var idx := 3 if data.slot == 3 else (p.weapons.current_slot if p.weapons.current_slot in [1, 2] else 1)
+		for k: String in PlayerInventory.WEAPON_SLOT:
+			if PlayerInventory.WEAPON_SLOT[k] == idx:
+				p.inventory.stow_or_drop(k)
 	var slot := p.weapons.take_weapon(data)
 	Foley.play(get_tree(), "pickup_weapon", -4.0)
 	EventBus.toast.emit(tr("interact.weapon_taken") % [tr(data.name_key), slot])

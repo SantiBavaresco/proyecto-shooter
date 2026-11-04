@@ -375,3 +375,15 @@
 - Miras sacadas de otros modelos: el negro de su textura se oscurece y gana brillo para combinar con el pavonado de las armas (en su arma de origen quedan como estaban).
 - Chalecos tácticos, chalecos antibalas y mochilas rehechos (`GearModels`): piezas blandas, porta-cargadores con solapa y MOLLE, bolsillos con cierre, tirantes, hebillas, faldones, tapas, cintas de compresión y bolsa de dormir en la de expedición.
 - Herramienta: `tests/screenshots/_icons.gd` arma una hoja con los íconos del inventario.
+
+## 2.1.2 — Correcciones de recarga rápida, miras, sonidos e inventario (2026-11-04)
+- Recarga rápida: el cargador viejo aparece debajo de las manos (fuera de cuadro) y cae a los pies; no choca con el jugador.
+- La escopeta doble caño usa el modelo de la Zastava (con el quiebre y las vainas); la ZC-75 aparte se sacó del juego.
+- Holográficas centradas (VK-19 y PP-B, y en todas las armas): la línea de mira pasa por el centro de la ventana.
+- MP5 y G-3A: con mira montada se arman sin el alza de tambor y la mira va más baja (`no_rear` en el montaje).
+- Pasos y apertura de cajas rehechos: pisadas más suaves (golpe sordo + contacto + textura del piso, sin saturar), mucho menos seguidas (cada 1,85 m caminando, 2,35 m corriendo) y más bajas al correr; crujido de madera por impulsos, trabas y chapa más graves, cierre del alijo.
+- Disparos con silenciador más fuertes (−7 dB y filtro en 2,4 kHz).
+- Inventario: al señalar un accesorio, cargador, munición o arma se marcan en verde las cosas que van con él (armas, cargadores, accesorios), también en cajas y cuerpos.
+- Cargadores de pistola con otra forma (acero redondeado, base ancha, agujeros testigo); los de fusil, con nervaduras; el de la Bizon, helicoidal.
+- Mochila más chica sacada de adentro de la puesta: la grande ya no desaparece (va a otro contenedor o al piso).
+- Agarrar un arma de la mesa: la que había en esa ranura va a la mochila o, si no entra, al piso.

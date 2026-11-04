@@ -393,12 +393,15 @@ func equip(s: ItemStack, slot: String, from: Inventory = null) -> bool:
 		if old.has_contents():
 			# Lo de adentro pasa al nuevo (lo que no entre queda en el viejo)
 			_move_contents(old, s)
-		var ok := (not old.has_contents() or not is_storage(from)) and \
+		# Si lo nuevo estaba adentro de lo viejo (una mochila sacada de la misma mochila),
+		# lo viejo no puede volver ahí: va a otro lado o al piso
+		var inside_old := old.contents.has(from)
+		var ok := not inside_old and (not old.has_contents() or not is_storage(from)) and \
 			(from.place(old, at, rot) or from.add(old) == 0)
 		if not ok and not old.has_contents():
 			ok = receive(old) == 0
 		if not ok:
-			if old.has_contents() or not is_storage(from):
+			if old.has_contents() or not is_storage(from) or inside_old:
 				drop(old)
 			else:
 				# No entra: se deja todo como estaba
@@ -458,6 +461,17 @@ func unequip(slot: String, to: Inventory = null, at := Vector2i(-1, -1), rotated
 	_foley("equip")
 	_on_changed()
 	return s
+
+
+## Desocupa una ranura: lo equipado va a los contenedores o, si no hay lugar, al piso.
+func stow_or_drop(slot: String) -> void:
+	if equipment.get(slot) == null:
+		return
+	if unequip(slot) == null:
+		var t := take_equipped(slot)
+		if t != null:
+			drop(t)
+			EventBus.toast.emit(tr("inv.dropped_no_room") % ItemDB.display_name(t.item))
 
 
 ## Saca lo equipado sin ponerlo en ningún lado (tirarlo).

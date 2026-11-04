@@ -48,7 +48,7 @@ func _equip(id: String) -> WeaponData:
 
 func test_catalog_has_26_valid_weapons() -> void:
 	var cat := _catalog()
-	assert_eq(cat.size(), 35)
+	assert_eq(cat.size(), 34)
 	for id: String in cat:
 		var d := _load(id)
 		assert_true(d != null, "%s carga" % id)
@@ -389,7 +389,7 @@ func test_npc_falls_stiff_and_gets_up() -> void:
 ## Cada arma queda apoyada sobre su mesa (ni flotando ni metida en la tabla).
 func test_weapons_rest_on_their_tables() -> void:
 	var tables := level.find_children("*", "StaticBody3D", true, false).filter(func(n: Node) -> bool: return n is WeaponTable)
-	assert_true(tables.size() >= 35, "hay una mesa por arma")
+	assert_true(tables.size() >= 34, "hay una mesa por arma")
 	for t: Node in tables:
 		var wt := t as WeaponTable
 		var top := wt.global_position.y + WeaponTable.TABLE_HEIGHT + WeaponTable.TABLE_SIZE.y * 0.5

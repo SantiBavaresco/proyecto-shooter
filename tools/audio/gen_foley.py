@@ -79,69 +79,118 @@ def grains(rng, n_grains, dur, lo, hi, gain):
     return out * gain
 
 
+def soft_thud(rng, f0, dur, gain):
+    """Golpe sordo: tono grave que cae un poco + ruido grave, sin ataque duro."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    f = f0 * (1.0 + 0.35 * np.exp(-t / 0.012))
+    tone = np.sin(2 * np.pi * np.cumsum(f) / SR)
+    noise = lp(rng.standard_normal(n), f0 * 6, 4)
+    e = env(n, 0.004, dur / 5)
+    return (tone * 0.6 + noise * 0.6) * e * gain
+
+
+def tap(rng, lo, hi, dur, gain):
+    """Contacto corto de la suela (ruido filtrado con caída rápida, ataque suave)."""
+    n = int(dur * SR)
+    return bp(rng.standard_normal(n), lo, hi, 3) * env(n, 0.0025, dur / 4) * gain
+
+
+def resonance(rng, freqs, dur, gain, q=0.25):
+    """Cuerpo hueco (madera, chapa): parciales graves que se apagan rápido."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    for f in freqs:
+        f2 = f * rng.uniform(0.96, 1.04)
+        out += np.sin(2 * np.pi * f2 * t + rng.uniform(0, 6.28)) * np.exp(-t / (dur * q * rng.uniform(0.7, 1.2)))
+    return out / max(len(freqs), 1) * env(n, 0.003, dur) * gain
+
+
 def step(surface, rng):
-    dur = 0.32
+    dur = 0.3
     buf = np.zeros(int(dur * SR))
-    heel = 0.0
-    toe = rng.uniform(0.045, 0.07)
+    toe = rng.uniform(0.065, 0.1)
+    k = rng.uniform(0.85, 1.1)
     if surface == "concrete":
-        place(buf, thump(rng, 70, 0.08, 0.9), heel)
-        place(buf, hp(scuff(rng, 1500, 7000, 0.06, 0.35), 900), heel + 0.004)
-        place(buf, thump(rng, 95, 0.06, 0.5), toe)
-        place(buf, scuff(rng, 2000, 8000, 0.08, 0.25), toe)
+        place(buf, soft_thud(rng, 70 * k, 0.09, 0.9), 0.0)
+        place(buf, tap(rng, 350, 2200, 0.04, 0.35), 0.002)
+        place(buf, tap(rng, 2500, 6000, 0.05, 0.05), 0.004)  # arenilla, muy baja
+        place(buf, soft_thud(rng, 95 * k, 0.07, 0.45), toe)
+        place(buf, tap(rng, 400, 2600, 0.035, 0.2), toe)
     elif surface == "dirt":
-        place(buf, thump(rng, 55, 0.1, 0.8), heel)
-        place(buf, grains(rng, 28, 0.16, 1200, 6000, 0.55), heel + 0.005)
-        place(buf, scuff(rng, 300, 2500, 0.12, 0.35), toe)
-        place(buf, grains(rng, 16, 0.12, 1500, 7000, 0.4), toe)
+        place(buf, soft_thud(rng, 55 * k, 0.11, 0.8), 0.0)
+        place(buf, grains(rng, 22, 0.13, 600, 3000, 0.22), 0.004)
+        place(buf, soft_thud(rng, 70 * k, 0.08, 0.35), toe)
+        place(buf, grains(rng, 12, 0.1, 700, 3500, 0.16), toe)
     elif surface == "wood":
-        place(buf, thump(rng, 110, 0.1, 0.8), heel)
-        place(buf, ring(rng, [190, 340, 520], 0.14, 0.45), heel)
-        place(buf, thump(rng, 140, 0.07, 0.45), toe)
-        place(buf, scuff(rng, 1200, 5000, 0.06, 0.15), toe)
-    else:  # metal
-        place(buf, thump(rng, 90, 0.07, 0.6), heel)
-        place(buf, ring(rng, [640, 1270, 2210, 3400], 0.28, 0.45), heel)
-        place(buf, ring(rng, [700, 1500, 2600], 0.2, 0.25), toe)
-        place(buf, scuff(rng, 2500, 9000, 0.05, 0.15), toe)
-    return buf
+        place(buf, soft_thud(rng, 90 * k, 0.1, 0.8), 0.0)
+        place(buf, resonance(rng, [140, 260, 410], 0.16, 0.35), 0.0)
+        place(buf, tap(rng, 500, 2500, 0.03, 0.18), 0.002)
+        place(buf, soft_thud(rng, 120 * k, 0.07, 0.4), toe)
+    else:  # metal (chapa, rejilla)
+        place(buf, soft_thud(rng, 80 * k, 0.08, 0.7), 0.0)
+        place(buf, resonance(rng, [310, 640, 1050], 0.22, 0.3), 0.0)
+        place(buf, tap(rng, 800, 3500, 0.03, 0.15), 0.002)
+        place(buf, resonance(rng, [340, 700], 0.15, 0.15), toe)
+    return lp(buf, 5000, 2)
+
+
+def creak(rng, dur, f_lo, f_hi, rate0, rate1, gain):
+    """Crujido de madera/bisagra: tren de impulsos (traba y desliza) que excita
+    resonancias de la madera; la frecuencia del tren sube y baja."""
+    n = int(dur * SR)
+    out = np.zeros(n)
+    t = 0.0
+    while t < dur:
+        u = t / dur
+        rate = rate0 + (rate1 - rate0) * np.sin(np.pi * u) + rng.uniform(-4, 4)
+        i = int(t * SR)
+        if i < n:
+            out[i] += rng.uniform(0.5, 1.0)
+        t += 1.0 / max(rate, 5.0)
+    out = bp(out, f_lo, f_hi, 2) + bp(out, f_lo * 1.9, f_hi * 1.4, 2) * 0.4
+    return out * env(n, dur * 0.2, dur * 0.5) * gain
 
 
 def crate_open(rng):
-    buf = np.zeros(int(0.9 * SR))
-    # Crujido de la bisagra / madera (tono que sube y baja con rozamiento)
-    n = int(0.35 * SR)
-    t = np.arange(n) / SR
-    f = 240 + 120 * np.sin(2 * np.pi * 3 * t) + rng.uniform(-20, 20)
-    creak = np.sign(np.sin(2 * np.pi * np.cumsum(f) / SR)) * 0.3
-    creak = bp(creak * (0.6 + 0.4 * rng.standard_normal(n) * 0.2), 300, 2500) * env(n, 0.06, 0.15)
-    place(buf, creak * 0.6, 0.0)
-    place(buf, thump(rng, 85, 0.18, 0.9), 0.36)
-    place(buf, ring(rng, [160, 290, 450], 0.25, 0.4), 0.36)
-    place(buf, grains(rng, 10, 0.2, 800, 4000, 0.2), 0.38)
-    return buf
+    buf = np.zeros(int(1.0 * SR))
+    place(buf, soft_thud(rng, 110, 0.06, 0.35), 0.0)          # se destraba la tapa
+    place(buf, creak(rng, 0.42, 380, 900, 28, 70, 0.9), 0.05)  # bisagra / madera
+    place(buf, soft_thud(rng, 75, 0.2, 0.9), 0.5)             # la tapa cae de costado
+    place(buf, resonance(rng, [130, 230, 360], 0.25, 0.45), 0.5)
+    return lp(buf, 6000)
 
 
 def box_open(rng):
-    buf = np.zeros(int(0.8 * SR))
-    for i, at in enumerate([0.0, 0.09]):  # dos trabas
-        place(buf, hp(scuff(rng, 2500, 9000, 0.012, 0.9), 2000), at)
-        place(buf, ring(rng, [1800, 3100, 4700], 0.08, 0.35), at)
-    place(buf, scuff(rng, 600, 3000, 0.25, 0.25), 0.18)
-    place(buf, ring(rng, [420, 880, 1430, 2300], 0.5, 0.5), 0.42)
-    place(buf, thump(rng, 120, 0.08, 0.5), 0.42)
-    return buf
+    buf = np.zeros(int(0.85 * SR))
+    for at in [0.0, 0.11]:  # dos trabas: clic sordo
+        place(buf, tap(rng, 900, 3500, 0.02, 0.7), at)
+        place(buf, resonance(rng, [1100, 1900], 0.05, 0.25), at)
+    place(buf, creak(rng, 0.2, 700, 1600, 60, 110, 0.25), 0.2)  # bisagra
+    place(buf, soft_thud(rng, 95, 0.12, 0.6), 0.45)
+    place(buf, resonance(rng, [260, 540, 910, 1450], 0.35, 0.45), 0.45)  # chapa
+    return lp(buf, 6500)
 
 
 def stash_open(rng):
-    buf = np.zeros(int(0.8 * SR))
-    # Cierre: muchos "dientes" seguidos
-    for i in range(34):
-        g = int(0.004 * SR)
-        x = bp(rng.standard_normal(g), 2000, 8000) * np.hanning(g)
-        place(buf, x * rng.uniform(0.3, 0.7), 0.02 + i * 0.012 + rng.uniform(0, 0.003))
-    place(buf, scuff(rng, 400, 3500, 0.35, 0.35), 0.4)
-    return buf
+    buf = np.zeros(int(0.85 * SR))
+    # Cierre: dientes a ~200 por segundo, con la mano que acelera y frena
+    n = int(0.5 * SR)
+    teeth = np.zeros(n)
+    t = 0.0
+    while t < 0.5:
+        rate = 140 + 120 * np.sin(np.pi * t / 0.5)
+        i = int(t * SR)
+        teeth[i] += rng.uniform(0.4, 1.0)
+        t += 1.0 / rate
+    teeth = bp(teeth, 1800, 5500, 2) * env(n, 0.04, 0.25)
+    place(buf, teeth * 0.8, 0.02)
+    # Tela que se abre
+    m = int(0.35 * SR)
+    rustle = bp(rng.standard_normal(m), 300, 2200, 2) * (0.5 + 0.5 * np.abs(np.sin(np.linspace(0, 9, m))))
+    place(buf, rustle * env(m, 0.08, 0.15) * 0.35, 0.45)
+    return lp(buf, 7000)
 
 
 def equip(rng):
@@ -180,7 +229,7 @@ def drop_item(rng):
 def save(name, x, peak=0.8):
     x = x - np.mean(x)
     m = np.max(np.abs(x)) or 1.0
-    x = np.tanh(x / m * 1.2) / np.tanh(1.2) * peak
+    x = x / m * peak  # sin saturar (la saturación los hacía ásperos)
     pcm = (x * 32767).astype(np.int16)
     with wave.open(os.path.join(OUT, name + ".wav"), "wb") as w:
         w.setnchannels(1)
@@ -194,7 +243,7 @@ def main():
     for surf in ["concrete", "dirt", "wood", "metal"]:
         for i in range(4):
             rng = np.random.default_rng(zlib.crc32(f"{surf}{i}".encode()))
-            save(f"step_{surf}_{i + 1}", step(surf, rng), 0.75)
+            save(f"step_{surf}_{i + 1}", step(surf, rng), 0.7)
     for name, fn in [("crate_open", crate_open), ("box_open", box_open), ("stash_open", stash_open),
                      ("equip", equip), ("pickup_item", pickup_item), ("pickup_weapon", pickup_weapon),
                      ("drop_item", drop_item)]:

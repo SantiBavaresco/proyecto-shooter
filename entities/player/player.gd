@@ -50,8 +50,8 @@ var is_dead: bool = false
 var _hurt_inside: bool = false
 const HURT_DPS := 6.0
 ## Pasos: metros entre pisadas (caminando, corriendo, agachado) y volumen.
-const STRIDE := {"walk": 0.78, "sprint": 1.05, "crouch": 0.55}
-const STEP_DB := {"walk": -13.0, "sprint": -8.0, "crouch": -21.0}
+const STRIDE := {"walk": 1.85, "sprint": 2.35, "crouch": 1.25}
+const STEP_DB := {"walk": -15.0, "sprint": -12.0, "crouch": -23.0}
 var _step_dist: float = 0.0
 var _step_player: AudioStreamPlayer
 const RESTART_AFTER_DEATH := 4.0

@@ -167,6 +167,15 @@ static func _mag(root: Node3D, item: ItemData) -> void:
 	if MAG_SHAPES.has(fam):
 		_mag_box(root, item)
 		return
+	if fam == "bizon":
+		# Helicoidal: tubo largo con nervaduras en espiral, acostado hacia Z
+		var mm := _m(Color(0.09, 0.095, 0.09), 0.6, 0.2)
+		_cyl(root, 0.03, 0.34, Vector3(0, 0.03, 0), mm, Vector3(PI * 0.5, 0, 0))
+		for i in 9:
+			var ring := _cyl(root, 0.0315, 0.008, Vector3(0, 0.03, -0.15 + i * 0.037), _m(Color(0.06, 0.06, 0.06), 0.7), Vector3(PI * 0.5, 0, 0.25))
+			ring.rotation = Vector3(PI * 0.5 + 0.2, 0, 0)
+		_cyl(root, 0.022, 0.03, Vector3(0, 0.03, 0.18), mm, Vector3(PI * 0.5, 0, 0))
+		return
 	if not _mag_models.has(fam):
 		var mag_node: Node3D = null
 		var ref := ItemDB.family_ref(fam)
@@ -206,12 +215,27 @@ static func _mag_box(root: Node3D, item: ItemData) -> void:
 	var length := float(sh[0]) * pow(float(item.capacity) / float(std.capacity), 0.55)
 	var width := float(sh[1])
 	var col := Color(0.2, 0.21, 0.22) if item.mag_family in ["stanag", "sr25", "sr22"] else Color(0.1, 0.105, 0.11)
-	var t := 0.026 if not item.mag_family.begins_with("pist") else 0.02
+	var brass := _m(Color(0.78, 0.6, 0.28), 0.35, 0.85)
 	# Acostado con lo largo hacia Z (en el ícono queda parado, como su casilla)
-	_box(root, Vector3(width, t, length), Vector3(0, t * 0.5, 0), _m(col, 0.55, 0.5), 0.003)
-	_box(root, Vector3(width + 0.006, t + 0.004, 0.012), Vector3(0, t * 0.5, length * 0.5 + 0.004), _m(col.darkened(0.3), 0.6, 0.4), 0.002)
-	_cyl(root, 0.0045, 0.03, Vector3(-width * 0.15, t * 0.6, -length * 0.5 - 0.004), _m(Color(0.78, 0.6, 0.28), 0.35, 0.85),
-		Vector3(PI * 0.5, 0, 0))
+	if item.mag_family.begins_with("pist"):
+		# Pistola: cuerpo de acero con los bordes muy redondeados, base que sobresale,
+		# agujeros testigo y la bala de arriba asomando
+		var t := 0.024
+		_box(root, Vector3(width, t, length), Vector3(0, t * 0.5, 0), _m(Color(0.16, 0.165, 0.17), 0.35, 0.8), t * 0.45)
+		_box(root, Vector3(width + 0.01, t + 0.006, 0.016), Vector3(0, t * 0.5, length * 0.5 + 0.006),
+			_m(Color(0.06, 0.06, 0.06), 0.7, 0.1), 0.007)
+		for i in 4:
+			_cyl(root, 0.0022, 0.004, Vector3(-width * 0.25, t + 0.0005, -length * 0.3 + i * length * 0.18), _m(Color(0.02, 0.02, 0.02), 0.9),
+				Vector3.ZERO)
+		_cyl(root, 0.0048, 0.018, Vector3(0, t * 0.55, -length * 0.5 - 0.004), brass, Vector3(PI * 0.5, 0, 0))
+		return
+	# Fusil o subfusil: caja de chapa o polímero con nervaduras a lo largo
+	var t2 := 0.026
+	_box(root, Vector3(width, t2, length), Vector3(0, t2 * 0.5, 0), _m(col, 0.55, 0.5), 0.003)
+	for sx: float in [-0.22, 0.22]:
+		_box(root, Vector3(0.004, 0.003, length * 0.8), Vector3(width * sx, t2 + 0.001, 0.0), _m(col.darkened(0.25), 0.55, 0.5), 0.001)
+	_box(root, Vector3(width + 0.006, t2 + 0.004, 0.012), Vector3(0, t2 * 0.5, length * 0.5 + 0.004), _m(col.darkened(0.3), 0.6, 0.4), 0.002)
+	_cyl(root, 0.0045, 0.03, Vector3(-width * 0.15, t2 * 0.6, -length * 0.5 - 0.004), brass, Vector3(PI * 0.5, 0, 0))
 
 
 ## Chaleco táctico: el chaleco con un porta-cargador por grilla de 1×2 y bolsillos.
@@ -293,9 +317,10 @@ static func display_weapon(data: WeaponData) -> Node3D:
 		d2.model_params["barrel"] = 0.21
 		d2.model_params["hg"] = 0.12
 		data = d2
-	var m := WeaponModelBuilder.build(data)
 	# Con la mira de fábrica (si es un accesorio)
-	WeaponAttach.apply_model(m, data, WeaponAttach.sight_of(data, {}), "")
+	var sg := WeaponAttach.sight_of(data, {})
+	var m := WeaponModelBuilder.build(WeaponAttach.model_data(data, sg))
+	WeaponAttach.apply_model(m, data, sg, "")
 	for n in ["HandR", "HandL", "HookR", "HookL", "HookP", "Arms", "SkinnedArms"]:
 		var h := m.find_child(n, true, false)
 		if h != null:

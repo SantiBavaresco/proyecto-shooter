@@ -333,7 +333,47 @@ func _update_hover(m: Vector2) -> void:
 		if sl.hovered != hv2:
 			sl.hovered = hv2
 			sl.queue_redraw()
+	_mark_compat(s)
 	_show_info(s if s != null else _selected)
+
+
+## ¿Van juntos? Accesorio ↔ arma donde se monta, cargador ↔ arma que lo usa,
+## munición ↔ cargador de su calibre.
+static func fits_together(a: ItemStack, b: ItemStack) -> bool:
+	if a == null or b == null or a == b:
+		return false
+	for pair: Array in [[a, b], [b, a]]:
+		var x := pair[0] as ItemStack
+		var y := pair[1] as ItemStack
+		if y.item.kind == "weapon":
+			var w := y.item.weapon()
+			if x.item.is_attachment() and ItemDB.fits_weapon(x.item, w):
+				return true
+			if x.item.kind == "mag" and ItemDB.mag_family(w.id) == x.item.mag_family:
+				return true
+		if x.item.kind == "ammo" and y.item.kind == "mag" \
+				and ItemDB.ammo_caliber(x.item.caliber) == ItemDB.ammo_caliber(y.item.caliber):
+			return true
+	return false
+
+
+## Resalta en verde lo que va con el ítem señalado (en todas las grillas y el equipo).
+func _mark_compat(s: ItemStack) -> void:
+	var on := s != null and (s.item.is_attachment() or s.item.kind in ["mag", "ammo", "weapon"])
+	for g: InvGrid in _grids():
+		var list: Array = []
+		if on:
+			for o in g.inv.stacks:
+				if fits_together(s, o):
+					list.append(o)
+		if list != g.compat:
+			g.compat = list
+			g.queue_redraw()
+	for sl: InvSlot in _all_slots():
+		var c := on and sl.slot != "quick" and fits_together(s, sl.stack())
+		if c != sl.compat:
+			sl.compat = c
+			sl.queue_redraw()
 
 
 # --- Arrastrar y soltar ------------------------------------------------------------
@@ -404,7 +444,8 @@ func _update_drag(m: Vector2) -> void:
 			if sl.slot == "quick":
 				hl = 1 if _press_stack.item.is_consumable() else -1
 			else:
-				hl = 1 if pinv.can_equip(_press_stack, sl.slot) or (sl == _press_from) else -1
+				hl = 1 if pinv.can_equip(_press_stack, sl.slot) or (sl == _press_from) \
+					or fits_together(_press_stack, sl.stack()) else -1
 		if sl.highlight != hl:
 			sl.highlight = hl
 			sl.queue_redraw()
