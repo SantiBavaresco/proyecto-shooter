@@ -398,3 +398,9 @@
 - Visores 4x nuevos: AC-4 (tipo ACOG, con fibra óptica) y SP-4 (tipo Elcan, con alza de respaldo). En las cajas de armas y en la caja de equipo.
 - Silenciador de 9 mm/.45 tipo Osprey: sección rectangular redondeada con el caño arriba. M-23: modelo corrido 2,3 mm para que la boca quede en el eje.
 - Inventario: los bolsillos suben (el aviso de sobrecarga solo ocupa lugar cuando aparece).
+
+## 2.1.4 — Fallas de cerrojos y escopetas, munición resaltada (2026-11-04)
+- Zona de armas gastadas: cerrojos y escopetas fallan 2,5 veces más por tiro (disparan poco).
+- Cerrojos: además de "no disparó" y "encasquillada", el cartucho nuevo se puede cruzar al cerrar ("TRABADA"): R lo saca, tarda 2,2 veces lo normal y se pierde ese cartucho.
+- Escopetas: el cierre o el martillo quedan trabados ("TRABADA — [R] quebrar y cerrar"): R la quiebra (recarga) y queda bien. Al recargar, a veces una vaina hinchada queda pegada y la recarga tarda más.
+- Inventario: al señalar un arma también se marca en verde su munición suelta.

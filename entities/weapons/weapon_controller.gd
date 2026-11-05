@@ -30,6 +30,8 @@ const BREATH_MAX := 5.0
 const BREATH_PENALTY := 3.0
 ## Estado que simula la zona de armas gastadas.
 const WORN_CONDITION := 0.35
+## Cerrojos y escopetas disparan poco: en la zona de armas gastadas fallan más por tiro.
+const WORN_MANUAL_MULT := 2.5
 ## Recarga rápida (R dos veces): ventana para el segundo toque y cuánto acorta.
 const FAST_RELOAD_WINDOW := 0.4
 const FAST_RELOAD_MULT := 0.72
@@ -548,12 +550,17 @@ func _advance_state(delta: float) -> void:
 		if state_time >= state_duration:
 			_play_mech(SynthSfx.click("bolt_fwd", 1.0, 0.05), -8.0)
 			if c.malfunction != "":
-				# Cerrojo: sale el cartucho que no disparó (o la vaina que no se extrajo)
-				# y entra otro
-				if c.malfunction == "misfire" and c.mag > 0 and not DebugTools.infinite_ammo:
+				# Cerrojo: sale el cartucho que no disparó (o la vaina que no se extrajo,
+				# o el que se trabó al entrar) y entra otro
+				if c.malfunction in ["misfire", "double_feed"] and c.mag > 0 and not DebugTools.infinite_ammo:
 					c.mag -= 1
 				c.malfunction = ""
 				c.case_stuck = false
+			elif c.mag > 0 and worn_zone() \
+					and _rng.randf() < fault_risk(effective_condition(c), _risk_mult(c.data))["double_feed"] * 3.0:
+				# Arma gastada: el cartucho nuevo se cruza y el cerrojo no cierra
+				c.malfunction = "double_feed"
+				_play_mech(SynthSfx.click("fumble", 1.0, 0.04), -6.0)
 			_set_state(State.READY, 0.0)
 			_emit_state()
 
@@ -690,6 +697,11 @@ func _start_reload() -> void:
 		var fail_p: float = [0.0, 0.35, 0.55, 0.7][lv]
 		while break_fumbles < [0, 1, 2, 3][lv] and _rng.randf() < fail_p:
 			break_fumbles += 1
+		# Escopeta gastada: una vaina hinchada queda pegada y cuesta sacarla
+		if c.data.reload_type == "break" and worn_zone() \
+				and _rng.randf() < fault_risk(effective_condition(c), _risk_mult(c.data))["stovepipe"] * 8.0:
+			break_fumbles += 2
+			EventBus.toast.emit(tr("weapon.stuck_shell"))
 		break_extra = break_fumbles * 0.1
 		dur *= [1.0, 1.12, 1.27, 1.4][lv] * (1.0 + break_extra)
 	else:
@@ -772,8 +784,14 @@ func _start_clear(c: WeaponSlot) -> void:
 	_reload_empty = false
 	if c.data.bolt_action:
 		_cycle_fx_done = false
-		_set_state(State.CYCLING, c.data.cycle_time * [1.0, 1.15, 1.4, 1.6][player.stress.level()])
+		# Un cartucho cruzado cuesta más sacarlo que una vaina o un cartucho que no salió
+		var k := 2.2 if c.malfunction == "double_feed" else 1.0
+		_set_state(State.CYCLING, c.data.cycle_time * k * [1.0, 1.15, 1.4, 1.6][player.stress.level()])
 		_emit_state()
+		return
+	if c.data.reload_type == "break":
+		# Escopeta trabada: se quiebra y se cierra (la recarga); al terminar queda bien
+		_start_reload()
 		return
 	if c.data.reload_type == "cylinder":
 		# Revólver: un cartucho que no salió; se gatilla de nuevo (gira el tambor)
@@ -896,6 +914,8 @@ func reload_duration(c: WeaponSlot) -> float:
 
 
 func _finish_reload(c: WeaponSlot) -> void:
+	if c.malfunction == "break_jam":
+		c.malfunction = ""
 	if c.data.reload_type == "rounds":
 		_load_rounds(c)  # los que faltaban por tiempo (los cartuchos ya entraron de a uno)
 	elif c.family != "" and inv != null and not DebugTools.infinite_ammo:
@@ -942,7 +962,7 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 	var w := c.data
 	var cond := effective_condition(c)
 	c.condition = maxf(0.0, c.condition - float(WEAR_PER_SHOT.get(w.reload_type, 1.0 / 4000.0)))
-	var risk := fault_risk(cond, reliability(w))
+	var risk := fault_risk(cond, _risk_mult(w))
 	if not accidental and _rng.randf() < risk["misfire"]:
 		# No disparó: el cartucho queda en la recámara (con cargador o cerrojo hay que
 		# destrabar y se descuenta al sacarlo; en la escopeta se pasa al otro caño)
@@ -1003,6 +1023,11 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 		else:
 			_cycle_fx_done = false
 			_set_state(State.CYCLING, w.cycle_time)
+	elif w.reload_type == "break":
+		# Escopeta gastada: el cierre o el martillo quedan trabados; hay que quebrarla (R)
+		if worn_zone() and _rng.randf() < risk["stovepipe"]:
+			c.malfunction = "break_jam"
+			_cooldown = 0.3
 	elif w.reload_type != "break" and w.reload_type != "cylinder":
 		# Semiautomáticas: la vaina puede quedar trabada en la ventana o entrar dos
 		# cartuchos a la vez (solo si quedaba otro para alimentar)
@@ -1077,6 +1102,15 @@ static func fault_risk(condition: float, mult := 1.0) -> Dictionary:
 
 ## Qué tan propensa a fallar es el arma (1 = normal): las de mecanismo tipo AK
 ## aguantan mucho más el desgaste; los cerrojos, algo más.
+## Multiplicador de fallas por tiro: el del arma y, en la zona de armas gastadas, más
+## para las de mecanismo manual (cerrojo, quiebre).
+func _risk_mult(w: WeaponData) -> float:
+	var m := reliability(w)
+	if worn_zone() and (w.bolt_action or w.reload_type == "break"):
+		m *= WORN_MANUAL_MULT
+	return m
+
+
 static func reliability(w: WeaponData) -> float:
 	if w.id in ["ak74", "akm", "svd", "pp19", "sks"]:
 		return 0.55

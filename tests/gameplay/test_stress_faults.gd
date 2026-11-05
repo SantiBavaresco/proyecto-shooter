@@ -337,3 +337,32 @@ func test_imported_reload_fumbles_with_stress() -> void:
 		await physics_frames(int(weapons.state_duration * 60.0) + 10)
 		assert_eq(c.mag, d.mag_size + 1, "igual termina cargando")
 	assert_gt(float(seen.size()), 1.0, "los intentos varían")
+
+
+## Zona de armas gastadas: los cerrojos y las escopetas también se traban.
+func test_bolt_and_shotgun_jam_when_worn() -> void:
+	player.teleport(_zone_pos("worn"), PI)
+	await physics_frames(60)
+	for id: String in ["mauser1909", "shotgun"]:
+		await _equip(id)
+		var c := weapons.current()
+		var jam := ""
+		for i in 200:
+			weapons._rng.seed = i * 7 + 1
+			c.mag = c.data.mag_size
+			c.malfunction = ""
+			weapons.state = WeaponController.State.READY
+			weapons._fire(c)
+			if weapons.state == WeaponController.State.CYCLING:
+				await physics_frames(int(weapons.state_duration * 60.0) + 3)
+			if c.malfunction != "" and c.malfunction != "misfire":
+				jam = c.malfunction
+				break
+		assert_true(jam != "", "%s: se traba alguna vez" % id)
+		if id == "shotgun":
+			assert_eq(jam, "break_jam")
+			bot.press_reload()
+			await physics_frames(2)
+			assert_eq(weapons.state, WeaponController.State.RELOADING, "R la quiebra")
+			await physics_frames(int(weapons.state_duration * 60.0) + 10)
+			assert_eq(c.malfunction, "", "quebrarla la destraba")

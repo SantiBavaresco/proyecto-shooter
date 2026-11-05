@@ -326,5 +326,7 @@
 	"item.optic_acog": "Visor 4x AC-4 (tipo ACOG)",
 	"item.optic_acog.desc": "Visor compacto de 4 aumentos con fibra óptica arriba y retícula de chevrón.",
 	"item.optic_elcan": "Visor 4x SP-4 (tipo Elcan)",
-	"item.optic_elcan.desc": "Visor de 4 aumentos con alza de respaldo arriba y retícula de cruz."
+	"item.optic_elcan.desc": "Visor de 4 aumentos con alza de respaldo arriba y retícula de cruz.",
+	"weapon.fault_break_jam": "TRABADA — [R] quebrar y cerrar",
+	"weapon.stuck_shell": "Vaina pegada: cuesta sacarla"
 }

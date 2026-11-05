@@ -338,7 +338,7 @@ func _update_hover(m: Vector2) -> void:
 
 
 ## ¿Van juntos? Accesorio ↔ arma donde se monta, cargador ↔ arma que lo usa,
-## munición ↔ cargador de su calibre.
+## munición ↔ arma y cargador de su calibre.
 static func fits_together(a: ItemStack, b: ItemStack) -> bool:
 	if a == null or b == null or a == b:
 		return false
@@ -350,6 +350,8 @@ static func fits_together(a: ItemStack, b: ItemStack) -> bool:
 			if x.item.is_attachment() and ItemDB.fits_weapon(x.item, w):
 				return true
 			if x.item.kind == "mag" and ItemDB.mag_family(w.id) == x.item.mag_family:
+				return true
+			if x.item.kind == "ammo" and ItemDB.ammo_caliber(x.item.caliber) == ItemDB.ammo_caliber(w.caliber):
 				return true
 		if x.item.kind == "ammo" and y.item.kind == "mag" \
 				and ItemDB.ammo_caliber(x.item.caliber) == ItemDB.ammo_caliber(y.item.caliber):

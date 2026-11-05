@@ -433,3 +433,10 @@ func test_compatible_items_are_marked() -> void:
 	var mag := ItemStack.make("mag_pist_9x19")
 	assert_true(InventoryScreen.fits_together(mag, pinv.equipment["pistol"]))
 	assert_true(InventoryScreen.fits_together(ItemStack.make("ammo_9x19", 10), mag), "munición con su cargador")
+
+
+func test_weapon_marks_its_ammo() -> void:
+	var ak := pinv.equipment["weapon1"] as ItemStack
+	assert_true(InventoryScreen.fits_together(ak, ItemStack.make("ammo_545x39", 30)), "la AR-74K marca la 5,45")
+	assert_false(InventoryScreen.fits_together(ak, ItemStack.make("ammo_9x19", 30)))
+	assert_true(InventoryScreen.fits_together(pinv.equipment["weapon2"], ItemStack.make("ammo_12g", 5)), "la escopeta, sus cartuchos")

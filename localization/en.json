@@ -326,5 +326,7 @@
 	"item.optic_acog": "AC-4 4x scope (ACOG type)",
 	"item.optic_acog.desc": "Compact 4x scope with a fiber optic on top and a chevron reticle.",
 	"item.optic_elcan": "SP-4 4x scope (Elcan type)",
-	"item.optic_elcan.desc": "4x scope with backup iron sights on top and a crosshair reticle."
+	"item.optic_elcan.desc": "4x scope with backup iron sights on top and a crosshair reticle.",
+	"weapon.fault_break_jam": "JAMMED — [R] break open and close",
+	"weapon.stuck_shell": "Stuck shell: hard to extract"
 }
