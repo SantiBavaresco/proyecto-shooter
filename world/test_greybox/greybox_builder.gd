@@ -18,6 +18,8 @@ extends Node3D
 ##    armas gastadas (fallas frecuentes)
 ##  - Inventario y saqueo (atrás a la izquierda del spawn): cajón, caja metálica,
 ##    alijo pesado, ítems sueltos en el piso y alambre de púas (daño y sangrado)
+##  - Zona de combate (al fondo a la izquierda): un grupo de 5 enemigos con IA entre
+##    coberturas, con una consola para cambiar la dificultad y otra para reiniciar
 
 const GridShader := preload("res://world/test_greybox/grid.gdshader")
 const Mannequin := preload("res://world/props/mannequin.gd")
@@ -165,6 +167,97 @@ func _build() -> void:
 	_build_armory(geo)
 	_build_loot_area(geo)
 	_build_floor_samples(geo)
+	geo.add_to_group(NavUtil.GROUP)
+	_build_arena(geo)
+
+
+## Zona de combate: x de −68 a −30, z de −98 a −52. Se entra por el sur (cerca del
+## inicio); los enemigos esperan al fondo entre coberturas.
+const ARENA_MIN := Vector2(-68, -98)
+const ARENA_MAX := Vector2(-30, -52)
+const ARENA_SQUAD := [["bandit_rifle", Vector3(-58, 0, -90), "akm"], ["bandit_rifle", Vector3(-40, 0, -88), "ak74"],
+	["bandit_smg", Vector3(-49, 0, -84), "mp5"], ["bandit_shotgun", Vector3(-62, 0, -78), "shotgun"],
+	["bandit_marksman", Vector3(-36, 0, -95), "svd"]]
+
+var _arena_npcs: Array[HumanNpc] = []
+
+
+func _build_arena(geo: Node3D) -> void:
+	var c := Vector3((ARENA_MIN.x + ARENA_MAX.x) * 0.5, 0, (ARENA_MIN.y + ARENA_MAX.y) * 0.5)
+	_sign(geo, Vector3(c.x, 3.4, ARENA_MAX.y + 1.5), tr("greybox.arena"))
+	# Muros que cierran la zona (para que no te vean ni oigan desde el resto de la
+	# pista); se entra por un hueco en el muro sur
+	_box(geo, Vector3(ARENA_MAX.x, 1.5, c.z), Vector3(0.5, 3, ARENA_MAX.y - ARENA_MIN.y), _mat_block)
+	var gap := 5.0
+	var wl := (ARENA_MAX.x - ARENA_MIN.x - gap) * 0.5
+	_box(geo, Vector3(ARENA_MIN.x + wl * 0.5, 1.5, ARENA_MAX.y), Vector3(wl, 3, 0.5), _mat_block)
+	_box(geo, Vector3(ARENA_MAX.x - wl * 0.5, 1.5, ARENA_MAX.y), Vector3(wl, 3, 0.5), _mat_block)
+	# Coberturas: muros bajos, contenedores, cajones, bloques, un auto
+	Structures.container(geo, Vector3(-55, 0, -70), 0.3, CONTAINER_COLORS[0])
+	Structures.container(geo, Vector3(-38, 0, -76), -0.2, CONTAINER_COLORS[1], true)
+	Structures.container(geo, Vector3(-60, 0, -92), PI * 0.5, CONTAINER_COLORS[2])
+	for p: Array in [[Vector3(-49, 0, -62), 0.0], [Vector3(-62, 0, -64), 0.4], [Vector3(-36, 0, -64), -0.3], [Vector3(-46, 0, -92), 0.1]]:
+		Structures.jersey(geo, p[0], p[1])
+	for p: Array in [[Vector3(-44, 0, -80), 0.0], [Vector3(-56, 0, -82), 0.5], [Vector3(-33, 0, -86), 0.2]]:
+		Structures.sandbags(geo, p[0], p[1], 4.0, 1.1, true)
+	Structures.crates(geo, Vector3(-50, 0, -74), 0.3, 3)
+	Structures.crates(geo, Vector3(-41, 0, -68), -0.4, 2)
+	Structures.car_wreck(geo, Vector3(-64, 0, -72), 1.2, "car_red")
+	Structures.building(geo, Vector3(-48, 0, -95), Vector3(7, 3.0, 5), 0.0, {"s": [[0.0, 1.0, 2.1, 0.0], [-2.3, 1.2, 2.0, 1.0],
+		[2.3, 1.2, 2.0, 1.0]]}, Structures.mat("plaster"), "flat")
+	var crate := LootContainerScript.new() as LootContainer
+	crate.name = "ArenaCrate"
+	crate.kind = "crate"
+	crate.contents = [["grenade_rg5", 3], ["grenade_f1", 2], ["medkit", 2], ["bandage", 4], ["vest_medium", 1], ["helmet_kevlar", 1]]
+	crate.position = Vector3(c.x + 5.0, 0, ARENA_MAX.y + 1.5)
+	crate.rotation = Vector3(0, PI, 0)
+	geo.add_child(crate)
+	for a: Array in [["difficulty", Vector3(c.x - 6.5, 0, ARENA_MAX.y + 1.5)], ["reset", Vector3(c.x - 4.5, 0, ARENA_MAX.y + 1.5)]]:
+		var con := ArenaConsole.new()
+		con.name = "ArenaConsole_" + a[0]
+		con.action = a[0]
+		con.position = a[1]
+		con.rotation = Vector3(0, PI, 0)
+		geo.add_child(con)
+		con.used.connect(_on_console)
+	NavUtil.bake(self, AABB(Vector3(ARENA_MIN.x - 2, -2, ARENA_MIN.y - 2), Vector3(ARENA_MAX.x - ARENA_MIN.x + 4, 12,
+		ARENA_MAX.y - ARENA_MIN.y + 8)), true)
+	_spawn_arena.call_deferred()
+
+
+func _on_console(action: String) -> void:
+	if action == "reset":
+		_spawn_arena()
+
+
+## Pone (o vuelve a poner) el grupo de 5 de la zona de combate.
+func _spawn_arena() -> void:
+	for n in _arena_npcs:
+		if is_instance_valid(n):
+			n.queue_free()
+	_arena_npcs.clear()
+	for i in ARENA_SQUAD.size():
+		var e: Array = ARENA_SQUAD[i]
+		var n := HumanNpc.new()
+		n.name = "ArenaNpc_%d" % i
+		n.loadout_id = e[0]
+		n.weapon_id = e[2]
+		n.squad = "arena"
+		n.leash = 26.0
+		n.hearing_mult = 0.5
+		n.position = e[1] + Vector3(0, 0.05, 0)
+		n.rotation = Vector3(0, PI, 0)
+		add_child(n)
+		_arena_npcs.append(n)
+
+
+## Muerte del jugador: el cuerpo queda con todo y vuelve a aparecer en el inicio con
+## el equipo de pruebas completo.
+func on_player_died(p: Player) -> void:
+	PlayerCorpse.leave(p)
+	p.inventory.give_start_kit()
+	p.respawn_at(Vector3(0, 0.05, 0), 0.0)
+	EventBus.player_respawned.emit(p)
 
 
 ## Pisos para probar los pasos: hormigón, tierra, madera y metal (losas de 3,5 m).

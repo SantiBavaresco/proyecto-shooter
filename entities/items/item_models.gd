@@ -74,6 +74,39 @@ static func build(item: ItemData, state := {}) -> Node3D:
 					_box(root, Vector3(0.025, 0.006, 0.026), Vector3(0.16, 0.004, -0.002), steel, 0.002).rotation = Vector3(0, 0.75, 0)
 					_box(root, Vector3(0.012, 0.014, 0.06), Vector3(-0.015, 0.007, 0), _m(Color(0.2, 0.2, 0.2), 0.5, 0.6), 0.002)
 					_box(root, Vector3(0.12, 0.022, 0.026), Vector3(-0.085, 0.011, 0), _m(Color(0.1, 0.1, 0.09), 0.85), 0.008)
+				"grenade_rg5":
+					# Cuerpo liso ovalado verde oliva, espoleta con palanca y anillo
+					var body_m := _m(Color(0.3, 0.34, 0.22), 0.6, 0.2)
+					var gm := MeshInstance3D.new()
+					var gs := SphereMesh.new()
+					gs.radius = 0.028
+					gs.height = 0.07
+					gm.mesh = gs
+					gm.material_override = body_m
+					gm.position = Vector3(0, 0.035, 0)
+					root.add_child(gm)
+					_cyl(root, 0.011, 0.024, Vector3(0, 0.078, 0), _m(Color(0.55, 0.56, 0.5), 0.4, 0.8))
+					_box(root, Vector3(0.008, 0.05, 0.004), Vector3(0.016, 0.06, 0), _m(Color(0.5, 0.52, 0.46), 0.4, 0.8), 0.001)
+					_cyl(root, 0.011, 0.002, Vector3(-0.016, 0.086, 0), _m(Color(0.7, 0.7, 0.68), 0.3, 0.9), Vector3(0, 0, PI * 0.5))
+				"grenade_f1":
+					# Tipo "limón": cuerpo segmentado
+					var body_f := _m(Color(0.27, 0.31, 0.2), 0.8, 0.15)
+					for row in 4:
+						for col in 6:
+							var a := TAU * col / 6.0 + (0.26 if row % 2 == 1 else 0.0)
+							var yy := 0.012 + row * 0.016
+							var rr := 0.026 - absf(row - 1.5) * 0.004
+							_box(root, Vector3(0.014, 0.014, 0.014), Vector3(cos(a) * rr, yy, sin(a) * rr), body_f, 0.003)
+					var core := MeshInstance3D.new()
+					var cs := SphereMesh.new()
+					cs.radius = 0.024
+					cs.height = 0.064
+					core.mesh = cs
+					core.material_override = body_f
+					core.position = Vector3(0, 0.035, 0)
+					root.add_child(core)
+					_cyl(root, 0.011, 0.024, Vector3(0, 0.078, 0), _m(Color(0.55, 0.56, 0.5), 0.4, 0.8))
+					_box(root, Vector3(0.008, 0.05, 0.004), Vector3(0.016, 0.06, 0), _m(Color(0.5, 0.52, 0.46), 0.4, 0.8), 0.001)
 				"bandage":
 					_cyl(root, 0.03, 0.055, Vector3(0, 0.03, 0), _m(Color(0.92, 0.9, 0.84), 0.95), Vector3(PI * 0.5, 0, 0))
 					_cyl(root, 0.012, 0.056, Vector3(0, 0.03, 0), _m(Color(0.75, 0.72, 0.66), 0.95), Vector3(PI * 0.5, 0, 0))
@@ -99,17 +132,18 @@ static func build(item: ItemData, state := {}) -> Node3D:
 					_cyl(root, 0.0425, 0.05, Vector3(0, 0.0375, 0), _m(Color(0.65, 0.2, 0.12), 0.6))
 				"bread":
 					_box(root, Vector3(0.15, 0.055, 0.075), Vector3(0, 0.03, 0), _m(Color(0.66, 0.44, 0.22), 0.9), 0.02)
-				"helmet_steel":
+				"helmet_steel", "helmet_kevlar":
+					var hc := Color(0.27, 0.31, 0.22) if item.id == "helmet_steel" else Color(0.42, 0.38, 0.28)
 					var h := MeshInstance3D.new()
 					var sm := SphereMesh.new()
 					sm.radius = 0.13
 					sm.height = 0.26
 					sm.is_hemisphere = true
 					h.mesh = sm
-					h.material_override = _m(Color(0.27, 0.31, 0.22), 0.75, 0.3)
+					h.material_override = _m(hc, 0.75, 0.3 if item.id == "helmet_steel" else 0.0)
 					h.scale = Vector3(1.0, 0.85, 1.12)
 					root.add_child(h)
-					_cyl(root, 0.135, 0.012, Vector3(0, 0.006, 0), _m(Color(0.22, 0.25, 0.18), 0.75, 0.3))
+					_cyl(root, 0.135, 0.012, Vector3(0, 0.006, 0), _m(hc.darkened(0.2), 0.75, 0.3))
 				"vest_light", "vest_plate":
 					var c := Color(0.3, 0.33, 0.24) if item.id == "vest_light" else Color(0.18, 0.2, 0.16)
 					_box(root, Vector3(0.42, 0.06, 0.5), Vector3(0, 0.03, 0), _m(c, 0.9), 0.02)

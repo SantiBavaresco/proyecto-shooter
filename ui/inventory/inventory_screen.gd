@@ -789,8 +789,9 @@ static func item_sheet(s: ItemStack, p: PlayerInventory) -> String:
 			rows.append([tr_s("inv.stat.regen"), "%.1f/s · %d s" % [float(fx["regen"]), int(fx.get("duration", 0))], ""])
 		rows.append([tr_s("inv.stat.use_time"), "%.1f s" % it.use_time, ""])
 	else:
-		if it.protection > 0.0:
-			rows.append([tr_s("inv.stat.protection"), "%d %%" % roundi(it.protection * 100.0), ""])
+		if it.armor_class > 0:
+			rows.append([tr_s("inv.stat.armor_class"), tr_s("inv.stat.class_n") % it.armor_class, ""])
+			rows.append([tr_s("inv.stat.stops"), tr_s("armor.stops.%d" % it.armor_class), ""])
 		if it.carry_bonus > 0.0:
 			rows.append([tr_s("inv.stat.carry"), "+%d kg" % int(it.carry_bonus), ""])
 		if s.state.has("condition"):

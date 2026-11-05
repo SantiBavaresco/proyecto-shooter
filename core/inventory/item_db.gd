@@ -109,6 +109,7 @@ static func _ensure() -> void:
 		it.use_time = float(e.get("use_time", 0.0))
 		it.effects = e.get("effects", {})
 		it.protection = float(e.get("protection", 0.0))
+		it.armor_class = int(e.get("class", 0))
 		it.carry_bonus = float(e.get("carry_bonus", 0.0))
 		it.model_path = String(e.get("model", ""))
 		it.model_scale = float(e.get("model_scale", 1.0))
@@ -266,7 +267,8 @@ static func fits_weapon(att: ItemData, w: WeaponData) -> bool:
 	if att == null or w == null:
 		return false
 	if att.kind == "sight":
-		return not mount(w.id).is_empty()
+		var only: Array = att.attach.get("only", [])
+		return not mount(w.id).is_empty() and (only.is_empty() or only.has(w.id))
 	if att.kind == "muzzle":
 		return String(att.attach.get("thread", "")) == thread_of(w)
 	return false

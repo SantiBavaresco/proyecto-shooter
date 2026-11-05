@@ -40,4 +40,8 @@ Antes de sumar uno, verificar la licencia (ver prompt maestro, sección 4).
 | `decal_bullet_holes` | `systems/combat/combat_world.gd` |
 | `sfx_weapons` (mecánica), `sfx_impacts` | `core/audio/synth_sfx.gd` |
 | `target_paper` | `world/props/paper_target.gd` |
+| Animaciones de enemigos (Mixamo: idle, caminar, correr, agachado, apuntar, disparar, recargar, tirar granada, morir) | `entities/npc/npc_body.gd` (pose por código con IK) |
+| Modelos de los Caranchos (bandidos) | `entities/npc/npc_loadouts.gd` (usan fsb, swat, swat_special y swat_remaster) |
+| Construcciones, árboles y pasto de la Isla Talavera | `world/structures.gd`, `world/zone_talavera/zone_builder.gd` |
+| `sfx_explosion`, `sfx_bullet_crack`, `sfx_knife` | `core/audio/synth_sfx.gd` (sintéticos) |
 

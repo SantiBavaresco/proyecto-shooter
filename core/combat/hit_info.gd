@@ -16,5 +16,7 @@ var distance: float = 0.0
 var drop: float = 0.0
 ## Rebotes que hizo antes de este impacto.
 var ricochets: int = 0
+## Poder de penetración de la bala al llegar (para casco y chaleco, ver Armor).
+var penetration: float = 0.0
 ## Quién disparó (para facciones y reputación en fases siguientes).
 var source: Node = null

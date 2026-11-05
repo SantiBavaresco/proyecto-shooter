@@ -95,3 +95,14 @@ Hasta tener un modelo de brazos con huesos, los brazos se generan por arma con d
 - **Accesorios**: miras sobre un montaje por arma (`data/items/attachments.json`: punto de apoyo y soporte); silenciadores por grupo de rosca según el calibre. Las holográficas de la PP-B y la VK-19 y el visor del CK-21 son ítems sacados de sus modelos (vienen puestos de fábrica). La mira de las armas por código con óptica fija (HK416, SCAR-L, SVD...) no se saca todavía.
 - **Disparo accidental**: al montar (recarga vacía o destrabado) y doble disparo en semiautomáticas; muy raro en un arma sana, más probable gastada.
 - **Muerte y cooperativo (diseño)**: una sola vida sin cargar partida: al morir, el cuerpo queda con todo y se reaparece en el último campamento neutral con lo del alijo general. La historia avanza por hechos del mundo (no se deshace al morir). Se programa para un jugador pero preparado para cooperativo PvE: el jugador ya se maneja por órdenes (PlayerCommand), los ítems se guardan como datos (to_dict) y el loot al azar se tira la primera vez que se abre la caja con una semilla propia (en red decide el anfitrión).
+
+## 2026-11-05 — Enemigos e Isla Talavera (F3)
+- **3 dificultades** (no 4): Novato, Regular, Veterano. Cambian la habilidad de la IA, no la vida ni el daño. Se eligen en el menú antes de la incursión; en la pista de pruebas, con una consola.
+- **Los Caranchos** (bandidos del Delta) usan los modelos de operadores/policía que ya había hasta tener los propios.
+- **Pose por código** mientras no haya animaciones: IK de piernas y brazos sobre el esqueleto Mixamo. Cuando haya animaciones Mixamo se reemplaza solo la parte de NpcBody (la IA no cambia).
+- **IA separada en cuerpo / cerebro / persona**: NpcBody (modelo, pose, cuerpos de impacto), NpcBrain (percepción y decisiones), HumanNpc (vida, blindaje, arma, movimiento). Los blancos son todos los del grupo "player" (cooperativo).
+- **Capas**: 5 cuerpos de movimiento de los enemigos (las balas no los tocan; pegan en los cuerpos de impacto, capa 6), 9 follaje (tapa la vista; no frena balas ni gente), 10 tejidos de alambrado (frenan a la gente; no balas ni vista).
+- **Blindaje por clase** contra el poder de penetración de la bala (que ya existía para atravesar materiales) y desgaste por impacto.
+- **Muerte**: el cuerpo del jugador queda en el mundo con todo; se reaparece en el Puesto del Viejo con cuchillo, pistola y una venda. Todavía sin guardado (eso es F7).
+- **Isla Talavera** es un mundo de prueba de la F3 (no es el mapa del Delta de la F4).
+

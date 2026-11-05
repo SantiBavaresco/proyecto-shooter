@@ -5,7 +5,7 @@ extends RefCounted
 ## Ver ItemDB.
 
 ## Orden de los tipos al ordenar el inventario.
-const KIND_ORDER := ["weapon", "melee", "armor", "helmet", "rig", "backpack", "sight", "muzzle", "mag", "ammo", "medical", "drink",
+const KIND_ORDER := ["weapon", "melee", "armor", "helmet", "rig", "backpack", "sight", "muzzle", "mag", "ammo", "throwable", "medical", "drink",
 	"food", "misc", "money"]
 
 var id: String = ""
@@ -29,8 +29,10 @@ var weapon_path: String = ""
 ## stamina_regen, duration).
 var use_time: float = 0.0
 var effects: Dictionary = {}
-## Equipo: protección (para F3) y kg extra que deja cargar.
+## Equipo: protección (vieja, solo informativa), clase de blindaje (1–5, ver Armor)
+## y kg extra que deja cargar.
 var protection: float = 0.0
+var armor_class: int = 0
 var carry_bonus: float = 0.0
 ## Modelo .glb propio (si no, se arma por código) y su escala.
 var model_path: String = ""

@@ -154,6 +154,87 @@ static func ricochet() -> AudioStreamWAV:
 	return s
 
 
+## Bala que pasa cerca: chasquido seco (onda de choque) y un silbido corto.
+static func crack() -> AudioStreamWAV:
+	var ck := "crack"
+	if _cache.has(ck):
+		return _cache[ck]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var n := int(RATE * 0.22)
+	var data := PackedFloat32Array()
+	data.resize(n)
+	var hp := 0.0
+	var prev := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var nz := rng.randf_range(-1.0, 1.0)
+		# Pasa altos: el chasquido es puro agudo
+		hp = 0.6 * (hp + nz - prev)
+		prev = nz
+		var snap := hp * exp(-t * 90.0) * 1.4
+		var whiz := sin(TAU * lerpf(2600.0, 1400.0, t / 0.22) * t) * exp(-t * 18.0) * 0.18 * minf(1.0, t * 200.0)
+		data[i] = snap + whiz + hp * exp(-t * 14.0) * 0.12
+	var w := _to_wav(data, 0.8)
+	_cache[ck] = w
+	return w
+
+
+## Explosión de granada: golpe grave, crujido de ruido y cola larga que retumba.
+static func explosion() -> AudioStreamWAV:
+	var ck := "explosion"
+	if _cache.has(ck):
+		return _cache[ck]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 991
+	var n := int(RATE * 2.2)
+	var data := PackedFloat32Array()
+	data.resize(n)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var nz := rng.randf_range(-1.0, 1.0)
+		lp += (nz - lp) * lerpf(0.5, 0.04, minf(1.0, t / 0.6))
+		lp2 += (lp - lp2) * 0.2
+		var boom := sin(TAU * (48.0 - 20.0 * minf(1.0, t / 0.4)) * t) * exp(-t * 3.2) * 1.2
+		var crackle := nz * exp(-t * 28.0) * 0.9
+		var tail := lp2 * exp(-t * 1.6) * 2.2
+		data[i] = (boom + crackle + tail) * minf(1.0, t * 400.0)
+	var w := _to_wav(data, 0.95)
+	_cache[ck] = w
+	return w
+
+
+## Cuchillo: zumbido de la hoja en el aire (hit = true: golpe en la carne).
+static func knife(hit: bool) -> AudioStreamWAV:
+	var ck := "knife_%s" % hit
+	if _cache.has(ck):
+		return _cache[ck]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 404 if hit else 403
+	var dur := 0.3 if hit else 0.22
+	var n := int(RATE * dur)
+	var data := PackedFloat32Array()
+	data.resize(n)
+	var bp := 0.0
+	var bp2 := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var nz := rng.randf_range(-1.0, 1.0)
+		bp += (nz - bp) * 0.25
+		bp2 += (bp - bp2) * 0.25
+		var env := sin(PI * clampf(t / 0.16, 0.0, 1.0))
+		var v := (bp - bp2) * env * 1.5
+		if hit and t > 0.1:
+			var tt := t - 0.1
+			v += sin(TAU * 95.0 * tt) * exp(-tt * 30.0) * 0.9 + nz * exp(-tt * 45.0) * 0.4
+		data[i] = v
+	var w := _to_wav(data, 0.7)
+	_cache[ck] = w
+	return w
+
+
 static func _to_wav(samples: PackedFloat32Array, gain: float) -> AudioStreamWAV:
 	var peak := 0.0001
 	for v in samples:

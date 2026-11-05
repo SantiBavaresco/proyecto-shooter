@@ -58,6 +58,7 @@ var _rising: bool = false
 
 
 func _ready() -> void:
+	add_to_group("blast_target")
 	inventory = Inventory.new(8, 6)
 	inventory.title_key = title_key
 	_make_loot()

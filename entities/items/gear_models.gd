@@ -7,7 +7,7 @@ extends RefCounted
 
 const FABRIC := {
 	"rig_light": Color(0.52, 0.45, 0.32), "rig_medium": Color(0.3, 0.33, 0.24), "rig_assault": Color(0.23, 0.24, 0.21),
-	"vest_light": Color(0.33, 0.35, 0.26), "vest_plate": Color(0.2, 0.21, 0.18),
+	"vest_light": Color(0.33, 0.35, 0.26), "vest_medium": Color(0.36, 0.33, 0.25), "vest_plate": Color(0.2, 0.21, 0.18),
 	"backpack_small": Color(0.45, 0.4, 0.29), "backpack_medium": Color(0.3, 0.32, 0.23),
 	"backpack_large": Color(0.33, 0.29, 0.21), "backpack_expedition": Color(0.24, 0.28, 0.26),
 }
@@ -138,7 +138,7 @@ static func rig(root: Node3D, item: ItemData) -> void:
 
 static func vest(root: Node3D, item: ItemData) -> void:
 	var c: Color = FABRIC.get(item.id, Color(0.3, 0.3, 0.24))
-	var heavy := item.id == "vest_plate"
+	var heavy := item.armor_class >= 3
 	var web := c.darkened(0.28)
 	var w := 0.3
 	var l := 0.36

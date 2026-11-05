@@ -34,6 +34,9 @@ var weapon_slot: int = -1
 var zoom: int = 0
 ## Ranura rápida pedida este tick (0–3, teclas 5–8) o −1.
 var quick_slot: int = -1
+## Tirar una granada (G) y cuchillazo rápido (V), solo en el tick en que se apretó.
+var grenade: bool = false
+var melee: bool = false
 
 
 func _to_string() -> String:

@@ -404,3 +404,30 @@
 - Cerrojos: además de "no disparó" y "encasquillada", el cartucho nuevo se puede cruzar al cerrar ("TRABADA"): R lo saca, tarda 2,2 veces lo normal y se pierde ese cartucho.
 - Escopetas: el cierre o el martillo quedan trabados ("TRABADA — [R] quebrar y cerrar"): R la quiebra (recarga) y queda bien. Al recargar, a veces una vaina hinchada queda pegada y la recarga tarda más.
 - Inventario: al señalar un arma también se marca en verde su munición suelta.
+
+## F3 (3.0.0) — Enemigos con IA, Isla Talavera, blindaje, granadas y cuchillo (2026-11-05)
+
+### Funciona
+- **Menú**: botón nuevo "Incursión: Isla Talavera" con 3 dificultades (Novato, Regular, Veterano). La pista de pruebas sigue igual.
+- **Enemigos (Caranchos)** con los modelos que ya había (sin el arma que traían pegada): llevan un arma de verdad en las manos (con su mira y, a veces, silenciador), casco y chaleco según el tipo (fusilero, subfusil, escopetero, tirador, pistolero, jefe).
+- **Pose por código** sobre el esqueleto Mixamo: piernas con IK (pasos según la velocidad, de costado o para atrás apuntando), agachado, torso que gira y se inclina hacia donde apunta, de perfil al apuntar, arma al hombro o en guardia, manos al arma con IK, recarga. Al morir se le aflojan las rodillas y cae hacia donde lo empujó el tiro; el arma cae al lado. Lejos se actualiza menos seguido.
+- **IA**: guardia, patrulla, investigar, combate, búsqueda y retirada. Vista con medidor de alerta (distancia, exposición, de frente o de costado, agachado y quieto cuesta más; el follaje tapa la vista). Oído: disparos (con silenciador mucho menos), pasos, explosiones, balas que pasan cerca. Se avisan dentro del escuadrón. En combate: tiran en ráfagas (cortas de lejos), se cubren buscando lugares donde agachados no se los ve, se asoman para tirar, avanzan de cobertura en cobertura, flanquean, tiran granadas, se retiran a curarse y no disparan si hay un compañero en la línea.
+- **Dificultad por habilidad** (una bala hace lo mismo en cualquier nivel): alcance y ángulo de visión, tiempo en darse cuenta, reacción, error de puntería que se asienta mientras te siguen viendo, ráfagas, cobertura, flanqueo, granadas, avisos y retirada. Medido con un grupo de 3 tirándole 12 s a alguien parado a la vista: a 20 m, 6 / 22 / 66 impactos; a 40 m, 1 / 5 / 17; a 70 m el novato ni lo ve.
+- **Blindaje**: casco y chaleco con clase 1–5; frenan según el poder de la bala (pistola ~0,3, fusil de asalto ~1, .308 ~3) y su desgaste. Si frenan, golpe contuso sin sangrado y nunca letal; el casco cubre parte de los tiros a la cabeza (no la cara). Se gastan con cada impacto. Ítems nuevos: casco de kevlar (3) y chaleco policial (3); el de acero y el liviano son clase 2, el de placas clase 4.
+- **Daño al jugador** por zonas (cabeza con núcleo letal, torso, brazos y piernas) con sangrado y estrés de combate (las balas que pasan cerca suenan y suben el estrés).
+- **Granadas** RG-5 y F-1 ([G]): rebotan, explotan con caída por distancia, detrás de una pared no llegan; estruendo que la IA oye de lejos, fogonazo, humo y sacudón. **Cuchillo** ([V]): estocada; por la espalda a alguien que no te vio es letal.
+- **HUD**: brújula arriba (con marca de tu cuerpo), indicador rojo de dirección del daño, contador de granadas.
+- **Muerte**: el cuerpo queda donde caíste con todo (armas, chalecos, mochila con lo de adentro, bolsillos, plata) y volvés al campamento (o al inicio en la pista de pruebas). Se revisa con [F].
+- **Isla Talavera**: 420 × 420 m del Delta con terreno, riacho al este, bañado al norte, camino de tierra, árboles (sauces, eucaliptos, ceibos), arbustos y pasto. Puesto del Viejo (inicio, alijo con AR-74, chaleco, casco, granadas…), retén de la ruta, Galpón de los Caranchos (alambrado, galpón, oficina del jefe, torre, contenedores; 7 enemigos), Estación de bombeo (casa de bombas, tanques, muelle; 4), Chacra abandonada (2) y una patrulla por el camino. Cajas con loot en cada lugar y un alijo escondido.
+- **Pista de pruebas**: zona de combate cerrada con 5 enemigos entre coberturas, consola para cambiar la dificultad y otra para reiniciar el grupo, y un cajón con granadas y blindaje.
+- **Miras de fábrica que ahora se sacan**: HK416 y SCAR-L (punto rojo PR-2; sin él quedan con alza y guion rebatibles) y DR-1 (visor PSO-1 nuevo, que solo va en el DR-1; sin él queda con el alza del AK).
+- F5 (laboratorio): invulnerable, para mirar a la IA tranquilo.
+
+### Falta / próximo
+- Animaciones reales (Mixamo): la pose por código es provisoria.
+- Voces de los enemigos, linterna, noche.
+- Terreno real del Delta (F4).
+
+### Bugs conocidos
+- Ninguno en los tests.
+

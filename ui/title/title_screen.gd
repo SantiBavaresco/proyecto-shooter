@@ -55,12 +55,12 @@ func _build() -> void:
 	spacer.custom_minimum_size = Vector2(0, 50)
 	_menu.add_child(spacer)
 
+	var raid_btn := _add_button(tr("title.raid"), _open_raid)
 	_add_button(tr("title.story"), Callable(), true)
-	_add_button(tr("title.sandbox"), Callable(), true)
-	var test_btn := _add_button(tr("title.test_track"), func() -> void: GameState.start_level(GameState.LEVEL_TEST_GREYBOX))
+	_add_button(tr("title.test_track"), func() -> void: GameState.start_level(GameState.LEVEL_TEST_GREYBOX))
 	_add_button(tr("menu.options"), _open_options)
 	_add_button(tr("menu.quit"), GameState.quit_game)
-	test_btn.grab_focus.call_deferred()
+	raid_btn.grab_focus.call_deferred()
 
 	var version := Label.new()
 	version.text = "v%s" % ProjectSettings.get_setting("application/config/version")
@@ -86,6 +86,47 @@ func _add_button(text: String, action: Callable, coming_soon := false) -> Button
 		b.pressed.connect(action)
 	_menu.add_child(b)
 	return b
+
+
+## Incursión: se elige la dificultad de los enemigos antes de entrar.
+func _open_raid() -> void:
+	for c in _menu.get_children():
+		if c is Button:
+			c.queue_free()
+	var head := Label.new()
+	head.text = tr("raid.title")
+	head.add_theme_font_size_override("font_size", 34)
+	head.add_theme_color_override("font_color", UiTheme.TEXT)
+	_menu.add_child(head)
+	var desc := Label.new()
+	desc.text = tr("raid.desc")
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.custom_minimum_size = Vector2(720, 0)
+	desc.add_theme_font_size_override("font_size", 19)
+	desc.add_theme_color_override("font_color", UiTheme.TEXT_DIM)
+	_menu.add_child(desc)
+	var first: Button = null
+	for lvl in 3:
+		var b := Button.new()
+		b.text = "%s  ·  %s" % [tr(Difficulty.name_key(lvl)), tr(Difficulty.name_key(lvl) + ".desc")]
+		b.custom_minimum_size = Vector2(720, 54)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.pressed.connect(func() -> void:
+			GameState.difficulty = lvl
+			GameState.start_level(GameState.LEVEL_ZONE))
+		_menu.add_child(b)
+		if lvl == GameState.difficulty:
+			first = b
+	var back := Button.new()
+	back.text = tr("menu.back")
+	back.custom_minimum_size = Vector2(420, 54)
+	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	back.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	back.pressed.connect(_build)
+	_menu.add_child(back)
+	if first != null:
+		first.grab_focus.call_deferred()
 
 
 func _open_options() -> void:

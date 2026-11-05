@@ -9,6 +9,7 @@ enum State { BOOT, TITLE, LOADING, PLAYING, PAUSED }
 const SCENE_TITLE := "res://ui/title/title_screen.tscn"
 const SCENE_LOADING := "res://ui/loading/loading_screen.tscn"
 const LEVEL_TEST_GREYBOX := "res://world/test_greybox/test_greybox.tscn"
+const LEVEL_ZONE := "res://world/zone_talavera/zone_talavera.tscn"
 
 const PauseMenuScript := preload("res://ui/pause/pause_menu.gd")
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
@@ -16,6 +17,9 @@ const UiTheme := preload("res://ui/theme/ui_theme.gd")
 var state: State = State.BOOT
 ## Hay una pantalla abierta sobre el juego (inventario): el jugador no recibe input.
 var ui_open: bool = false
+## Dificultad de los enemigos (Difficulty.Level). Se elige en el menú antes de la
+## incursión; en la pista de pruebas se cambia desde una consola.
+var difficulty: int = 1
 ## Nivel que la pantalla de carga tiene que cargar.
 var pending_level: String = ""
 

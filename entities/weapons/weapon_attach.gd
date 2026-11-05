@@ -112,6 +112,12 @@ static func _build_optic(id: String, tinted := true) -> Node3D:
 		_acog(root)
 	elif scene == "code_elcan":
 		_elcan(root)
+	elif scene == "code_pso":
+		# Visor del DR-1 con su montura lateral (va solo en esa arma, en sus coordenadas)
+		var d := WeaponData.new()
+		d.reticle = String(a.get("reticle", "chevron"))
+		d.scope_mag = float(a.get("mag", 4.0))
+		ModelsRifles.pso(root, d)
 	else:
 		# Las piezas "keep" del .glb, alineadas como en su arma
 		var model := Node3D.new()

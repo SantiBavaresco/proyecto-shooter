@@ -1,0 +1,54 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://world/zone_talavera/zone_builder.gd" id="1_builder"]
+[ext_resource type="PackedScene" path="res://entities/player/player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://ui/hud/hud.gd" id="3_hud"]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
+sky_top_color = Color(0.36, 0.45, 0.58, 1)
+sky_horizon_color = Color(0.74, 0.7, 0.62, 1)
+ground_bottom_color = Color(0.14, 0.15, 0.12, 1)
+ground_horizon_color = Color(0.52, 0.5, 0.42, 1)
+sun_angle_max = 25.0
+
+[sub_resource type="Sky" id="Sky_res"]
+sky_material = SubResource("Sky_mat")
+
+[sub_resource type="Environment" id="Env"]
+background_mode = 2
+sky = SubResource("Sky_res")
+ambient_light_source = 3
+ambient_light_energy = 0.85
+reflected_light_source = 2
+tonemap_mode = 4
+tonemap_white = 6.0
+ssao_enabled = true
+ssao_radius = 1.2
+ssao_intensity = 1.4
+glow_enabled = true
+glow_intensity = 0.4
+glow_bloom = 0.04
+fog_enabled = true
+fog_light_color = Color(0.66, 0.66, 0.6, 1)
+fog_density = 0.0035
+fog_sky_affect = 0.4
+
+[sub_resource type="CameraAttributesPractical" id="CamAttr"]
+
+[node name="ZoneTalavera" type="Node3D"]
+script = ExtResource("1_builder")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Env")
+camera_attributes = SubResource("CamAttr")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+light_color = Color(1, 0.92, 0.8, 1)
+light_energy = 1.25
+shadow_enabled = true
+directional_shadow_max_distance = 160.0
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")

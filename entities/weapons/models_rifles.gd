@@ -326,10 +326,18 @@ static func scar(data: WeaponData) -> Node3D:
 	var bz := rf - 0.1
 	WeaponModelBuilder.barrel(root, "Barrel", rf + 0.01, bz, 0.0115, 0.0092, steel, 0.0045)
 	var muzzle := _muzzle_device(root, "a2", bz, steel)
-	var sight := WeaponModelBuilder.red_dot(root, 0.034, -0.07)
+	# Con punto rojo de fábrica o, si se lo sacaron, alza y guion rebatibles
+	var sight: Vector3
+	var eye := 0.24
+	if data.sight == "red_dot":
+		sight = WeaponModelBuilder.red_dot(root, 0.034, -0.07)
+	else:
+		_irons_flip(root, 0.045, rf + 0.02, 0.034, 0.065)
+		sight = Vector3(0, 0.065, rf + 0.02)
+		eye = _eye_irons(data.id, sight.z)
 	var mag := WeaponModelBuilder.group(root, "Mag", Vector3(0, -0.07, -0.14))
 	WeaponModelBuilder.curved_mag(mag, 0.025, 0.175, 0.06, 0.064, 0.95, 0.024, WeaponModelBuilder.mat("tan"), WeaponModelBuilder.mat("polymer"))
-	WeaponModelBuilder.marker(root, "Sight", sight, 0.24)
+	WeaponModelBuilder.marker(root, "Sight", sight, eye)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0185, 0.005, -0.06))
 	return root
@@ -487,16 +495,30 @@ static func svd(data: WeaponData) -> Node3D:
 	WeaponModelBuilder.lathe(root, "FsCollar", [z_fs - 0.016, 0.0, z_fs - 0.016, 0.0122, z_fs + 0.016, 0.0122, z_fs + 0.016, 0.0], m, Vector3.ZERO, 16)
 	WeaponModelBuilder.front_post(root, z_fs, 0.006, 0.042, m, false, true, 0.014, 0.026)
 	var muzzle := _muzzle_device(root, "svd", bz, m)
-	# Visor PSO
-	var sight := WeaponModelBuilder.scope(root, data, 0.074, 0.03, "pso")
-	WeaponModelBuilder.rbox(root, "PsoMount", Vector3(0.012, 0.05, 0.11), Vector3(-0.016, 0.03, -0.075), m, 0.003)
+	# Visor PSO (de fábrica) o, sin visor, el alza tangencial del AK
+	var sight: Vector3
+	var eye := 0.075
+	if data.sight == "scope":
+		sight = pso(root, data)
+	else:
+		_ak_rear_sight(root, -0.13, -0.205, -0.188, 0.042)
+		sight = Vector3(0, 0.042, z_fs)
+		eye = _eye_irons(data.id, z_fs)
 	# Cargador de 10
 	var mag := WeaponModelBuilder.group(root, "Mag", Vector3(0, -0.04, -0.137))
 	WeaponModelBuilder.curved_mag(mag, 0.022, 0.15, 0.068, 0.074, 1.1, 0.025, m, m)
-	WeaponModelBuilder.marker(root, "Sight", sight, 0.075)
+	WeaponModelBuilder.marker(root, "Sight", sight, eye)
 	WeaponModelBuilder.marker(root, "Muzzle", Vector3(0, 0, muzzle))
 	WeaponModelBuilder.marker(root, "Ejection", Vector3(0.0156, 0.006, -0.08))
 	return root
+
+
+## Visor PSO con su montura lateral, en coordenadas del DR-1. Devuelve la línea de mira.
+static func pso(root: Node3D, data: WeaponData) -> Vector3:
+	var sight := WeaponModelBuilder.scope(root, data, 0.074, 0.03, "pso")
+	WeaponModelBuilder.rbox(root, "PsoMount", Vector3(0.012, 0.05, 0.11), Vector3(-0.016, 0.03, -0.075),
+		WeaponModelBuilder.mat("metal"), 0.003)
+	return sight
 
 
 ## PP-B (tipo PP-19 Bizon): cargador helicoidal bajo el caño, culata plegable de tubo.

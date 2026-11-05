@@ -1,6 +1,7 @@
 extends CanvasLayer
 ## Herramientas de diagnóstico.
 ##  F1  → overlay con FPS, memoria, draw calls, estado y datos del jugador.
+##  F5  → invulnerable (para probar la IA).
 ##  F12 → guarda un reporte de bug en user://bug_reports/ y lo copia al portapapeles.
 
 const REPORT_DIR := "user://bug_reports/"
@@ -11,6 +12,8 @@ var overlay_visible: bool = false
 var show_trajectories: bool = false
 ## Laboratorio: munición infinita (F4).
 var infinite_ammo: bool = false
+## Laboratorio: el jugador no recibe daño (F5), para mirar a la IA tranquilo.
+var god_mode: bool = false
 
 var _panel: PanelContainer
 var _label: Label
@@ -42,6 +45,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("debug_infinite_ammo"):
 		infinite_ammo = not infinite_ammo
 		_show_toast(tr("lab.infinite_ammo") % _on_off(infinite_ammo))
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("debug_god_mode"):
+		god_mode = not god_mode
+		_show_toast(tr("lab.god_mode") % _on_off(god_mode))
 		get_viewport().set_input_as_handled()
 
 

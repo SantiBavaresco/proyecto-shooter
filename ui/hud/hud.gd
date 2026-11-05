@@ -10,7 +10,7 @@ extends CanvasLayer
 ##  - Viñeta roja con poca salud y al recibir daño; pantalla de muerte.
 ## Todo se oculta con Opciones → Video → Mostrar interfaz (menos la muerte).
 ## También crea la pantalla de inventario (Tab).
-## La brújula llega en F3.
+##  - Brújula arriba e indicador de dirección del daño.
 
 const UiTheme := preload("res://ui/theme/ui_theme.gd")
 const FADE_SPEED := 2.5
@@ -26,6 +26,7 @@ var _ammo_label: Label
 var _reserve_label: Label
 var _weapon_label: Label
 var _mode_label: Label
+var _grenade_label: Label
 var _hint_label: Label
 var _status_label: Label
 var _fault_label: Label
@@ -60,6 +61,7 @@ func _ready() -> void:
 	EventBus.item_use_started.connect(_on_use_started)
 	EventBus.item_use_finished.connect(func(_id: String, _ok: bool) -> void: _use_left = 0.0)
 	EventBus.player_died.connect(func() -> void: _death.visible = true)
+	EventBus.player_respawned.connect(func(_p: Node) -> void: _death.visible = false)
 	EventBus.stamina_changed.connect(_on_stamina_changed)
 	EventBus.weapon_state_changed.connect(_on_weapon_state)
 	EventBus.aim_changed.connect(func(aiming: bool) -> void: _dot.visible = not aiming)
@@ -181,6 +183,12 @@ func _build() -> void:
 	_dot.offset_bottom = 2
 	_dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_dot)
+	var compass := HudCompass.new()
+	compass.name = "Compass"
+	_root.add_child(compass)
+	var dmg := HudDamageIndicator.new()
+	dmg.name = "DamageIndicator"
+	_root.add_child(dmg)
 
 	# Marcador de impacto: cuatro trazos en diagonal alrededor del centro
 	_hitmarker = Control.new()
@@ -243,6 +251,8 @@ func _build() -> void:
 	row.add_child(_reserve_label)
 	_mode_label = _label(18, UiTheme.ACCENT, HORIZONTAL_ALIGNMENT_RIGHT)
 	ammo_box.add_child(_mode_label)
+	_grenade_label = _label(16, UiTheme.TEXT_DIM, HORIZONTAL_ALIGNMENT_RIGHT)
+	ammo_box.add_child(_grenade_label)
 
 	_hint_label = _label(22, UiTheme.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	_hint_label.set_anchors_preset(Control.PRESET_CENTER)
@@ -386,6 +396,10 @@ func _on_inventory() -> void:
 	for q in _quick_boxes:
 		q.pinv = p.inventory
 		q.queue_redraw()
+	var gn := 0
+	for gid: String in PlayerActions.GRENADE_IDS:
+		gn += p.inventory.count_of(gid)
+	_grenade_label.text = (tr("hud.grenades") % gn) if gn > 0 else ""
 	var o := p.inventory.overload()
 	_overload_label.text = "" if o <= 0.0 else ("%s · %.0f kg" % [tr("hud.overloaded"), p.inventory.total_weight()])
 

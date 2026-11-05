@@ -69,6 +69,7 @@ const DEFAULTS: Dictionary = {
 	"bug_report": [{"key": KEY_F12}],
 	"debug_trajectories": [{"key": KEY_F3}],
 	"debug_infinite_ammo": [{"key": KEY_F4}],
+	"debug_god_mode": [{"key": KEY_F5}],
 }
 
 ## Acciones que el jugador puede remapear desde Opciones (teclado/mouse),

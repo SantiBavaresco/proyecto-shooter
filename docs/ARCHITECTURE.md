@@ -121,3 +121,13 @@ CombatWorld (uno por nivel, grupo "combat_world")
 - `Vitals` (`core/vitals.gd`): salud, sangrado y efectos con duración.
 - Mundo: `LootContainer`, `AmmoCrate` (contenedor que se repone), `WorldItem` (ítem suelto con física), `NpcDummy` (cuerpo con botín). Todos exponen `inventory`, `title_key` e `interact()`; abrirlos emite `EventBus.loot_requested`.
 - Interfaz (`ui/inventory`): `InventoryScreen` (la crea el HUD), `InvGrid`, `InvSlot`, `ItemIcons` (íconos renderizados una vez desde `ItemModels`, los modelos 3D por código de cada ítem).
+
+## Enemigos (F3)
+- `entities/npc/human_npc.gd` (**HumanNpc**, CharacterBody3D): vida, casco y chaleco (ItemStack con condición), arma (cargador, repuestos, recarga, ráfagas con error de puntería), movimiento por NavigationAgent3D, pasos, granadas, curarse, botín al morir. Recibe órdenes del cerebro (`go_to`, `aim_point`, `raised`, `crouching`, `burst_left`, `aim_error_deg`).
+- `entities/npc/npc_brain.gd` (**NpcBrain**): percepción (vista con medidor de alerta, oído por `EventBus.noise_emitted`, balas cercanas, daño) y estados (IDLE, PATROL, INVESTIGATE, COMBAT, SEARCH, RETREAT). Busca coberturas con rayos sobre la malla de navegación, flanquea, avisa al escuadrón. Los blancos son los del grupo "player".
+- `entities/npc/npc_body.gd` (**NpcBody**): modelo .glb Mixamo, cuerpos de impacto por hueso (capa 6), pose por código (IK de piernas y brazos, torso que apunta), arma en las manos, caída al morir, LOD de la pose por distancia.
+- `entities/npc/npc_loadouts.gd`: equipo por tipo. `core/difficulty.gd`: perfiles de las 3 dificultades.
+- `core/combat/armor.gd`: clases de blindaje contra el poder de penetración (`HitInfo.penetration`).
+- `world/nav_util.gd`: malla de navegación al cargar (nodos del grupo "nav_source", capas 1 y 10).
+- `world/structures.gd`: construcciones y vegetación por código. `world/zone_talavera/`: Isla Talavera.
+- Capas: 1 mundo y jugador, 5 cuerpos de movimiento de enemigos, 6 cuerpos de impacto, 8 casquillos, 9 follaje (vista), 10 alambrados (movimiento).

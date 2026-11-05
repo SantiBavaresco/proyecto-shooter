@@ -32,6 +32,10 @@ const TRAJ_LIFETIME := 6.0
 const TRAJ_MAX_SEGMENTS := 3000
 ## Capa de colisión de los casquillos (no chocan con el jugador ni con balas).
 const SHELL_LAYER := 8
+## Lo que tocan las balas: todo menos casquillos, cuerpos de movimiento de los
+## enemigos (capa 5: las balas pegan en sus cuerpos de impacto), follaje (capa 9) y
+## tejidos de alambrado (capa 10: solo frenan a la gente).
+const BULLET_MASK := 0xFFFFFFFF & ~(1 << (SHELL_LAYER - 1)) & ~(1 << 4) & ~(1 << 8) & ~(1 << 9)
 
 ## Hit-stop (micro pausa) al confirmar una baja o un tiro a la cabeza.
 var hitstop_enabled: bool = true
@@ -92,6 +96,8 @@ class Projectile:
 	## Desplazamiento visual de la trazadora (de la cámara a la boca del arma) que se desvanece.
 	var visual_offset: Vector3 = Vector3.ZERO
 	var alive: bool = true
+	## Ya avisó que pasó cerca de alguien.
+	var near_done: bool = false
 
 
 static func get_for(node: Node) -> CombatWorld:
@@ -220,13 +226,14 @@ func _step(p: Projectile, space: PhysicsDirectSpaceState3D, g: float, delta: flo
 	p.vel -= p.vel.normalized() * p.drag * speed * speed * delta
 	var from := p.pos
 	var to := p.pos + p.vel * delta
+	_check_near_miss(p, from, to)
 	var remaining := 1.0
 	# Hasta 4 sub-tramos por tick para resolver rebotes y penetraciones en el mismo frame.
 	for _sub in 4:
 		var q := PhysicsRayQueryParameters3D.create(from, to)
 		q.exclude = p.exclude
 		q.collide_with_areas = false
-		q.collision_mask = 0xFFFFFFFF & ~(1 << (SHELL_LAYER - 1))
+		q.collision_mask = BULLET_MASK
 		var hit := space.intersect_ray(q)
 		if hit.is_empty():
 			_record_segment(p, from, to)
@@ -252,6 +259,33 @@ func _step(p: Projectile, space: PhysicsDirectSpaceState3D, g: float, delta: flo
 	_update_tracer(p, from)
 
 
+## Balas que pasan cerca: al jugador le suena el chasquido y le sube el estrés; los
+## enemigos se dan cuenta de que les están tirando (y de dónde).
+func _check_near_miss(p: Projectile, from: Vector3, to: Vector3) -> void:
+	if p.near_done or p.traveled < 4.0:
+		return
+	var from_player := p.source != null and is_instance_valid(p.source) and p.source.is_in_group("player")
+	if not from_player:
+		var pl := get_tree().get_first_node_in_group("player") as Player
+		if pl != null and not pl.is_dead:
+			var head := pl.camera.global_position
+			var c := Geometry3D.get_closest_point_to_segment(head, from, to)
+			var d := c.distance_to(head)
+			if d < 1.6 and d > 0.05:
+				p.near_done = true
+				play_sound_at(SynthSfx.crack(), c, -2.0 - d * 4.0, rng.randf_range(0.92, 1.08))
+				pl.near_miss(1.6 - d)
+		return
+	for n in get_tree().get_nodes_in_group("ai_npc"):
+		var npc := n as Node3D
+		if npc == null or not npc.has_method("on_near_miss"):
+			continue
+		var chest := npc.global_position + Vector3(0, 1.3, 0)
+		if Geometry3D.get_closest_point_to_segment(chest, from, to).distance_to(chest) < 2.5:
+			npc.call("on_near_miss", p.origin, p.source)
+			p.near_done = true
+
+
 ## Impacto: daño, efectos y qué sigue. Devuelve desde dónde continúa el proyectil
 ## (rebote o salida del material atravesado) o Vector3.INF si se detuvo.
 func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Object,
@@ -271,6 +305,7 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 	info.zone = _zone_of(collider, pos, dir)
 	info.drop = _drop_from_aim(p, pos)
 	var vel_factor := clampf(p.vel.length() / maxf(p.v0, 1.0), 0.0, 1.0)
+	info.penetration = p.power * vel_factor
 	info.damage = p.damage * vel_factor * DAMAGE_MODEL.multiplier(info.zone)
 	if DAMAGE_MODEL.is_lethal(info.zone):
 		info.damage = maxf(info.damage, DAMAGE_MODEL.lethal_damage)
@@ -280,7 +315,7 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 	if target != null:
 		var result: Variant = target.call("apply_hit", info)
 		killed = result is bool and result
-		if p.source != null:
+		if p.source != null and p.source.is_in_group("player"):
 			EventBus.hit_confirmed.emit(info, killed)
 			if hitstop_enabled and (killed or DamageModel.is_head(info.zone)):
 				_hitstop()
@@ -323,7 +358,7 @@ func _try_penetrate(p: Projectile, pos: Vector3, dir: Vector3, surface: String, 
 	var far := pos + dir * (cap + 0.002)
 	var q := PhysicsRayQueryParameters3D.create(far, pos + dir * 0.0002)
 	q.collide_with_areas = false
-	q.collision_mask = 0xFFFFFFFF & ~(1 << (SHELL_LAYER - 1))
+	q.collision_mask = BULLET_MASK
 	var back := space.intersect_ray(q)
 	if back.is_empty() or back["collider"] != collider:
 		return Vector3.INF  # más grueso de lo que puede atravesar (o pegado a otra cosa)

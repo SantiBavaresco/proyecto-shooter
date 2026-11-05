@@ -92,6 +92,9 @@ func _ready() -> void:
 		var id := parts[0]
 		var st := {}
 		for k in range(1, parts.size()):
+			if parts[k] == "nosight":
+				st["sight"] = ""
+				continue
 			var it := ItemDB.get_item(parts[k])
 			if it != null:
 				st["sight" if it.kind == "sight" else "muzzle"] = parts[k]

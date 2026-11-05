@@ -20,6 +20,8 @@ var _interact_queued: bool = false
 var _slot_queued: int = -1
 var _zoom_queued: int = 0
 var _quick_queued: int = -1
+var _grenade_queued: bool = false
+var _melee_queued: bool = false
 var _aim_state: bool = false
 
 
@@ -40,6 +42,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_mode_queued = true
 	if event.is_action_pressed("interact"):
 		_interact_queued = true
+	if event.is_action_pressed("grenade"):
+		_grenade_queued = true
+	if event.is_action_pressed("melee"):
+		_melee_queued = true
 	for i in SLOT_ACTIONS.size():
 		if event.is_action_pressed(SLOT_ACTIONS[i]):
 			_slot_queued = i + 1
@@ -79,12 +85,16 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.weapon_slot = _slot_queued
 	cmd.zoom = _zoom_queued
 	cmd.quick_slot = _quick_queued
+	cmd.grenade = _grenade_queued
+	cmd.melee = _melee_queued
 	_clear_queued()
 	return cmd
 
 
 func _clear_queued() -> void:
 	_quick_queued = -1
+	_grenade_queued = false
+	_melee_queued = false
 	_zoom_queued = 0
 	_jump_queued = false
 	_fire_queued = false

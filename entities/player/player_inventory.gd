@@ -486,6 +486,48 @@ func take_equipped(slot: String) -> ItemStack:
 	return s
 
 
+## Saca todo lo que lleva (equipo, bolsillos y plata) para dejarlo en su cuerpo al
+## morir. Devuelve las pilas (las mochilas y chalecos se llevan su contenido).
+func strip_all() -> Array[ItemStack]:
+	cancel_use()
+	var out: Array[ItemStack] = []
+	for slot: String in EQUIP_SLOTS:
+		var st := take_equipped(slot)
+		if st != null:
+			out.append(st)
+	for p in pockets:
+		for st in p.stacks.duplicate():
+			out.append(st)
+		p.clear()
+	if money > 0:
+		out.append(ItemStack.make("cash", money))
+		money = 0
+	for i in quick.size():
+		quick[i] = ""
+	_on_changed()
+	return out
+
+
+## Lo que tiene al reaparecer en el campamento: cuchillo, una pistola con dos
+## cargadores y una venda (el resto se busca en el alijo).
+func give_respawn_kit() -> void:
+	_set_equipped("melee", ItemStack.make("knife"))
+	var d := load("res://data/weapons/pistol.tres") as WeaponData
+	var mag := ItemDB.standard_mag("pistol")
+	if mag != "":
+		receive(ItemStack.make(mag, 1, {"rounds": ItemDB.get_item(mag).capacity}))
+	player.weapons.equip_weapon(d, WEAPON_SLOT["pistol"], {}, false, null, true)
+	receive(ItemStack.make("bandage", 2))
+	quick[0] = "bandage"
+	_on_changed()
+
+
+## Casco o chaleco que cubre la zona (null si no lleva).
+func armor_for_zone(zone: String) -> ItemStack:
+	var slot := Armor.slot_for_zone(zone)
+	return equipment.get(slot) as ItemStack if slot != "" else null
+
+
 ## Pasa el estado del arma en uso (cargador, desgaste...) a su ítem.
 func sync_weapons() -> void:
 	for slot: String in WEAPON_SLOT:

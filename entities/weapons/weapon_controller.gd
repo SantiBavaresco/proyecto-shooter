@@ -1174,7 +1174,7 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 	var cam := player.camera
 	var from := cam.global_position
 	var to := from - cam.global_basis.z * INTERACT_RANGE
-	var q := PhysicsRayQueryParameters3D.create(from, to)
+	var q := PhysicsRayQueryParameters3D.create(from, to, 0xFFFFFFFF & ~(1 << 8))
 	q.exclude = [player.get_rid()]
 	q.collide_with_areas = true
 	var hit := player.get_world_3d().direct_space_state.intersect_ray(q)

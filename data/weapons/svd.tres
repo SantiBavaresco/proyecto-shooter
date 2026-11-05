@@ -16,8 +16,8 @@ model_params = {
 "gas": true,
 "muzzle_dev": "flash"
 }
-sight = "scope"
-scope_mag = 4.0
+sight = "iron"
+scope_mag = 0.0
 scope_mag_max = 0.0
 reticle = "chevron"
 caliber = "7.62×54R"

@@ -42,6 +42,8 @@ var eye_height: float = 1.66
 var is_sprinting: bool = false
 ## Armas del jugador (se crean en _ready).
 var weapons: WeaponController
+## Cuchillazo y granadas.
+var actions: PlayerActions
 ## Inventario (mochila, equipo, ranuras rápidas) y salud.
 var inventory: PlayerInventory
 var vitals: Vitals = Vitals.new()
@@ -52,6 +54,14 @@ const HURT_DPS := 6.0
 ## Pasos: metros entre pisadas (caminando, corriendo, agachado) y volumen.
 const STRIDE := {"walk": 1.85, "sprint": 2.35, "crouch": 1.25}
 const STEP_DB := {"walk": -19.0, "sprint": -16.0, "crouch": -26.0}
+## Hasta dónde se oyen los pasos (m) para la IA.
+const STEP_NOISE := {"walk": 7.0, "sprint": 15.0, "crouch": 2.5}
+## Capa de colisión de los cuerpos de movimiento de los personajes con IA.
+const NPC_BODY_LAYER := 5
+const DAMAGE_MODEL := preload("res://data/combat/damage_model.tres")
+## Estrés de combate (0–1): sube al recibir tiros o cuando pasan cerca, baja solo.
+var combat_stress: float = 0.0
+var _rng := RandomNumberGenerator.new()
 var _step_dist: float = 0.0
 var _step_player: AudioStreamPlayer
 const RESTART_AFTER_DEATH := 4.0
@@ -87,6 +97,9 @@ var _stamina_emit_accum: float = 0.0
 
 func _ready() -> void:
 	add_to_group("player")
+	_rng.randomize()
+	# Choca con los cuerpos de los enemigos y con los alambrados (capa 10)
+	collision_mask |= (1 << (NPC_BODY_LAYER - 1)) | (1 << 9)
 	if config == null:
 		config = DEFAULT_CONFIG
 	stamina.configure(config)
@@ -111,6 +124,10 @@ func _ready() -> void:
 	weapons.name = "Weapons"
 	add_child(weapons)
 	weapons.setup(self, false)
+	actions = PlayerActions.new()
+	actions.name = "Actions"
+	actions.player = self
+	add_child(actions)
 	inventory.give_start_kit()
 	# Sombra con forma de persona (la cápsula queda solo como respaldo, sin sombra)
 	body_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -259,6 +276,11 @@ func _update_zones(delta: float) -> void:
 		lvl = 2
 	elif zone_kinds.has("stress_medium"):
 		lvl = 1
+	combat_stress = maxf(0.0, combat_stress - delta * 0.07)
+	if combat_stress > 0.65:
+		lvl = maxi(lvl, 2)
+	elif combat_stress > 0.25:
+		lvl = maxi(lvl, 1)
 	stress.set_level(lvl)
 	stress.tick(delta)
 	# Alambre de púas: corta al entrar (sangrado) y lastima mientras se está adentro
@@ -330,9 +352,12 @@ func _physics_process(delta: float) -> void:
 		EventBus.player_landed.emit(-_prev_vel_y)
 		if -_prev_vel_y > 2.0:
 			_play_step(-6.0 if -_prev_vel_y > 5.0 else -10.0)
+			EventBus.noise_emitted.emit(global_position, 10.0, self)
 	_update_steps(delta, now_on_floor)
 	_was_on_floor = now_on_floor
 
+	if actions != null:
+		actions.tick(cmd, delta)
 	if weapons != null:
 		weapons.physics_tick(cmd, delta)
 
@@ -481,6 +506,7 @@ func _update_steps(delta: float, on_floor: bool) -> void:
 	if _step_dist >= float(STRIDE[mode]):
 		_step_dist = 0.0
 		_play_step(float(STEP_DB[mode]))
+		EventBus.noise_emitted.emit(global_position, float(STEP_NOISE[mode]), self)
 
 
 ## Una pisada: el sonido depende del piso (rayo hacia abajo desde los pies).
@@ -514,11 +540,78 @@ func _play_step(volume_db: float) -> void:
 func take_damage(amount: float, bleed := 0) -> void:
 	if is_dead:
 		return
+	if DebugTools.god_mode:
+		EventBus.player_damaged.emit(amount)
+		return
 	var died := vitals.damage(amount, bleed)
 	EventBus.player_damaged.emit(amount)
 	_emit_health()
 	if died:
 		_die()
+
+
+## Tiro (o esquirla) que le pega al jugador: zona según dónde pegó en la cápsula,
+## casco y chaleco según la clase de la bala, sangrado y estrés.
+func apply_hit(info: HitInfo) -> bool:
+	if is_dead:
+		return false
+	var zone := hit_zone(info.position, info.direction) if info.zone == "" else info.zone
+	info.zone = zone
+	var dmg := info.damage * DAMAGE_MODEL.multiplier(zone) if info.weapon_id != "melee" else info.damage
+	var lethal := DAMAGE_MODEL.is_lethal(zone)
+	var pen := info.penetration
+	var piece := inventory.armor_for_zone(zone) if inventory != null else null
+	var bleed := 0
+	if piece != null:
+		var cond := float(piece.state.get("condition", 1.0))
+		var res := Armor.resolve(dmg, pen, zone, piece.item.armor_class, cond, _rng)
+		if res.covered:
+			piece.state["condition"] = maxf(0.0, cond - res.wear)
+			dmg = res.damage
+			if not res.penetrated:
+				lethal = false
+				EventBus.toast.emit(tr("armor.stopped") % tr(piece.item.name_key))
+			inventory.changed.emit()
+	if lethal:
+		dmg = maxf(dmg, DAMAGE_MODEL.lethal_damage)
+	elif zone == "head_core":
+		# El casco frenó un tiro que era letal: golpe fuerte igual
+		dmg = maxf(dmg, 12.0)
+	if dmg >= 8.0 and (piece == null or dmg > info.damage * 0.5):
+		var chance := 0.6 if zone == "torso" else (0.4 if zone == "limb" else 0.5)
+		if _rng.randf() < chance:
+			bleed = 2 if dmg > 40.0 else 1
+	combat_stress = minf(1.0, combat_stress + 0.45)
+	var origin := info.position - info.direction * maxf(info.distance, 1.0)
+	EventBus.player_hit_from.emit(origin)
+	take_damage(dmg, bleed)
+	return is_dead
+
+
+## Zona del cuerpo del jugador según la altura y la distancia al eje del impacto.
+func hit_zone(pos: Vector3, dir: Vector3) -> String:
+	var local := pos - global_position
+	var h := local.y
+	var head_c := global_position + Vector3(0, eye_height + 0.02, 0)
+	if h > eye_height - 0.16:
+		# Núcleo: si la bala pasa cerca del centro de la cabeza
+		var to_c := head_c - pos
+		var closest := pos + dir.normalized() * clampf(to_c.dot(dir.normalized()), 0.0, 0.3)
+		return "head_core" if closest.distance_to(head_c) < 0.055 else "head"
+	# Distancia de la trayectoria al eje del cuerpo (vista desde arriba): lejos = brazo
+	var d2 := Vector2(dir.x, dir.z)
+	var lateral := 0.0
+	if d2.length() > 0.05:
+		d2 = d2.normalized()
+		lateral = absf(d2.cross(Vector2(global_position.x - pos.x, global_position.z - pos.z)))
+	if h < capsule_height * 0.47 or lateral > 0.19:
+		return "limb"
+	return "torso"
+
+
+## Un tiro pasó cerca (zumbido): sube el estrés.
+func near_miss(strength := 1.0) -> void:
+	combat_stress = minf(1.0, combat_stress + 0.12 * strength)
 
 
 ## Efectos de un consumible (los aplica el inventario al terminar de usarlo).
@@ -553,11 +646,32 @@ func _die() -> void:
 	is_dead = true
 	inventory.cancel_use()
 	EventBus.player_died.emit()
+	# El nivel decide: dejar el cuerpo con el equipo y reaparecer en el campamento
+	var lvl := get_tree().current_scene
+	if lvl == null or not lvl.has_method("on_player_died"):
+		lvl = get_parent()
+	if lvl != null and lvl.has_method("on_player_died"):
+		get_tree().create_timer(RESTART_AFTER_DEATH, false).timeout.connect(func() -> void:
+			if is_inside_tree():
+				lvl.call("on_player_died", self))
+		return
 	if GameState.state == GameState.State.PLAYING and get_tree().current_scene != null:
 		var path := get_tree().current_scene.scene_file_path
 		get_tree().create_timer(RESTART_AFTER_DEATH, false).timeout.connect(func() -> void:
 			if path != "" and GameState.state == GameState.State.PLAYING:
 				GameState.start_level(path))
+
+
+## Vuelve a la vida en otro lugar (después de morir): salud llena, sin sangrado.
+func respawn_at(pos: Vector3, facing_yaw: float) -> void:
+	vitals.reset()
+	is_dead = false
+	combat_stress = 0.0
+	stamina.restore(stamina.maximum)
+	pitch_angle = 0.0
+	_set_stance(Stance.STANDING)
+	teleport(pos, facing_yaw)
+	_emit_health()
 
 
 # --- Diagnóstico --------------------------------------------------------------

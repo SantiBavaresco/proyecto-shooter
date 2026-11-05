@@ -23,6 +23,13 @@ signal player_stance_changed(stance: int)
 ## --- Combate ---
 ## Un disparo propio salió (para HUD, sonido, IA que escucha en fases siguientes).
 signal weapon_fired(weapon_id: String)
+## Ruido en el mundo (disparos, pasos, explosiones) que la IA puede oír: dónde,
+## hasta qué distancia se oye (m) y quién lo hizo.
+signal noise_emitted(pos: Vector3, radius: float, source: Node)
+## Al jugador le pegaron desde `origin` (para el indicador de dirección).
+signal player_hit_from(origin: Vector3)
+## Murió un personaje con IA (para el HUD, estadísticas y misiones).
+signal npc_killed(npc: Node, killer: Node)
 ## Un proyectil del jugador impactó algo que recibe daño.
 signal hit_confirmed(info: HitInfo, killed: bool)
 ## Estado del arma actual para el HUD.
@@ -46,6 +53,8 @@ signal health_changed(current: float, maximum: float, bleeding: int)
 signal player_damaged(amount: float)
 ## El jugador murió.
 signal player_died
+## El jugador volvió a aparecer (después de morir).
+signal player_respawned(player: Node)
 ## Se pidió abrir el inventario con un contenedor al lado (null = solo la mochila).
 signal loot_requested(container: Object)
 ## Se pidió tirar al suelo una pila sacada del inventario.

@@ -20,6 +20,16 @@ var _slot_pending: int = -1
 var _zoom_pending: int = 0
 var _quick_pending: int = -1
 var _prev_fire: bool = false
+var _grenade_pending: bool = false
+var _melee_pending: bool = false
+
+
+func press_grenade() -> void:
+	_grenade_pending = true
+
+
+func press_melee() -> void:
+	_melee_pending = true
 
 
 ## Simula una pulsación de saltar (se consume en el próximo tick).
@@ -86,6 +96,10 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.weapon_slot = _slot_pending
 	cmd.zoom = _zoom_pending
 	cmd.quick_slot = _quick_pending
+	cmd.grenade = _grenade_pending
+	cmd.melee = _melee_pending
+	_grenade_pending = false
+	_melee_pending = false
 	_quick_pending = -1
 	_zoom_pending = 0
 	_jump_pending = false
