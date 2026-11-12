@@ -61,9 +61,21 @@ var _death_t: float = -1.0
 var _fall_dir: Vector3 = Vector3.BACK
 var _fall_node: Node3D
 var _dropped_weapon: Node3D
+## Muñeco físico al morir (null si murió "instantáneo", al cargar una partida).
+var ragdoll: Ragdoll
+## Fuerza del tiro que lo mata (N·s por cada 1 de dirección).
+const DEATH_PUSH := 28.0
 var _sk_scale: float = 1.0
 var _crouch_s: float = 0.0
 var _raise_s: float = 0.0
+## Suavizados (lo que pide la IA cambia de golpe; el cuerpo lo sigue con inercia).
+var _vel_s: Vector3 = Vector3.ZERO
+var _accel_s: Vector3 = Vector3.ZERO
+var _yaw_s: float = 0.0
+var _pitch_s: float = 0.0
+var _turn_s: float = 0.0
+var _breath: float = 0.0
+var _last_world_yaw: float = NAN
 
 
 func _ready() -> void:
@@ -116,6 +128,11 @@ static func short_name(n: String) -> String:
 
 func bone(n: String) -> int:
 	return int(_bones.get(n, -1))
+
+
+## Huesos de padres a hijos.
+func bone_order() -> PackedInt32Array:
+	return _order
 
 
 func _index_bones() -> void:
@@ -352,28 +369,47 @@ func _process(delta: float) -> void:
 	if skeleton == null:
 		return
 	if dead:
-		_update_death(delta)
+		if ragdoll != null:
+			if not ragdoll.frozen:
+				ragdoll.apply_pose()
+		else:
+			_update_death(delta)
 		return
 	_lod_t += delta
 	var cam := get_viewport().get_camera_3d()
 	var interval := 0.0
 	if cam != null:
 		var d := cam.global_position.distance_to(global_position)
-		interval = 0.0 if d < 40.0 else (0.05 if d < 90.0 else (0.15 if d < 180.0 else 0.4))
+		interval = 0.0 if d < 60.0 else (0.033 if d < 120.0 else (0.1 if d < 200.0 else 0.3))
 	if _lod_t >= interval:
 		_update_pose(_lod_t)
 		_lod_t = 0.0
 
 
 func _update_pose(delta: float) -> void:
-	_crouch_s = move_toward(_crouch_s, crouch, delta * 3.5)
-	_raise_s = move_toward(_raise_s, 0.35 if reloading else raise, delta * 4.0)
-	var speed := Vector2(local_velocity.x, local_velocity.z).length()
+	delta = minf(delta, 0.1)
+	var k := func(rate: float) -> float: return 1.0 - exp(-rate * delta)
+	# Agacharse y subir el arma con curva (arranca y frena suave)
+	_crouch_s = lerpf(_crouch_s, crouch, k.call(5.0))
+	_raise_s = lerpf(_raise_s, 0.35 if reloading else raise, k.call(7.0))
+	var prev_v := _vel_s
+	_vel_s = _vel_s.lerp(local_velocity, k.call(7.0))
+	if delta > 0.0:
+		_accel_s = _accel_s.lerp((_vel_s - prev_v) / delta, k.call(4.0))
+	_yaw_s = lerp_angle(_yaw_s, aim_yaw, k.call(10.0))
+	_pitch_s = lerpf(_pitch_s, aim_pitch, k.call(10.0))
+	# Giro del cuerpo entero (para inclinarse en las curvas)
+	var wy := global_rotation.y
+	if not is_nan(_last_world_yaw) and delta > 0.0:
+		_turn_s = lerpf(_turn_s, wrapf(wy - _last_world_yaw, -PI, PI) / delta, k.call(5.0))
+	_last_world_yaw = wy
+	_breath = fmod(_breath + delta * (1.5 + clampf(_vel_s.length() / 3.0, 0.0, 1.0) * 1.5), TAU)
+	var speed := Vector2(_vel_s.x, _vel_s.z).length()
 	# Pasos: una zancada (dos pasos) cada ~1,4 m caminando
 	var stride := lerpf(0.55, 0.36, _crouch_s) * clampf(speed / 1.5, 0.0, 1.6)
 	_stride_amp = move_toward(_stride_amp, stride if speed > 0.15 else 0.0, delta * 2.5)
 	_phase = fmod(_phase + delta * speed / maxf(lerpf(1.4, 1.0, _crouch_s), 0.1) * PI, TAU)
-	_solve(_stride_amp, _phase, Vector2(local_velocity.x, local_velocity.z) / maxf(speed, 0.001), 0.0)
+	_solve(_stride_amp, _phase, Vector2(_vel_s.x, _vel_s.z) / maxf(speed, 0.001), 0.0)
 
 
 ## Arma la pose completa en el espacio del esqueleto y la aplica.
@@ -390,9 +426,16 @@ func _solve(stride: float, phase: float, move_dir: Vector2, fold: float) -> void
 	var g: Array[Transform3D] = []
 	g.resize(sk.get_bone_count())
 	var hips := bone("Hips")
-	var bob := absf(sin(phase)) * 0.025 * clampf(stride / 0.5, 0.0, 1.0)
+	var walk := clampf(stride / 0.5, 0.0, 1.0) * (1.0 - fold)
+	var bob := absf(sin(phase)) * 0.025 * walk
 	var drop := (_crouch_s * 0.42 + fold * 0.5 - bob) * unit
-	var lean := _crouch_s * 0.35 + fold * 0.6 + clampf(stride - 0.6, 0.0, 0.5) * 0.4
+	# Se inclina hacia adelante al acelerar o correr, atrás al frenar
+	var acc_lean := clampf(-_accel_s.z * 0.04, -0.12, 0.18) * (1.0 - fold)
+	var lean := _crouch_s * 0.35 + fold * 0.6 + clampf(stride - 0.6, 0.0, 0.5) * 0.4 + acc_lean
+	# Balanceo de cadera al caminar, inclinación en las curvas y respiración
+	var sway := sin(phase) * 0.022 * walk
+	var bank := clampf(-_turn_s * Vector2(_vel_s.x, _vel_s.z).length() * 0.035, -0.16, 0.16) * (1.0 - fold)
+	var breath := sin(_breath) * 0.012 * (1.0 - fold)
 	var spine_names := ["Spine", "Spine1", "Spine2"]
 	var n_spine := 0
 	for nm: String in spine_names:
@@ -409,14 +452,17 @@ func _solve(stride: float, phase: float, move_dir: Vector2, fold: float) -> void
 			t = _rest_global[b]
 		if b == hips:
 			t.origin -= up * drop
-			t.basis = Basis(right, -lean * 0.4) * t.basis
+			t.origin += right * sway * unit
+			t.basis = Basis(fwd, bank + sway * 2.0) * Basis(right, -lean * 0.4) * t.basis
 		var sn := short_name(sk.get_bone_name(b))
 		var si := spine_names.find(sn)
 		if si >= 0:
-			var rot := Basis(up, (aim_yaw + blade) * w) * Basis(right, (aim_pitch * w) - lean * 0.2 * (1.0 if si == 0 else 0.5))
+			var rot := Basis(up, (_yaw_s + blade) * w) * Basis(right, (_pitch_s * w) - lean * 0.2 * (1.0 if si == 0 else 0.5) - breath) \
+				* Basis(fwd, -(sway * 2.0 + bank) * w * 0.8)
 			t.basis = rot * t.basis
 		elif sn == "Neck":
-			t.basis = Basis(up, -blade * 0.9) * t.basis
+			# La cabeza compensa el balanceo (mirada estable)
+			t.basis = Basis(up, -blade * 0.9) * Basis(right, breath * 0.6) * t.basis
 		g[b] = t
 	# Arma en el espacio del esqueleto
 	var wxf := _weapon_transform(g, up, fwd, right, unit, fold)
@@ -470,10 +516,10 @@ func _weapon_transform(g: Array[Transform3D], up: Vector3, fwd: Vector3, right: 
 	var shoulder := g[sh].origin if sh >= 0 else Vector3.ZERO
 	var chest := g[sp].origin if sp >= 0 else shoulder
 	var r := _raise_s * (1.0 - fold)
-	var yaw_b := Basis(up, aim_yaw)
+	var yaw_b := Basis(up, _yaw_s)
 	var aim_fwd := yaw_b * fwd
 	var aim_right := yaw_b * right
-	var pitch := lerpf(-0.75, aim_pitch, r)
+	var pitch := lerpf(-0.75, _pitch_s, r)
 	var dir := Basis(aim_right, pitch) * aim_fwd
 	var w_up := dir.cross(aim_right).normalized() * -1.0
 	if w_up.dot(up) < 0.0:
@@ -487,6 +533,10 @@ func _weapon_transform(g: Array[Transform3D], up: Vector3, fwd: Vector3, right: 
 		# La culata contra el hombro (un poco hacia adentro); en guardia, baja y hacia el centro
 		var pocket := shoulder + aim_right * (-0.02 * unit) - aim_right * ((1.0 - r) * 0.08 * unit) + up * ((r * 0.05 - (1.0 - r) * 0.06) * unit) + aim_fwd * (0.04 * unit)
 		pos = pocket - basis * Vector3(0, 0, _stock_z * unit * 0.9)
+	# El arma acompaña el paso (menos apuntando) y la respiración
+	var walk := clampf(_stride_amp / 0.5, 0.0, 1.0) * (1.0 - fold)
+	pos += up * ((sin(_phase * 2.0) * 0.012 * walk * (1.0 - r * 0.6) + sin(_breath) * 0.004) * unit)
+	pos += aim_right * (sin(_phase) * 0.01 * walk * (1.0 - r * 0.7) * unit)
 	return Transform3D(basis.scaled(Vector3.ONE * unit), pos)
 
 
@@ -550,8 +600,10 @@ func _apply(g: Array[Transform3D]) -> void:
 
 # --- Muerte -----------------------------------------------------------------------
 
-## Cae muerto. dir: hacia dónde lo empujó el último tiro (mundo).
-func die(dir: Vector3, instant := false) -> void:
+## Cae muerto. dir: hacia dónde lo empujó el último tiro (mundo); hit_pos: dónde le
+## pegó; vel: la velocidad que traía. Cae como un muñeco físico (ragdoll); "instant"
+## (al cargar) lo deja acostado sin simular.
+func die(dir: Vector3, instant := false, hit_pos := Vector3.INF, vel := Vector3.ZERO) -> void:
 	if dead:
 		return
 	dead = true
@@ -561,20 +613,67 @@ func die(dir: Vector3, instant := false) -> void:
 	_death_t = 1.6 if instant else 0.0
 	for h in hitboxes:
 		h.set_meta("dead", true)
-	# El arma cae al lado
+	var use_ragdoll := not instant and skeleton != null and bone("Hips") >= 0
+	# El arma se suelta y cae
 	if weapon_node != null:
 		_dropped_weapon = weapon_node
 		weapon_node = null
-		var xf := _dropped_weapon.global_transform
-		var side := global_basis * Vector3(randf_range(-0.6, 0.6), 0, randf_range(-0.2, 0.6))
-		var flat := Basis(Vector3(0, 1, 0), randf() * TAU) * Basis(Vector3(0, 0, 1), PI * 0.5)
-		var tw := create_tween()
-		_dropped_weapon.global_transform = xf
-		var ground := global_position + side + Vector3(0, 0.04, 0)
-		tw.tween_property(_dropped_weapon, "global_transform", Transform3D(flat, ground), 0.0 if instant else 0.5) \
-			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+		if use_ragdoll:
+			_drop_weapon_physics(dir, vel)
+		else:
+			var xf := _dropped_weapon.global_transform
+			var side := global_basis * Vector3(randf_range(-0.6, 0.6), 0, randf_range(-0.2, 0.6))
+			var flat := Basis(Vector3(0, 1, 0), randf() * TAU) * Basis(Vector3(0, 0, 1), PI * 0.5)
+			var tw := create_tween()
+			_dropped_weapon.global_transform = xf
+			var ground := global_position + side + Vector3(0, 0.04, 0)
+			tw.tween_property(_dropped_weapon, "global_transform", Transform3D(flat, ground), 0.0 if instant else 0.5) \
+				.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	if use_ragdoll:
+		var push := dir.normalized() * DEATH_PUSH if dir.length() > 0.01 else Vector3.ZERO
+		var at := hit_pos if hit_pos != Vector3.INF else chest_position()
+		ragdoll = Ragdoll.create(self, vel, at, push)
+		return
 	if instant:
 		_update_death(0.0)
+
+
+## Un tiro o una explosión a un cuerpo ya muerto: lo mueve.
+func push(at: Vector3, impulse: Vector3) -> void:
+	if ragdoll != null:
+		ragdoll.push(at, impulse)
+
+
+## El arma se suelta de las manos y cae como un objeto físico.
+func _drop_weapon_physics(dir: Vector3, vel: Vector3) -> void:
+	var w := _dropped_weapon
+	var xf := w.global_transform
+	var rb := RigidBody3D.new()
+	rb.name = "DroppedWeapon"
+	rb.top_level = true
+	rb.collision_layer = 1 << (Ragdoll.LAYER - 1)
+	rb.collision_mask = 1
+	rb.mass = 3.5
+	rb.angular_damp = 1.0
+	rb.continuous_cd = true
+	add_child(rb)
+	rb.global_transform = Transform3D(xf.basis.orthonormalized(), xf.origin)
+	var keep_scale := xf.basis.get_scale()
+	w.get_parent().remove_child(w)
+	rb.add_child(w)
+	w.transform = Transform3D(Basis.from_scale(keep_scale), Vector3.ZERO)
+	var box := ItemModels.local_aabb(w)
+	var cs := CollisionShape3D.new()
+	var sh := BoxShape3D.new()
+	sh.size = Vector3(maxf(box.size.x * keep_scale.x, 0.04), maxf(box.size.y * keep_scale.y, 0.04),
+		maxf(box.size.z * keep_scale.z, 0.1))
+	cs.shape = sh
+	cs.position = box.get_center() * keep_scale
+	rb.add_child(cs)
+	rb.reset_physics_interpolation()
+	rb.linear_velocity = vel + dir.normalized() * 0.8 + global_basis * Vector3(randf_range(-0.8, 0.8), 0.6, -0.4)
+	rb.angular_velocity = Vector3(randf_range(-3, 3), randf_range(-2, 2), randf_range(-3, 3))
+	_dropped_weapon = rb
 
 
 func _update_death(delta: float) -> void:

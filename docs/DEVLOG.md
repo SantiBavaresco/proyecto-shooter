@@ -440,3 +440,12 @@
 - Cuchillo en la tecla 4 (`PlayerActions.knife_out`), clic izquierdo estocada.
 - Sin trazadoras en las armas del jugador; NPC 1 de cada 5 tiros.
 - Viewmodel: FOV de cadera 62 → 56 y `HIP_RAISE` (+3 cm).
+
+
+## 3.0.2 — Ragdoll y movimiento más fluido de los NPC
+- `Ragdoll` (entities/npc/ragdoll.gd): 12 cápsulas RigidBody3D (capa 12, solo chocan con el mundo) unidas con ConeTwist (columna, cuello, hombros, cadera) y Hinge (rodillas, codos). Arranca en la pose y velocidad del NPC más el empujón del tiro; copia las cápsulas a los huesos cada cuadro; se congela quieto y se descongela con un tiro.
+- Medido con un péndulo: en Jolt el límite de HingeJoint3D se mide como A respecto de B (girar B en +Z cuenta negativo) → rango invertido. La base de la articulación tiene que ser de mano derecha (con una base espejada se invertían algunas).
+- Articulaciones y cápsulas con `top_level` (si no, heredaban el giro del NPC y la física explotaba).
+- Arma suelta como RigidBody3D. BULLET_MASK excluye la capa 12 (las balas pegan en los cuerpos de impacto, que siguen a los huesos).
+- Movimiento: giro con velocidad angular suavizada, velocidad/apuntado con suavizado exponencial, balanceo de cadera, inclinación por aceleración y en curvas, respiración, el arma acompaña el paso; LOD de pose más fino.
+- CombatWorld: no guardar como tirador un nodo ya borrado.

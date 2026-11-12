@@ -17,6 +17,7 @@ const WALK_SPEED := 1.5
 const RUN_SPEED := 4.0
 const CROUCH_SPEED := 1.0
 const TURN_SPEED := 5.0
+var _yaw_rate: float = 0.0
 const SHOT_HEAR := 160.0
 const SHOT_HEAR_SUPPRESSED := 35.0
 const DAMAGE_MODEL := preload("res://data/combat/damage_model.tres")
@@ -242,7 +243,7 @@ func _update_move(delta: float, _p: Dictionary) -> void:
 		vy -= 9.8 * delta
 	else:
 		vy = minf(vy, 0.0)
-	velocity = velocity.lerp(Vector3(hv.x, vy, hv.z), clampf(delta * 10.0, 0.0, 1.0))
+	velocity = velocity.lerp(Vector3(hv.x, vy, hv.z), 1.0 - exp(-7.0 * delta))
 	velocity.y = vy
 	move_and_slide()
 	# Pasos (se oyen de cerca: corriendo bastante más)
@@ -329,10 +330,14 @@ func _update_body(delta: float, p: Dictionary) -> void:
 		var md := wrapf(move_yaw - _yaw, -PI, PI)
 		if absf(wrapf(want_yaw - move_yaw, -PI, PI)) < 1.0:
 			leg_diff = md
-	_yaw = wrapf(_yaw + clampf(leg_diff, -turn * delta, turn * delta), -PI, PI)
+	# Giro con inercia: acelera y frena (no gira a velocidad fija de golpe)
+	var want_rate := clampf(leg_diff * 7.0, -turn, turn)
+	_yaw_rate = lerpf(_yaw_rate, want_rate, 1.0 - exp(-12.0 * delta))
+	_yaw = wrapf(_yaw + _yaw_rate * delta, -PI, PI)
 	rotation = Vector3(0, _yaw, 0)
 	var torso_target := clampf(wrapf(want_yaw - _yaw, -PI, PI), -0.9, 0.9)
-	_torso_yaw = move_toward(_torso_yaw, torso_target, turn * 1.6 * delta)
+	var td := torso_target - _torso_yaw
+	_torso_yaw += clampf(td * (1.0 - exp(-14.0 * delta)), -turn * 1.6 * delta, turn * 1.6 * delta)
 	if aim_dir != Vector3.ZERO:
 		var pt := atan2(aim_dir.y, Vector2(aim_dir.x, aim_dir.z).length())
 		_pitch = move_toward(_pitch, clampf(pt, -1.1, 1.1), 3.0 * delta)
@@ -500,6 +505,8 @@ func refine_zone(zone: String, hit_pos: Vector3, dir: Vector3) -> String:
 ## Recibe un tiro (o esquirla). Devuelve true si lo mató.
 func apply_hit(info: HitInfo) -> bool:
 	if dead:
+		# Ya muerto: el tiro mueve el cuerpo
+		body.push(info.position, info.direction.normalized() * clampf(info.damage * 0.25, 3.0, 15.0))
 		return false
 	var dmg := info.damage
 	var piece := helmet if info.zone.begins_with("head") else (vest if info.zone == "torso" else null)
@@ -536,8 +543,10 @@ func _die(info: HitInfo) -> void:
 	remove_from_group("ai_npc")
 	add_to_group("npc_corpse")
 	($Collision as CollisionShape3D).set_deferred("disabled", true)
+	var vel := velocity
 	velocity = Vector3.ZERO
-	body.die(info.direction if info != null else -global_basis.z)
+	body.die(info.direction if info != null else -global_basis.z, false,
+		info.position if info != null else Vector3.INF, vel)
 	# Golpe del cuerpo y del arma contra el piso
 	get_tree().create_timer(0.75, false).timeout.connect(func() -> void:
 		if is_inside_tree():

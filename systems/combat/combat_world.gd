@@ -35,7 +35,7 @@ const SHELL_LAYER := 8
 ## Lo que tocan las balas: todo menos casquillos, cuerpos de movimiento de los
 ## enemigos (capa 5: las balas pegan en sus cuerpos de impacto), follaje (capa 9) y
 ## tejidos de alambrado (capa 10: solo frenan a la gente).
-const BULLET_MASK := 0xFFFFFFFF & ~(1 << (SHELL_LAYER - 1)) & ~(1 << 4) & ~(1 << 8) & ~(1 << 9)
+const BULLET_MASK := 0xFFFFFFFF & ~(1 << (SHELL_LAYER - 1)) & ~(1 << 4) & ~(1 << 8) & ~(1 << 9) & ~(1 << 11)
 
 ## Hit-stop (micro pausa) al confirmar una baja o un tiro a la cabeza.
 var hitstop_enabled: bool = true
@@ -301,7 +301,7 @@ func _handle_impact(p: Projectile, pos: Vector3, normal: Vector3, collider: Obje
 	info.weapon_id = p.weapon_id
 	info.distance = p.traveled
 	info.ricochets = p.ricochets
-	info.source = p.source
+	info.source = p.source if is_instance_valid(p.source) else null
 	info.zone = _zone_of(collider, pos, dir)
 	info.drop = _drop_from_aim(p, pos)
 	var vel_factor := clampf(p.vel.length() / maxf(p.v0, 1.0), 0.0, 1.0)

@@ -373,3 +373,50 @@ func test_zz_sim() -> void:
 			level.queue_free()
 			level = null
 			await process_frames(2)
+
+
+func test_npc_ragdoll_falls_and_settles() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0, -6), FACE_SOUTH)
+	await physics_frames(20)
+	var info := HitInfo.new()
+	info.damage = 500.0
+	info.zone = "torso"
+	info.direction = Vector3(0, 0, -1)
+	info.position = n.body.chest_position()
+	info.source = player
+	n.apply_hit(info)
+	var rd := n.body.ragdoll
+	assert_true(rd != null, "cae como muñeco físico")
+	assert_gt(float(rd.parts.size()), 9.0, "con cadera, columna, cabeza, brazos y piernas")
+	await physics_frames(60 * 4)
+	var hips := rd.center()
+	assert_lt(hips.y, 0.45, "quedó en el piso (cadera a %.2f m)" % hips.y)
+	assert_lt(hips.z, -6.0, "cayó hacia donde lo empujó el tiro")
+	var head := n.body.head_position()
+	assert_lt(head.y, 0.6, "la cabeza también (%.2f m)" % head.y)
+	for i in rd.hinges.size():
+		var bend := rd.hinge_bend(i)
+		assert_true(bend > -0.25 and bend < 2.8, "%s %d no se dobla al revés (%.2f rad)" % [rd.hinges[i][3], i, bend])
+	# Las rodillas no se doblan al revés aunque las empujen fuerte
+	for i in rd.hinges.size():
+		var child := rd.hinges[i][1] as RigidBody3D
+		var parent := rd.hinges[i][0] as RigidBody3D
+		var axis := (parent.global_basis * (rd.hinges[i][2] as Vector3)).normalized()
+		# Empuje que la endereza y la pasa de largo (gira al revés del doblez)
+		var tangent := axis.cross(child.global_basis.y).normalized()
+		rd.push(child.global_position + child.global_basis.y * 0.2, -tangent * child.mass * 2.5)
+	await physics_frames(60 * 2)
+	for i in rd.hinges.size():
+		var bend := rd.hinge_bend(i)
+		assert_gt(bend, -0.3, "%s %d sigue sin doblarse al revés tras empujarla (%.2f rad)" % [rd.hinges[i][3], i, bend])
+	await physics_frames(60 * 6)
+	assert_true(rd.frozen, "quieto, se congela (no gasta)")
+	# Un tiro al cuerpo lo vuelve a mover
+	var hi := HitInfo.new()
+	hi.damage = 40.0
+	hi.direction = Vector3(1, 0, 0)
+	hi.position = rd.center()
+	n.apply_hit(hi)
+	assert_false(rd.frozen, "un tiro lo mueve")
+	assert_true(n.get_interact_text() != "", "se puede revisar")
