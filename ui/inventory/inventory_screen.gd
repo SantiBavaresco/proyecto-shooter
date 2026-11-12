@@ -27,7 +27,7 @@ const GAP := 6.0
 const DRAG_START_PX := 5.0
 
 enum Act { USE, EQUIP, UNEQUIP, UNLOAD, SPLIT, DROP, TAKE, STORE, CLEAR_QUICK, FILL_MAG, EMPTY_MAG, DETACH_SIGHT,
-	DETACH_MUZZLE, QUICK_1 = 20, ATTACH_1 = 40 }
+	DETACH_MUZZLE, SEARCH, QUICK_1 = 20, ATTACH_1 = 40 }
 
 var player: Player
 var pinv: PlayerInventory
@@ -47,6 +47,12 @@ var _rig_title: Label
 var _shown_rig: ItemStack = null
 var _shown_bag: Object = null
 var _loot_grid: InvGrid
+## Grillas del contenedor que se muestra: la única (_loot_grid) o las de un chaleco
+## tirado (varias, acomodadas como en el chaleco).
+var _loot_grids: Array[InvGrid] = []
+var _loot_box: Control
+var _loot_scroll: ScrollContainer
+var _back_btn: Button
 var _loot_panel: Control
 var _loot_title: Label
 var _slots: Dictionary = {}
@@ -81,6 +87,7 @@ func _ready() -> void:
 	_build()
 	visible = false
 	EventBus.loot_requested.connect(func(c: Object) -> void: open(c))
+	EventBus.bag_search_requested.connect(func(st: ItemStack) -> void: open(BagView.new(st, GroundPile)))
 	EventBus.inventory_changed.connect(_refresh)
 	EventBus.player_died.connect(func() -> void: close())
 
@@ -102,6 +109,9 @@ func open(c: Object = null) -> void:
 	if is_open:
 		_close_container()
 	pinv.sync_weapons()
+	if c == null:
+		# Sin contenedor: lo que hay en el piso alrededor
+		c = GroundPile.new(player)
 	container = c
 	is_open = true
 	visible = true
@@ -114,8 +124,7 @@ func open(c: Object = null) -> void:
 	for q in _quick:
 		q.pinv = pinv
 	if container != null:
-		var ci := container.get("inventory") as Inventory
-		_loot_grid.setup(ci, CELL)
+		_setup_loot_grids()
 		_loot_title.text = tr(String(container.get("title_key"))).to_upper()
 		_loot_panel.visible = true
 		# Revisando algo: equipo, mochila y contenedor, con las grillas del mismo tamaño
@@ -144,6 +153,62 @@ func _close_container() -> void:
 	if container != null and is_instance_valid(container) and container.has_method("on_loot_closed"):
 		container.call("on_loot_closed")
 	container = null
+
+
+## Arma las grillas del contenedor: una sola, o las de un chaleco con su forma.
+func _setup_loot_grids() -> void:
+	for g in _loot_grids:
+		if g != _loot_grid:
+			g.queue_free()
+	_loot_grids.clear()
+	var invs: Array = container.get("inventories") if "inventories" in container else []
+	if invs.size() > 1:
+		var lay: Array = container.get("layout")
+		var size := Vector2.ZERO
+		for i in invs.size():
+			var g := InvGrid.new()
+			g.setup(invs[i], CELL)
+			var l: Array = lay[i] if i < lay.size() else [0, i * 2]
+			g.position = Vector2(float(l[0]), float(l[1])) * (CELL + GAP)
+			_loot_box.add_child(g)
+			_loot_grids.append(g)
+			size = size.max(g.position + g.size)
+		_loot_box.custom_minimum_size = size
+		_loot_box.visible = true
+		_loot_scroll.visible = false
+	else:
+		_loot_grid.setup(container.get("inventory") as Inventory, CELL)
+		_loot_grids.append(_loot_grid)
+		_loot_box.visible = false
+		_loot_scroll.visible = true
+	_back_btn.visible = "back" in container and container.get("back") != null
+
+
+func _is_loot(g: Variant) -> bool:
+	return g is InvGrid and _loot_grids.has(g)
+
+
+## Dónde guardar algo en el contenedor: la primera grilla en la que entra.
+func _loot_dest(s: ItemStack) -> Inventory:
+	for g in _loot_grids:
+		if g.inv.can_add(s):
+			return g.inv
+	return _loot_grids[0].inv if not _loot_grids.is_empty() else null
+
+
+## Revisar una mochila o chaleco (tirado o en un contenedor) sin agarrarlo.
+func open_bag(s: ItemStack) -> void:
+	var from := container
+	if from is GroundPile:
+		from = GroundPile
+	open(BagView.new(s, from))
+
+
+func _go_back() -> void:
+	if container == null or not ("back" in container):
+		return
+	var b: Variant = container.get("back")
+	open(null if (b == GroundPile or b == null) else b)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -283,7 +348,7 @@ func _sync_storage_grids() -> void:
 
 ## Grilla del jugador (no la del contenedor).
 func _is_player_grid(g: Variant) -> bool:
-	return g is InvGrid and g != _loot_grid
+	return g is InvGrid and not _loot_grids.has(g) and g != _loot_grid
 
 
 ## Arrastrando cerca del borde de arriba o de abajo de una grilla: se desplaza sola.
@@ -308,7 +373,7 @@ func _grids() -> Array[InvGrid]:
 	if _bag_scroll.visible:
 		out.append(_bag_grid)
 	if _loot_panel.visible:
-		out.append(_loot_grid)
+		out.append_array(_loot_grids)
 	return out
 
 
@@ -579,8 +644,11 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 			pinv.use(s)
 		elif pinv.unequip(sl.slot) == null:
 			EventBus.toast.emit(tr("inv.no_room"))
-	elif from == _loot_grid:
-		pinv.transfer(s, _loot_grid.inv, null)
+	elif _is_loot(from):
+		if s.item.is_container() and s.has_contents() and not _can_pick(s):
+			open_bag(s)
+		else:
+			_take_from_loot(s, (from as InvGrid).inv)
 	elif s.item.is_consumable():
 		if not pinv.use(s):
 			EventBus.toast.emit(tr("inv.cant_now"))
@@ -606,11 +674,32 @@ func _attach_targets(att: ItemStack) -> Array[ItemStack]:
 
 
 func _shift_transfer(s: ItemStack, g: InvGrid) -> void:
-	if g == _loot_grid:
-		pinv.transfer(s, _loot_grid.inv, null)
+	if _is_loot(g):
+		_take_from_loot(s, g.inv)
 	else:
-		pinv.transfer(s, g.inv, _loot_grid.inv)
+		var dst := _loot_dest(s)
+		if dst != null:
+			pinv.transfer(s, g.inv, dst)
 	_refresh()
+
+
+## Agarrar algo del contenedor: a los bolsillos/chaleco/mochila; una mochila o un
+## chaleco con cosas adentro (no entra en otra mochila) se equipa si esa ranura está libre.
+func _take_from_loot(s: ItemStack, src: Inventory) -> void:
+	if s.item.is_container() and s.has_contents():
+		var slot := pinv.slot_for(s)
+		if pinv.equipment.get(slot) == null:
+			src.remove(s)
+			pinv.place_equipped(s, slot)
+		else:
+			EventBus.toast.emit(tr("inv.no_room"))
+		return
+	pinv.transfer(s, src, null)
+
+
+## Se puede agarrar (equipar en su ranura libre o guardar en algún lado).
+func _can_pick(s: ItemStack) -> bool:
+	return WorldItem.can_pick(pinv, s)
 
 
 func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
@@ -618,7 +707,7 @@ func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
 	_menu_stack = s
 	_menu_from = from
 	var in_bag: bool = _is_player_grid(from)
-	var in_loot: bool = from == _loot_grid
+	var in_loot: bool = _is_loot(from)
 	var equipped: bool = from is InvSlot and (from as InvSlot).slot != "quick"
 	var quick_slot: bool = from is InvSlot and (from as InvSlot).slot == "quick"
 	if s.item.is_consumable() and (in_bag or quick_slot):
@@ -644,6 +733,8 @@ func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
 		var targets := _attach_targets(s)
 		for i in targets.size():
 			_menu.add_item(tr("inv.attach") % ItemDB.display_name(targets[i].item), Act.ATTACH_1 + i)
+	if s.item.is_container() and (in_loot or in_bag) and not s.contents.is_empty():
+		_menu.add_item(tr("inv.search"), Act.SEARCH)
 	if in_loot:
 		_menu.add_item(tr("inv.take"), Act.TAKE)
 	if in_bag and _loot_panel.visible:
@@ -693,9 +784,15 @@ func _on_menu(id: int) -> void:
 		Act.DROP:
 			_drop_to_ground(s, from)
 		Act.TAKE:
-			pinv.transfer(s, _loot_grid.inv, null)
+			_take_from_loot(s, (from as InvGrid).inv)
 		Act.STORE:
-			pinv.transfer(s, (from as InvGrid).inv, _loot_grid.inv)
+			var dst := _loot_dest(s)
+			if dst != null:
+				pinv.transfer(s, (from as InvGrid).inv, dst)
+		Act.SEARCH:
+			_menu_stack = null
+			open_bag(s)
+			return
 		Act.CLEAR_QUICK:
 			pinv.set_quick((from as InvSlot).quick_index, "")
 		_:
@@ -712,7 +809,11 @@ func _on_menu(id: int) -> void:
 
 func take_all() -> void:
 	if container != null and _find_player():
-		pinv.take_all(container.get("inventory") as Inventory)
+		for g in _loot_grids.duplicate():
+			for st in g.inv.stacks.duplicate():
+				if st.item.is_container() and st.has_contents():
+					continue
+				pinv.transfer(st, g.inv, null)
 		_refresh()
 
 
@@ -870,8 +971,10 @@ func _refresh() -> void:
 func _stack_exists(s: ItemStack) -> bool:
 	if pinv.storage_of(s) != null:
 		return true
-	if _loot_panel.visible and _loot_grid.inv != null and _loot_grid.inv.has_stack(s):
-		return true
+	if _loot_panel.visible:
+		for g in _loot_grids:
+			if g.inv != null and g.inv.has_stack(s):
+				return true
 	return pinv.equipment.values().has(s)
 
 
@@ -889,6 +992,9 @@ func _all_grids() -> Array[InvGrid]:
 	out.append_array(_rig_grids)
 	out.append(_bag_grid)
 	out.append(_loot_grid)
+	for g in _loot_grids:
+		if g != _loot_grid:
+			out.append(g)
 	return out
 
 
@@ -1060,9 +1166,21 @@ func _build() -> void:
 	take.set_meta("take_button", true)
 	_take_btn = take
 	lv.add_child(take)
+	_back_btn = Button.new()
+	_back_btn.text = tr("inv.back")
+	_back_btn.add_theme_font_size_override("font_size", 17)
+	_back_btn.focus_mode = Control.FOCUS_NONE
+	_back_btn.pressed.connect(_go_back)
+	_back_btn.visible = false
+	lv.add_child(_back_btn)
 	_loot_grid = InvGrid.new()
 	_loot_grid.setup(Inventory.new(8, 6), CELL)
-	lv.add_child(_scroller(_loot_grid, 8))
+	_loot_scroll = _scroller(_loot_grid, 8)
+	lv.add_child(_loot_scroll)
+	_loot_box = Control.new()
+	_loot_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_loot_box.visible = false
+	lv.add_child(_loot_box)
 	_loot_panel.visible = false
 	_root.set_meta("panels", panels)
 	# Ayuda de teclas abajo de todo

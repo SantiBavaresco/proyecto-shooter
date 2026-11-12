@@ -151,6 +151,7 @@ var out_of_breath: float = 0.0
 var _cooldown: float = 0.0
 var _sprint_block: float = 0.0
 var _hint_target: Node = null
+var _hint_text: String = ""
 var _rng := RandomNumberGenerator.new()
 ## Vista en primera persona (modelo, manos, animaciones, visor).
 var view: WeaponViewmodel
@@ -992,7 +993,8 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 	for i in maxi(w.pellets, 1):
 		var cone := spread + (w.pellet_spread if w.pellets > 1 else 0.0)
 		var dir := _random_cone(fwd, basis, cone)
-		var tracer := i == 0 and w.tracer_every > 0 and c.shots % w.tracer_every == 0
+		# Sin trazadoras en las armas del jugador (se veían raras saliendo de la vista)
+		var tracer := false
 		combat.fire_projectile(origin, dir, w, player, [player.get_rid()], tracer, muzzle_world)
 
 	# Retroceso de cámara (subida + desvío lateral) y patada visual del arma
@@ -1171,6 +1173,9 @@ func _break_shell_pos(c: WeaponSlot, i: int) -> Vector3:
 # --- Interacción ------------------------------------------------------------
 
 func _update_interaction(cmd: PlayerCommand) -> void:
+	if GameState.ui_open or player.is_dead:
+		_clear_hint()
+		return
 	var cam := player.camera
 	var from := cam.global_position
 	var to := from - cam.global_basis.z * INTERACT_RANGE
@@ -1192,15 +1197,30 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 			n = n.get_parent()
 		if target != null and String(target.call("get_interact_text")) == "":
 			target = null
-	if target != _hint_target:
-		_hint_target = target
-		var text := ""
-		if target != null:
-			var key_label := InputActions.event_label(InputActions.get_kbm_event("interact"))
-			text = tr(target.call("get_interact_text")) % key_label
+	# Se compara el texto (no el objeto): si lo que mirabas se agarró y se borró, o
+	# cambió su cantidad, el cartel se actualiza igual
+	_hint_target = target
+	var text := ""
+	if target != null:
+		var key_label := InputActions.event_label(InputActions.get_kbm_event("interact"))
+		text = tr(target.call("get_interact_text")).replace("%s", key_label)
+	if text != _hint_text:
+		_hint_text = text
 		EventBus.interact_hint_changed.emit(text)
 	if cmd.interact and target != null:
 		target.call("interact", player)
+		_clear_hint()
+	elif cmd.interact_alt and target != null and target.has_method("interact_alt"):
+		target.call("interact_alt", player)
+		_clear_hint()
+
+
+## Borra el cartel de interacción (después de agarrar algo, al abrir menús, al morir).
+func _clear_hint() -> void:
+	_hint_target = null
+	if _hint_text != "":
+		_hint_text = ""
+		EventBus.interact_hint_changed.emit("")
 
 
 ## Repone la munición de todas las armas (caja de munición del laboratorio).

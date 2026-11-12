@@ -21,7 +21,9 @@ const HIP_POSE: Dictionary = {
 }
 ## Resolución de la imagen del visor (cuadrada).
 const SCOPE_RES := 512
-const VM_FOV_HIP := 62.0
+const VM_FOV_HIP := 56.0
+## Todas las armas de cadera un poco más arriba (se veían chicas y muy abajo).
+const HIP_RAISE := Vector3(-0.005, 0.03, 0.0)
 const VM_FOV_ADS := 52.0
 
 var wc: WeaponController
@@ -213,6 +215,7 @@ func _process(delta: float) -> void:
 		var hip: Vector3 = HIP_POSE.get(w.model, Vector3(0.13, -0.14, -0.26))
 		if w.model_params.has("hip"):
 			hip = GlbWeapon._v(w.model_params["hip"])  # armas .glb muy chicas o grandes
+		hip += HIP_RAISE
 		var ads := Vector3(-sight.x, -sight.y, -wc.eye_relief_for(c) - sight.z)
 		pos = hip.lerp(ads, a)
 	var rot := Vector3.ZERO

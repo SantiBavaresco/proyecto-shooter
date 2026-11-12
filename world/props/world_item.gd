@@ -63,18 +63,75 @@ func get_interact_text() -> String:
 	var name := ItemDB.display_name(stack.item)
 	if stack.count > 1:
 		name += " ×%d" % stack.count
+	if _searchable():
+		var p := _local_player()
+		if p != null and not can_pick(p.inventory, stack):
+			# No entra (o ya tenés una puesta y esta tiene cosas): solo revisarla
+			return tr("interact.search") % ["%s", name]
+		return (tr("interact.pick_up") % ["%s", name]) + "    " + tr("interact.hold_search")
 	return tr("interact.pick_up") % ["%s", name]
+
+
+## Mochila o chaleco táctico: se puede revisar sin agarrarlo.
+func _searchable() -> bool:
+	return stack.item.is_container() and not stack.contents.is_empty()
+
+
+func _local_player() -> Player:
+	return get_tree().get_first_node_in_group("player") as Player
+
+
+## ¿Se puede agarrar? Se equipa si su ranura está libre; si no, tiene que estar vacía
+## (una mochila con cosas no entra en otra) y caber en algún lado.
+static func can_pick(pinv: PlayerInventory, s: ItemStack) -> bool:
+	if pinv == null:
+		return false
+	if s.item.kind == "money":
+		return true
+	if s.item.is_container():
+		var slot := pinv.slot_for(s)
+		if slot != "" and pinv.equipment.get(slot) == null:
+			return true
+		if s.has_contents():
+			return false
+	for inv in pinv.storages():
+		if pinv.accepts(inv, s) and (inv.can_add(s) or not inv.find_free(s.item.size).is_empty()):
+			return true
+	return false
 
 
 func interact(player: Node) -> void:
 	var p := player as Player
 	if p == null or p.inventory == null:
 		return
+	if _searchable() and not can_pick(p.inventory, stack):
+		interact_alt(player)
+		return
+	if stack.item.is_container():
+		var slot := p.inventory.slot_for(stack)
+		if slot != "" and p.inventory.equipment.get(slot) == null:
+			# Mochila o chaleco con la ranura libre: te lo ponés con lo que tenga adentro
+			p.inventory.place_equipped(stack, slot)
+			_picked(stack)
+			return
 	var left := p.inventory.receive(stack)
 	if left > 0:
 		stack.count = left
 		EventBus.toast.emit(tr("inv.no_room"))
 		return
-	EventBus.toast.emit(tr("inv.picked") % ItemDB.display_name(stack.item))
-	Foley.play(get_tree(), "pickup_weapon" if stack.item.kind == "weapon" else "pickup_item", -4.0)
+	_picked(stack)
+
+
+## Mantener [F]: revisarla sin agarrarla (mochilas y chalecos).
+func interact_alt(player: Node) -> void:
+	if not _searchable():
+		interact(player)
+		return
+	Foley.play(get_tree(), "pickup_item", -10.0)
+	EventBus.bag_search_requested.emit(stack)
+
+
+func _picked(s: ItemStack) -> void:
+	EventBus.toast.emit(tr("inv.picked") % ItemDB.display_name(s.item))
+	Foley.play(get_tree(), "pickup_weapon" if s.item.kind == "weapon" else "pickup_item", -4.0)
 	queue_free()

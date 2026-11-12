@@ -373,5 +373,9 @@
 	"item.vest_medium.desc": "Reinforced soft vest, class 3. Stops pistols and SMGs; a rifle goes through.",
 	"action.debug_god_mode": "God mode (lab)",
 	"hud.grenades": "[G] Grenades: %d",
-	"compass.camp": "Post"
+	"compass.camp": "Post",
+	"interact.hold_search": "hold [%s]: search",
+	"loot.ground": "Ground (nearby)",
+	"inv.search": "Search",
+	"inv.back": "◂ Back"
 }

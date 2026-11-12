@@ -431,3 +431,12 @@
 ### Bugs conocidos
 - Ninguno en los tests.
 
+
+
+## 3.0.1 — Correcciones de prueba (Franquito)
+- Inventario del piso: `GroundPile` (ui/inventory/ground_pile.gd) arma una grilla con los WorldItem a 2 m; las pilas son las mismas del mundo (sale de la grilla → desaparece; entra → cae a los pies).
+- Mochilas/chalecos tirados: `BagView` muestra sus grillas (los chalecos con su forma) en el panel del contenedor; [F] agarra o equipa, mantener [F] (0,4 s, `interact_alt`) revisa; "Volver" al piso.
+- Cartel de interacción: se compara el texto cada cuadro y se borra al interactuar y con menús abiertos (antes quedaba con el objeto ya borrado).
+- Cuchillo en la tecla 4 (`PlayerActions.knife_out`), clic izquierdo estocada.
+- Sin trazadoras en las armas del jugador; NPC 1 de cada 5 tiros.
+- Viewmodel: FOV de cadera 62 → 56 y `HIP_RAISE` (+3 cm).

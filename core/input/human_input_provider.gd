@@ -17,6 +17,12 @@ var _fire_queued: bool = false
 var _reload_queued: bool = false
 var _mode_queued: bool = false
 var _interact_queued: bool = false
+var _interact_alt_queued: bool = false
+## [F] apretada: cuánto hace y si ya disparó el "mantener".
+var _interact_down: bool = false
+var _interact_held: float = 0.0
+var _interact_hold_done: bool = false
+const INTERACT_HOLD := 0.4
 var _slot_queued: int = -1
 var _zoom_queued: int = 0
 var _quick_queued: int = -1
@@ -41,7 +47,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("fire_mode"):
 		_mode_queued = true
 	if event.is_action_pressed("interact"):
-		_interact_queued = true
+		_interact_down = true
+		_interact_held = 0.0
+		_interact_hold_done = false
+	elif event.is_action_released("interact") and _interact_down:
+		_interact_down = false
+		if not _interact_hold_done:
+			_interact_queued = true
 	if event.is_action_pressed("grenade"):
 		_grenade_queued = true
 	if event.is_action_pressed("melee"):
@@ -67,7 +79,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func poll_command(_delta: float) -> PlayerCommand:
 	var cmd := PlayerCommand.new()
+	if _interact_down and not _interact_hold_done:
+		_interact_held += _delta
+		if _interact_held >= INTERACT_HOLD:
+			_interact_hold_done = true
+			_interact_alt_queued = true
 	if GameState.ui_open:
+		_interact_down = false
 		# Con el inventario abierto el jugador no se mueve ni dispara
 		_clear_queued()
 		return cmd
@@ -82,6 +100,7 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.reload = _reload_queued
 	cmd.fire_mode = _mode_queued
 	cmd.interact = _interact_queued
+	cmd.interact_alt = _interact_alt_queued
 	cmd.weapon_slot = _slot_queued
 	cmd.zoom = _zoom_queued
 	cmd.quick_slot = _quick_queued
@@ -101,6 +120,7 @@ func _clear_queued() -> void:
 	_reload_queued = false
 	_mode_queued = false
 	_interact_queued = false
+	_interact_alt_queued = false
 	_slot_queued = -1
 
 

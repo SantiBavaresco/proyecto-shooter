@@ -373,5 +373,9 @@
 	"item.vest_medium.desc": "Chaleco blando reforzado, clase 3. Frena pistolas y subfusiles; un fusil lo pasa.",
 	"action.debug_god_mode": "Invulnerable (laboratorio)",
 	"hud.grenades": "[G] Granadas: %d",
-	"compass.camp": "Puesto"
+	"compass.camp": "Puesto",
+	"interact.hold_search": "mantené [%s]: revisar",
+	"loot.ground": "Piso (alrededor)",
+	"inv.search": "Revisar",
+	"inv.back": "◂ Volver"
 }

@@ -57,6 +57,8 @@ signal player_died
 signal player_respawned(player: Node)
 ## Se pidió abrir el inventario con un contenedor al lado (null = solo la mochila).
 signal loot_requested(container: Object)
+## Revisar una mochila o chaleco tirado sin agarrarlo (mantener [F]).
+signal bag_search_requested(stack: ItemStack)
 ## Se pidió tirar al suelo una pila sacada del inventario.
 signal item_dropped(stack: Object)
 ## Se guardó un reporte de bug (F12).

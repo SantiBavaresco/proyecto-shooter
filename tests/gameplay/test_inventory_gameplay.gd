@@ -440,3 +440,123 @@ func test_weapon_marks_its_ammo() -> void:
 	assert_true(InventoryScreen.fits_together(ak, ItemStack.make("ammo_545x39", 30)), "la AR-74K marca la 5,45")
 	assert_false(InventoryScreen.fits_together(ak, ItemStack.make("ammo_9x19", 30)))
 	assert_true(InventoryScreen.fits_together(pinv.equipment["weapon2"], ItemStack.make("ammo_12g", 5)), "la escopeta, sus cartuchos")
+
+
+func test_hint_clears_after_picking_up() -> void:
+	var med := level.find_child("Item_medkit", true, false) as WorldItem
+	player.teleport(med.global_position + Vector3(0, 0.05, 1.2), 0.0)
+	await physics_frames(5)
+	await _look_at(med.global_position)
+	await physics_frames(3)
+	var hint := [""]
+	var cb := func(t: String) -> void: hint[0] = t
+	EventBus.interact_hint_changed.connect(cb)
+	await physics_frames(1)
+	weapons._hint_text = ""
+	await physics_frames(2)
+	assert_true(hint[0].contains("F"), "mirando el botiquín aparece el cartel: %s" % hint[0])
+	bot.press_interact()
+	await physics_frames(4)
+	assert_false(is_instance_valid(med), "lo agarró")
+	assert_eq(hint[0], "", "y el cartel se borra")
+	EventBus.interact_hint_changed.disconnect(cb)
+
+
+func test_ground_pile_in_inventory() -> void:
+	var p := player.global_position
+	var a := WorldItem.spawn(level, ItemStack.make("bandage", 2), p + Vector3(0.6, 0.2, 0))
+	var b := WorldItem.spawn(level, ItemStack.make("medkit", 1), p + Vector3(-0.5, 0.2, 0.4))
+	var far := WorldItem.spawn(level, ItemStack.make("medkit", 1), p + Vector3(6, 0.2, 0))
+	await physics_frames(20)
+	var scr := _screen()
+	scr.open(null)
+	assert_true(scr.container is GroundPile, "sin contenedor: el piso")
+	var ground := scr.container.get("inventory") as Inventory
+	assert_true(ground.has_stack(a.stack) and ground.has_stack(b.stack), "lo que está cerca")
+	assert_false(ground.has_stack(far.stack), "lo lejano no")
+	# Agarrar del piso: desaparece del mundo
+	(pinv.equipment["backpack"] as ItemStack).contents[0] = Inventory.new(10, 12)
+	var n := pinv.count_of("medkit")
+	pinv.transfer(b.stack, ground, pinv.bag)
+	await process_frames(2)
+	assert_eq(pinv.count_of("medkit"), n + 1)
+	assert_false(is_instance_valid(b), "el botiquín ya no está en el piso")
+	# Tirar al piso desde el inventario: aparece a los pies
+	var s := ItemStack.make("bandage", 3)
+	pinv.bag.add(s)
+	var moved := s.count
+	pinv.transfer(s, pinv.storage_of(s), ground)
+	await process_frames(2)
+	assert_eq(a.stack.count, 2 + moved, "se juntó con las vendas que ya estaban en el piso")
+	var m := pinv.first_stack("medkit")
+	var before := get_tree().get_nodes_in_group("world_items").size()
+	pinv.transfer(m, pinv.storage_of(m), ground)
+	await process_frames(2)
+	assert_eq(get_tree().get_nodes_in_group("world_items").size(), before + 1, "cayó al piso")
+	scr.close()
+
+
+func test_backpack_on_ground_search_or_take() -> void:
+	var bag := ItemStack.make("backpack_small")
+	bag.contents[0].add_item("medkit", 1)
+	bag.contents[0].add_item("bandage", 3)
+	var w := WorldItem.spawn(level, bag, player.global_position + Vector3(0, 0.3, -1.0))
+	await physics_frames(20)
+	# Con mochila puesta y esta llena: no entra, solo se revisa
+	assert_false(WorldItem.can_pick(pinv, bag), "una mochila con cosas no entra en otra")
+	assert_true(w.get_interact_text().contains(tr("interact.search").split(":")[0].replace("[%s] ", "")), "el cartel dice revisar")
+	w.interact(player)
+	await process_frames(2)
+	var scr := _screen()
+	assert_true(scr.is_open and scr.container is BagView, "se abre para revisarla")
+	var inv := scr.container.get("inventory") as Inventory
+	var n := pinv.count_of("medkit")
+	pinv.transfer(inv.stacks.filter(func(s: ItemStack) -> bool: return s.item.id == "medkit")[0], inv, null)
+	assert_eq(pinv.count_of("medkit"), n + 1, "se saca de la mochila tirada")
+	assert_eq(bag.contents[0].count_of("medkit"), 0)
+	scr._go_back()
+	assert_true(scr.container is GroundPile, "Volver: al piso")
+	scr.close()
+	# Sin mochila puesta: se la pone con lo que tiene adentro
+	var mine := pinv.take_equipped("backpack")
+	assert_true(mine != null)
+	assert_true(WorldItem.can_pick(pinv, bag))
+	assert_true(w.get_interact_text().contains("revisar") or w.get_interact_text().contains("search"), "agarrar o mantener para revisar")
+	w.interact(player)
+	await process_frames(2)
+	assert_eq(pinv.equipment["backpack"], bag, "puesta")
+	assert_eq(pinv.count_of("bandage") >= 3, true, "con lo de adentro")
+
+
+func test_hold_interact_searches() -> void:
+	var cmd := PlayerCommand.new()
+	cmd.interact_alt = true
+	var bag := ItemStack.make("backpack_small")
+	var w := WorldItem.spawn(level, bag, player.global_position + Vector3(0, 0.3, -1.0))
+	await physics_frames(10)
+	var got := [null]
+	var cb := func(st: ItemStack) -> void: got[0] = st
+	EventBus.bag_search_requested.connect(cb)
+	w.interact_alt(player)
+	assert_eq(got[0], bag, "mantener F revisa aunque entre")
+	EventBus.bag_search_requested.disconnect(cb)
+	await process_frames(2)
+	_screen().close()
+
+
+func test_knife_on_key_4() -> void:
+	await _wait_ready()
+	bot.select_slot(4)
+	await physics_frames(3)
+	assert_true(player.actions.knife_out, "4: cuchillo en la mano")
+	assert_true(weapons.lowered, "el arma se guarda")
+	await physics_frames(20)
+	bot.press_fire()
+	await physics_frames(3)
+	assert_eq(player.actions.action, "melee", "clic: estocada")
+	await physics_frames(40)
+	assert_true(player.actions.knife_out, "sigue con el cuchillo")
+	bot.select_slot(1)
+	await physics_frames(3)
+	assert_false(player.actions.knife_out, "1: vuelve al arma")
+	assert_false(weapons.lowered)

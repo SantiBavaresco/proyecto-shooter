@@ -27,7 +27,9 @@ var fire_pressed: bool = false
 var aim: bool = false
 var reload: bool = false
 var fire_mode: bool = false
+## Tocar [F] (al soltar). Mantenerlo: interact_alt (revisar una mochila sin agarrarla).
 var interact: bool = false
+var interact_alt: bool = false
 ## Slot de arma pedido este tick (1–4) o −1.
 var weapon_slot: int = -1
 ## Muescas de aumento del visor este tick (+ acercar, − alejar).

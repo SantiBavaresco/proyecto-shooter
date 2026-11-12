@@ -23,15 +23,36 @@ var t: float = 0.0
 var _done: bool = false
 var _prop: Node3D
 var _grenade_id: String = ""
+## Cuchillo en la mano (tecla 4): el arma queda guardada y el clic izquierdo da la
+## estocada. 1–3 (o 4 otra vez) vuelve al arma.
+var knife_out: bool = false
+var _knife_draw: float = 0.0
 
 
 func tick(cmd: PlayerCommand, delta: float) -> void:
 	if player.is_dead:
+		knife_out = false
 		_end()
 		return
 	if action == "":
 		var free := not player.inventory.is_using() and not GameState.ui_open
-		if cmd.melee and free and player.inventory.equipment.get("melee") != null:
+		var has_knife := player.inventory.equipment.get("melee") != null
+		if knife_out and (not has_knife or not player.weapons.lowered):
+			# Se quedó sin cuchillo o algo volvió a levantar el arma (un botiquín)
+			_put_knife_away()
+		if cmd.weapon_slot == 4 and free and has_knife:
+			if knife_out:
+				_put_knife_away()
+			else:
+				_draw_knife()
+			return
+		if knife_out and cmd.weapon_slot > 0:
+			_put_knife_away()
+			return
+		if knife_out:
+			_knife_draw = minf(_knife_draw + delta / 0.3, 1.0)
+			_anim_knife_idle()
+		if (cmd.melee or (knife_out and cmd.fire_pressed)) and free and has_knife:
 			_start("melee")
 		elif cmd.grenade and free:
 			var gid := _grenade_in_inventory()
@@ -83,12 +104,40 @@ func _start(a: String) -> void:
 
 
 func _end() -> void:
-	if action != "":
+	if action != "" and not knife_out:
 		player.weapons.lowered = false
+	var was := action
 	action = ""
 	if _prop != null:
 		_prop.queue_free()
 		_prop = null
+	if knife_out and was != "" and not player.is_dead:
+		# Vuelve a quedar con el cuchillo en la mano
+		_make_knife_prop()
+
+
+func _draw_knife() -> void:
+	knife_out = true
+	_knife_draw = 0.0
+	player.weapons.lowered = true
+	player.input_provider.cancel_aim()
+	_make_knife_prop()
+	_play(SynthSfx.knife(false), -14.0)
+
+
+func _put_knife_away() -> void:
+	knife_out = false
+	player.weapons.lowered = false
+	if _prop != null:
+		_prop.queue_free()
+		_prop = null
+
+
+func _make_knife_prop() -> void:
+	var a := action
+	action = "melee"
+	_make_prop()
+	action = a
 
 
 func _play(s: AudioStream, vol: float) -> void:
@@ -179,6 +228,9 @@ func _throw() -> void:
 # --- Vista ------------------------------------------------------------------------------
 
 func _make_prop() -> void:
+	if _prop != null:
+		_prop.queue_free()
+		_prop = null
 	var vp := player.weapons.viewmodel_viewport() if player.weapons != null else null
 	if vp == null:
 		return
@@ -204,6 +256,19 @@ func _anim_knife() -> void:
 	var thrust := pow(k, 0.6)
 	var local := Vector3(lerpf(0.22, 0.06, thrust), lerpf(-0.26, -0.1, thrust), lerpf(-0.3, -0.62, thrust))
 	var rot := Basis.from_euler(Vector3(deg_to_rad(lerpf(-25, 5, thrust)), deg_to_rad(lerpf(20, 4, thrust)), 0))
+	_prop.global_transform = cam.global_transform * Transform3D(rot, local)
+
+
+## Cuchillo en la mano, quieto: abajo a la derecha, punta al frente (sube al sacarlo).
+func _anim_knife_idle() -> void:
+	if _prop == null:
+		return
+	var cam := player.weapons.viewmodel_camera()
+	_prop.visible = true
+	var e := 1.0 - pow(1.0 - _knife_draw, 3.0)
+	var sway := sin(Time.get_ticks_msec() * 0.0015) * 0.004
+	var local := Vector3(0.2, lerpf(-0.45, -0.24 + sway, e), -0.32)
+	var rot := Basis.from_euler(Vector3(deg_to_rad(-22), deg_to_rad(18), deg_to_rad(-8)))
 	_prop.global_transform = cam.global_transform * Transform3D(rot, local)
 
 

@@ -396,7 +396,7 @@ func _fire(want: Vector3) -> void:
 	for i in maxi(w.pellets, 1):
 		var cone := err + (w.pellet_spread if w.pellets > 1 else 0.0)
 		var dir := _cone(want, cone)
-		var tracer := i == 0 and w.tracer_every > 0 and rng.randi() % 3 == 0
+		var tracer := i == 0 and w.tracer_every > 0 and rng.randi() % 5 == 0
 		combat.fire_projectile(origin, dir, w, self, _exclude, tracer)
 	var sup := muzzle_id != ""
 	if not sup:
