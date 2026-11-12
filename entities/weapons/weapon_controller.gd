@@ -1048,6 +1048,9 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 			if not accidental and c.mag > 0 and c.mode() == "semi" and worn_zone() and _rng.randf() < risk["doubling"]:
 				_slam_pending = true
 	EventBus.weapon_fired.emit(w.id)
+	# Los enemigos oyen el tiro (con silenciador, mucho más cerca)
+	EventBus.noise_emitted.emit(player.global_position,
+		HumanNpc.SHOT_HEAR_SUPPRESSED if c.suppressed() else HumanNpc.SHOT_HEAR, player)
 	_emit_state()
 
 

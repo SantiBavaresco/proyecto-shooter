@@ -420,3 +420,19 @@ func test_npc_ragdoll_falls_and_settles() -> void:
 	n.apply_hit(hi)
 	assert_false(rd.frozen, "un tiro lo mueve")
 	assert_true(n.get_interact_text() != "", "se puede revisar")
+
+
+
+func test_npc_hears_real_player_shot() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0, -70), 0.0)
+	await physics_frames(20)
+	for i in 200:
+		if player.weapons.state == WeaponController.State.READY:
+			break
+		await physics_frames(1)
+	# Disparo de verdad hacia un costado (la bala no le pasa cerca)
+	player.yaw = PI * 0.5
+	bot.press_fire()
+	await physics_frames(20)
+	assert_true(n.brain.state in [NpcBrain.State.COMBAT, NpcBrain.State.INVESTIGATE], "oye el tiro del jugador a 70 m")
