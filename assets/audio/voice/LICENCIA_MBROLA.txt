@@ -1,0 +1,111 @@
+Voces provisorias generadas con eSpeak NG + MBROLA (mx1, mx2, vz1). NO se pueden incluir en un producto que se venda sin permiso de los dueños de cada base de difonos: reemplazarlas antes de cualquier venta.
+
+===== mbrola-mx1 =====
+License
+--------------------------------------------------------------
+This mbrola database is being provided to you, the licensee,by 
+the Faculte Polytechnique de Mons, the licensor and owner of the
+database. The original diphone database, from which this mbrola 
+database has been built, is owned and copyrighted by the Oregon
+Graduate Institute of Science & Technology.
+
+By obtaining, using and/or copying this database, you agree 
+that you have read, understood, and will comply with these 
+terms and conditions :
+
+Terms and conditions on the use of MX1
+--------------------------------------
+
+Permission is granted to use this database for synthesizing 
+speech with and only with the Mbrola program made available 
+from the MBROLA project www homepage :
+
+   http://tcts.fpms.ac.be/synthesis
+   
+Terms and conditions for the distribution of MX1
+------------------------------------------------
+
+The distribution of this database is submitted to the same terms 
+and conditions as the distribution of the Mbrola program. 
+In addition, this database may not be sold or incorporated into 
+any product which is sold without prior permission from the 
+Diphone Database Owner ( Oregon Graduate Institute of Science &
+Technology, P.O. Box 91000, Portland, Oregon 97291-1000, USA ).
+
+When no charge is made, this database may be copied and distributed
+freely, provided that this notice is copied and distributed with it.
+
+Disclaimer
+===== mbrola-mx2 =====
+License
+--------------------------------------------------------------
+This mbrola database is being provided to you, the licensee,by 
+the Faculte Polytechnique de Mons, the licensor and owner of the
+database. The original diphone database, from which this mbrola 
+database has been built, is owned and copyrighted by Humberto 
+Pérez Espinosa.
+
+By obtaining, using and/or copying this database, you agree 
+that you have read, understood, and will comply with these 
+terms and conditions :
+
+Terms and conditions on the use of MX2
+--------------------------------------
+
+Permission is granted to use this database for synthesizing 
+speech with and only with the Mbrola program made available 
+from the MBROLA project www homepage :
+
+   http://tcts.fpms.ac.be/synthesis
+   
+Terms and conditions for the distribution of MX2
+------------------------------------------------
+
+The distribution of this database is submitted to the same terms 
+and conditions as the distribution of the Mbrola program. 
+In addition, this database may not be sold or incorporated into 
+any product which is sold without prior permission from the 
+Diphone Database Owner: 
+Humberto Perez Espinosa <humbertop@inaoep.mx>
+
+When no charge is made, this database may be copied and distributed
+freely, provided that this notice is copied and distributed with it.
+
+Disclaimer
+===== mbrola-vz1 =====
+License
+--------------------------------------------------------------
+This mbrola database is being provided to you, the licensee,by 
+the Faculte Polytechnique de Mons, the licensor and owner of the
+database. The original diphone database, from which this mbrola 
+database has been built, is owned and copyrighted by 
+Manuel Rodriguez Hourcadette , [hourcade@ula.ve].
+
+By obtaining, using and/or copying this database, you agree 
+that you have read, understood, and will comply with these 
+terms and conditions :
+
+Terms and conditions on the use of VZ1
+--------------------------------------
+
+Permission is granted to use this database for synthesizing 
+speech with and only with the Mbrola program made available 
+from the MBROLA project www homepage :
+
+   http://tcts.fpms.ac.be/synthesis
+   
+Terms and conditions for the distribution of VZ1
+------------------------------------------------
+
+The distribution of this database is submitted to the same terms 
+and conditions as the distribution of the Mbrola program. 
+In addition, this database may not be sold or incorporated into 
+any product which is sold without prior permission from the 
+Diphone Database Owner : Manuel Rodriguez Hourcadette,Grupo de 
+Ciencias Fonéticas, Laboratorio de Fonética, Facultad de 
+Humanidades, Universidad de Los Andes, Mérida, VENEZUELA.
+
+When no charge is made, this database may be copied and distributed
+freely, provided that this notice is copied and distributed with it.
+
+Disclaimer

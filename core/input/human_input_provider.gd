@@ -27,6 +27,10 @@ var _slot_queued: int = -1
 var _zoom_queued: int = 0
 var _quick_queued: int = -1
 var _grenade_queued: bool = false
+var _smoke_queued: bool = false
+var _g_down: bool = false
+var _g_held: float = 0.0
+var _g_done: bool = false
 var _melee_queued: bool = false
 var _aim_state: bool = false
 
@@ -54,8 +58,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		_interact_down = false
 		if not _interact_hold_done:
 			_interact_queued = true
+	# [G] tocada: fragmentación (al soltar); mantenida: humo
 	if event.is_action_pressed("grenade"):
-		_grenade_queued = true
+		_g_down = true
+		_g_held = 0.0
+		_g_done = false
+	elif event.is_action_released("grenade") and _g_down:
+		_g_down = false
+		if not _g_done:
+			_grenade_queued = true
 	if event.is_action_pressed("melee"):
 		_melee_queued = true
 	for i in SLOT_ACTIONS.size():
@@ -79,6 +90,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func poll_command(_delta: float) -> PlayerCommand:
 	var cmd := PlayerCommand.new()
+	if _g_down and not _g_done:
+		_g_held += _delta
+		if _g_held >= INTERACT_HOLD:
+			_g_done = true
+			_smoke_queued = true
 	if _interact_down and not _interact_hold_done:
 		_interact_held += _delta
 		if _interact_held >= INTERACT_HOLD:
@@ -105,6 +121,7 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.zoom = _zoom_queued
 	cmd.quick_slot = _quick_queued
 	cmd.grenade = _grenade_queued
+	cmd.grenade_smoke = _smoke_queued
 	cmd.melee = _melee_queued
 	_clear_queued()
 	return cmd
@@ -113,6 +130,7 @@ func poll_command(_delta: float) -> PlayerCommand:
 func _clear_queued() -> void:
 	_quick_queued = -1
 	_grenade_queued = false
+	_smoke_queued = false
 	_melee_queued = false
 	_zoom_queued = 0
 	_jump_queued = false

@@ -21,7 +21,7 @@ static func make(by: Node, id := "grenade_rg5") -> Grenade:
 	var g := Grenade.new()
 	g.thrower = by
 	g.item_id = id
-	g.fuse = 3.4 if id == "grenade_rg5" else 3.8
+	g.fuse = 3.4 if id == "grenade_rg5" else (1.6 if id == "grenade_smoke" else 3.8)
 	return g
 
 
@@ -87,6 +87,12 @@ func _physics_process(delta: float) -> void:
 
 func explode() -> void:
 	_exploded = true
+	if item_id == "grenade_smoke":
+		# Humo: no lastima; la lata queda echando humo donde cayó
+		SmokeCloud.spawn(get_parent(), global_position)
+		EventBus.noise_emitted.emit(global_position, 18.0, self)
+		queue_free()
+		return
 	var center := global_position + Vector3(0, 0.15, 0)
 	var space := get_world_3d().direct_space_state
 	var hit_targets := {}

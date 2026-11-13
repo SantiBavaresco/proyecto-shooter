@@ -449,3 +449,16 @@
 - Arma suelta como RigidBody3D. BULLET_MASK excluye la capa 12 (las balas pegan en los cuerpos de impacto, que siguen a los huesos).
 - Movimiento: giro con velocidad angular suavizada, velocidad/apuntado con suavizado exponencial, balanceo de cadera, inclinación por aceleración y en curvas, respiración, el arma acompaña el paso; LOD de pose más fino.
 - CombatWorld: no guardar como tirador un nodo ya borrado.
+
+
+## 3.1.0 — Escuadras militares
+- `Squad` (entities/npc/squad.gd): comandante por escuadra; cada 0,5 s reparte roles (suppress, advance, flank, hold, reload, retreat) según cuántos quedan, quién ve, quién recarga y la distancia. Modos: push (avanzan de a ~1/3 mientras ~1/3 cubre), hold (cerca: mantienen ángulos), flank (si te pierden o la pelea se estanca 8 s), fall_back (perdieron la mitad). Lo que sabe uno lo saben todos. Los aliados no militares del mismo `squad` reciben órdenes con 0,8–1,6 s de demora.
+- Fuego de cobertura: ráfagas a la última posición conocida aunque no te vea; nunca te sigue a través del humo. Sin fuego amigo: antes de cada tiro mira si hay un compañero en la línea.
+- Voz: `VoiceBank` + `HumanNpc.speak`; grito (se oye ~110 m) lejos o en tiroteo, hablado (~22 m) cerca; seña con la mano si el compañero lo ve y no hay tiroteo; en sigilo nunca grita. Sin repetir la misma frase (pausa por frase).
+- Patrulla en formación (cuña, el último mira atrás); al investigar en silencio frenan a los suyos con seña.
+- Humo: `grenade_smoke` (G mantenida), `SmokeCloud` tapa la vista de la IA; la escuadra tira humo para cruzar campo abierto.
+- Estrés de NPC: tiros cerca, heridas y compañeros caídos → peor puntería, recarga más lenta y a veces se traba la mano. Armas gastadas se traban (bandidos 0,15–0,7 de estado).
+- Jugador: presión de combate (cantidad y cercanía de enemigos en combate contra vos, ×2 bajo techo) alimenta el estrés.
+- Botín de militares gastado (arma 0,15–0,45, blindaje 0,2–0,5).
+- Pista: consola de enemigos (bandidos 5 / militares 8). Isla: galpón con 4 militares a cargo de 5 bandidos, ronda de 2 y campamento de 4 en el monte.
+- Corrección: los enemigos ahora oyen los disparos del jugador.

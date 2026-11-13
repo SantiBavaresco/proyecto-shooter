@@ -61,6 +61,9 @@ const NPC_BODY_LAYER := 5
 const DAMAGE_MODEL := preload("res://data/combat/damage_model.tres")
 ## Estrés de combate (0–1): sube al recibir tiros o cuando pasan cerca, baja solo.
 var combat_stress: float = 0.0
+## Presión de combate actual (0..0.9) y cada cuánto se recalcula.
+var pressure: float = 0.0
+var _pressure_t: float = 0.0
 var _rng := RandomNumberGenerator.new()
 var _step_dist: float = 0.0
 var _step_player: AudioStreamPlayer
@@ -266,6 +269,36 @@ func _update_camera_effects(delta: float) -> void:
 		camera.position = camera.position.lerp(Vector3.ZERO, 1.0 - exp(-10.0 * delta))
 
 
+## 0..0.9 según los enemigos en combate contra vos (ver _update_zones).
+func _combat_pressure() -> float:
+	if not is_inside_tree():
+		return 0.0
+	var sum := 0.0
+	var indoor := -1
+	for n in get_tree().get_nodes_in_group("ai_npc"):
+		var h := n as HumanNpc
+		if h == null or h.dead or h.brain == null or h.brain.state != NpcBrain.State.COMBAT or h.brain.target != self:
+			continue
+		var d := h.global_position.distance_to(global_position)
+		var w := clampf(1.0 - d / 60.0, 0.0, 1.0)
+		if w <= 0.0:
+			continue
+		if d < 25.0:
+			if indoor < 0:
+				indoor = 1 if is_indoors() else 0
+			if indoor == 1:
+				w *= 2.0
+		sum += w * 0.3
+	return minf(sum, 0.9)
+
+
+## ¿Hay techo encima? (combate en interiores)
+func is_indoors() -> bool:
+	var rq := PhysicsRayQueryParameters3D.create(camera.global_position, camera.global_position + Vector3.UP * 8.0, 1)
+	rq.exclude = [get_rid()]
+	return not get_world_3d().direct_space_state.intersect_ray(rq).is_empty()
+
+
 ## Zonas de prueba: fijan el estrés objetivo; el arma consulta "worn".
 func _update_zones(delta: float) -> void:
 	zone_kinds = TestZone.kinds_at(get_tree(), global_position) if is_inside_tree() else PackedStringArray()
@@ -277,6 +310,13 @@ func _update_zones(delta: float) -> void:
 	elif zone_kinds.has("stress_medium"):
 		lvl = 1
 	combat_stress = maxf(0.0, combat_stress - delta * 0.07)
+	# Presión de combate: cuantos más enemigos saben dónde estás y más cerca están, más
+	# estrés; bajo techo (combate cercano) el doble. Uno lejos no alcanza ni para leve.
+	_pressure_t -= delta
+	if _pressure_t <= 0.0:
+		_pressure_t = 0.25
+		pressure = _combat_pressure()
+	combat_stress = maxf(combat_stress, pressure)
 	if combat_stress > 0.65:
 		lvl = maxi(lvl, 2)
 	elif combat_stress > 0.25:

@@ -45,3 +45,13 @@ Antes de sumar uno, verificar la licencia (ver prompt maestro, sección 4).
 | Construcciones, árboles y pasto de la Isla Talavera | `world/structures.gd`, `world/zone_talavera/zone_builder.gd` |
 | `sfx_explosion`, `sfx_bullet_crack`, `sfx_knife` | `core/audio/synth_sfx.gd` (sintéticos) |
 
+
+
+## Voces de los militares (provisorias) — 3.1.0
+| Recurso | Origen | Licencia / atención |
+|---|---|---|
+| `assets/audio/voice/v1..v3/*.wav` (19 frases × 3 voces × grito/hablado) | Generadas con `tools/audio/gen_voices.py`: eSpeak NG (GPL, solo como herramienta) + voces MBROLA mx2, mx1, vz1 | **No comercial**: las bases MBROLA no pueden ir en un producto que se venda sin permiso de sus dueños. Sirven para probar; reemplazar por grabaciones propias (o voces con licencia comercial) antes de cualquier venta. Aviso en `assets/audio/voice/LICENCIA_MBROLA.txt` |
+| Señas con la mano (alto, avanzar, flanquear, agacharse) | `entities/npc/npc_body.gd` (pose por código) | Propio |
+| Humo (partículas y siseo) | `entities/items/smoke_cloud.gd`, `core/audio/synth_sfx.gd` | Propio |
+
+Pendiente para reemplazar: grabar las frases con voces rioplatenses (lista en `tools/audio/gen_voices.py`, LINES) en dos registros, gritado y hablado.

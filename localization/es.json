@@ -353,7 +353,7 @@
 	"greybox.arena": "ZONA DE COMBATE",
 	"arena.difficulty": "Dificultad: %s",
 	"arena.change_difficulty": "[%s] Cambiar la dificultad",
-	"arena.reset": "[%s] Reiniciar el combate (5 enemigos)",
+	"arena.reset": "[%s] Reiniciar el combate",
 	"arena.reset_label": "REINICIAR",
 	"inv.stat.armor_class": "Blindaje",
 	"inv.stat.class_n": "Clase %d",
@@ -377,5 +377,12 @@
 	"interact.hold_search": "mantené [%s]: revisar",
 	"loot.ground": "Piso (alrededor)",
 	"inv.search": "Revisar",
-	"inv.back": "◂ Volver"
+	"inv.back": "◂ Volver",
+	"arena.change_faction": "[%s] Cambiar enemigos (bandidos / militares)",
+	"arena.faction_bandits": "Enemigos: bandidos (5)",
+	"arena.faction_military": "Enemigos: militares (8)",
+	"loot.military": "Militar",
+	"item.grenade_smoke": "Granada de humo RDG",
+	"item.grenade_smoke.desc": "Lata de humo: tapa la vista durante ~25 s. Mantené [G] para tirarla.",
+	"zone.mil_camp": "Campamento militar"
 }

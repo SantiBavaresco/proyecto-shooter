@@ -24,11 +24,13 @@ const CHECKPOINT := Vector3(-62, 0, 60)
 const BASE_A := Vector3(35, 0, -25)
 const BASE_B := Vector3(128, 0, 112)
 const FARM := Vector3(-105, 0, -115)
+## Campamento militar en el monte (pelea en campo abierto con árboles).
+const MIL_CAMP := Vector3(92, 0, -118)
 ## Camino de tierra: del campamento al retén, al galpón y a la estación.
 const ROAD := [Vector3(-150, 0, 140), Vector3(-110, 0, 100), Vector3(-62, 0, 60), Vector3(-20, 0, 20), Vector3(25, 0, -8),
 	Vector3(70, 0, 30), Vector3(105, 0, 85), Vector3(128, 0, 100)]
 ## Lugares planos: [centro, radio].
-const PADS := [[CAMP, 16.0], [CHECKPOINT, 10.0], [BASE_A, 40.0], [BASE_B, 20.0], [FARM, 18.0]]
+const PADS := [[CAMP, 16.0], [CHECKPOINT, 10.0], [BASE_A, 40.0], [BASE_B, 20.0], [FARM, 18.0], [MIL_CAMP, 11.0]]
 
 var _noise := FastNoiseLite.new()
 var _geo: Node3D
@@ -60,6 +62,7 @@ func _ready() -> void:
 	_build_base_a()
 	_build_base_b()
 	_build_farm()
+	_build_mil_camp()
 	_build_props()
 	_build_vegetation()
 	NavUtil.bake(self, AABB(Vector3(-SIZE * 0.5, -10, -SIZE * 0.5), Vector3(SIZE, 40, SIZE)), true, 0.3)
@@ -421,6 +424,31 @@ func _build_farm() -> void:
 	_geo.add_child(stash)
 
 
+## Campamento militar: dos carpas, fogón, cajones y un cajón de armas, en un claro chico
+## del monte (los árboles quedan cerca: pelea en campo abierto pero con troncos).
+func _build_mil_camp() -> void:
+	var c := _at(MIL_CAMP)
+	Structures.tent(_geo, c + Vector3(-4, 0, -3), 0.3, Vector3(3.2, 2.0, 4.2), Structures.mat("tarp"))
+	Structures.tent(_geo, c + Vector3(4.5, 0, -2), -0.4, Vector3(3.2, 2.0, 4.2))
+	Structures.campfire(_geo, c + Vector3(0, 0, 2))
+	Structures.crates(_geo, c + Vector3(-5, 0, 4), 0.2, 3)
+	Structures.sandbags(_geo, c + Vector3(6, 0, 5), -0.6, 3.0, 1.0)
+	var wc := LootContainer.new()
+	wc.name = "MilCamp_Weapons"
+	wc.kind = "weapons"
+	wc.loot_seed = 701
+	wc.position = c + Vector3(-1.5, 0.1, -4.5)
+	_geo.add_child(wc)
+	var crate := LootContainer.new()
+	crate.name = "MilCamp_Crate"
+	crate.kind = "crate"
+	crate.loot_seed = 702
+	crate.contents = [["grenade_smoke", 2], ["medkit", 1], ["bandage", 3], ["ammo_556x45", 90]]
+	crate.position = c + Vector3(-5.5, 0.1, 2.0)
+	_geo.add_child(crate)
+	Structures.sign_post(_geo, c + Vector3(0, 0, 9), PI, tr("zone.mil_camp"))
+
+
 ## Cosas sueltas por el mapa: autos, tambores, cajones.
 func _build_props() -> void:
 	var spots := [[Vector3(-128, 0, 118), 0.4, "car_red"], [Vector3(-35, 0, 36), 2.0, "car_white"], [Vector3(55, 0, 15), -0.8, "car_green"],
@@ -522,11 +550,23 @@ func _spawn_enemies() -> void:
 	_npc("Torre", "bandit_marksman", a + Vector3(24, 4.6, -18), PI * 0.75, "galpon", [], true)
 	_npc("Porton1", "bandit_rifle", a + Vector3(-21, 0, 18.5), PI * 0.8, "galpon")
 	_npc("Porton2", "bandit_shotgun", a + Vector3(-25, 0, 15), PI * 0.6, "galpon")
-	_npc("PatrullaA1", "bandit_smg", a + Vector3(10, 0, 4), 0.0, "galpon",
-		[a + Vector3(10, 0, 4), a + Vector3(24, 0, 12), a + Vector3(24, 0, -14), a + Vector3(-10, 0, 4)])
-	_npc("PatrullaA2", "bandit_rifle", a + Vector3(-10, 0, 10), 0.0, "galpon",
-		[a + Vector3(-10, 0, 10), a + Vector3(-24, 0, -2), a + Vector3(-12, 0, -18), a + Vector3(0, 0, 8)])
 	_npc("Galpon", "bandit_rifle", a + Vector3(2, 0, -6), PI, "galpon")
+	# Trabajo en conjunto: los militares mandan a los bandidos del galpón
+	_npc("MilJefe", "mil_leader", a + Vector3(-12, 0, -4), PI * 0.8, "galpon")
+	_npc("MilTirador", "mil_marksman", a + Vector3(20, 0, 14), PI * 0.7, "galpon")
+	_npc("Mil1", "mil_rifle", a + Vector3(-6, 0, 12), PI * 0.9, "galpon")
+	_npc("Mil2", "mil_rifle", a + Vector3(14, 0, 2), PI * 0.6, "galpon")
+	# Ronda: dos militares que dan vueltas por afuera del alambrado (en formación)
+	var ronda := [a + Vector3(-36, 0, 30), a + Vector3(36, 0, 30), a + Vector3(36, 0, -30), a + Vector3(-36, 0, -30)]
+	_npc("RondaA", "mil_rifle", a + Vector3(-36, 0, 30), 0.0, "ronda", ronda)
+	_npc("RondaB", "mil_rifle", a + Vector3(-38, 0, 34), 0.0, "ronda")
+	# Campamento militar en el monte: 4
+	var m := MIL_CAMP
+	_npc("CampLider", "mil_leader", m + Vector3(-1.5, 0, 3.5), PI * 0.2, "monte")
+	_npc("Camp1", "mil_rifle", m + Vector3(2.0, 0, 3.0), -PI * 0.3, "monte")
+	_npc("Camp2", "mil_marksman", m + Vector3(6.5, 0, 6.5), PI, "monte")
+	_npc("Camp3", "mil_rifle", m + Vector3(-8, 0, -6), 0.0, "monte",
+		[m + Vector3(-8, 0, -6), m + Vector3(10, 0, -10), m + Vector3(12, 0, 10), m + Vector3(-10, 0, 12)])
 	# Estación de bombeo
 	var b := BASE_B
 	_npc("Bombas1", "bandit_smg", b + Vector3(-2, 0, 1), PI * 0.6, "bombas")

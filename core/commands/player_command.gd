@@ -38,6 +38,8 @@ var zoom: int = 0
 var quick_slot: int = -1
 ## Tirar una granada (G) y cuchillazo rápido (V), solo en el tick en que se apretó.
 var grenade: bool = false
+## Mantener [G]: granada de humo.
+var grenade_smoke: bool = false
 var melee: bool = false
 
 

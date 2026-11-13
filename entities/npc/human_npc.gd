@@ -93,6 +93,19 @@ var _looting: bool = false
 var _heal_left: float = 0.0
 var _step_dist: float = 0.0
 var _steps: AudioStreamPlayer3D
+## Táctica ("military" = se coordina en escuadra, habla y se hace señas).
+var tactics: String = ""
+## Voz (VoiceBank) de los que hablan; "" = mudo.
+var voice_id: String = ""
+var squad_obj: Squad = null
+## Estrés (0..1): sube con tiros cerca, heridas y compañeros caídos; empeora la
+## puntería y la recarga (más lenta, a veces se le traba la mano).
+var stress: float = 0.0
+## Estado del arma (0..1): las gastadas se traban en pleno combate.
+var weapon_condition: float = 0.8
+var smokes: int = 0
+var _jam: bool = false
+var _voice: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -114,6 +127,9 @@ func _ready() -> void:
 	cs.position = Vector3(0, 0.9, 0)
 	add_child(cs)
 	loadout = NpcLoadouts.get_loadout(loadout_id)
+	tactics = String(loadout.get("tactics", ""))
+	if tactics == "military":
+		title_key = "loot.military"
 	max_hp = float(loadout.get("hp", 100.0))
 	hp = max_hp
 	body = NpcBody.new()
@@ -152,6 +168,42 @@ func _ready() -> void:
 	_last_pos = global_position
 	brain = NpcBrain.new(self)
 	EventBus.noise_emitted.connect(_on_noise)
+	if bool(loadout.get("voice", false)):
+		var vs := VoiceBank.voices()
+		if not vs.is_empty():
+			voice_id = String(vs[absi(hash(String(name))) % vs.size()])
+	_voice = AudioStreamPlayer3D.new()
+	_voice.bus = "SFX_World"
+	_voice.max_polyphony = 1
+	add_child(_voice)
+	_join_squad.call_deferred()
+
+
+func _join_squad() -> void:
+	squad_obj = Squad.get_for(self)
+	if squad_obj != null:
+		squad_obj.add(self)
+
+
+## Dice una frase: gritada (se oye de lejos) o hablada (solo de cerca).
+func speak(key: String, shout: bool) -> void:
+	if voice_id == "" or dead:
+		return
+	var st := VoiceBank.stream(voice_id, key, shout, rng)
+	if st == null:
+		return
+	_voice.stream = st
+	_voice.unit_size = 9.0 if shout else 2.2
+	_voice.max_distance = 110.0 if shout else 22.0
+	_voice.volume_db = 2.0 if shout else -6.0
+	_voice.pitch_scale = rng.randf_range(0.96, 1.05) * (1.0 + stress * 0.06)
+	_voice.position = Vector3(0, 1.6, 0)
+	_voice.play()
+
+
+func add_stress(v: float) -> void:
+	var k := 0.6 if tactics == "military" else 1.0
+	stress = clampf(stress + v * k, 0.0, 1.0)
 
 
 ## Dificultad con la que juega.
@@ -165,9 +217,19 @@ func _equip() -> void:
 	weapon = load("res://data/weapons/%s.tres" % wid) as WeaponData
 	if weapon == null:
 		weapon = load("res://data/weapons/akm.tres") as WeaponData
+	var wc: Array = loadout.get("weapon_condition", [0.3, 0.75])
+	weapon_condition = rng.randf_range(float(wc[0]), float(wc[1]))
+	# Mira (si su equipo trae y el arma la acepta)
+	var sights: Array = loadout.get("sights", [])
+	if not sights.is_empty():
+		var sid := String(sights[rng.randi() % sights.size()])
+		if sid != "" and ItemDB.has(sid) and ItemDB.fits_weapon(ItemDB.get_item(sid), weapon):
+			sight_id = sid
+	var sm: Array = loadout.get("smokes", [0, 0])
+	smokes = rng.randi_range(int(sm[0]), int(sm[1]))
 	# Alguno lleva silenciador (si el arma tiene rosca)
 	var thread := ItemDB.thread_of(weapon)
-	if thread != "" and rng.randf() < 0.15:
+	if thread != "" and rng.randf() < float(loadout.get("suppressor", 0.15)):
 		muzzle_id = {"pistol": "supp_pistol", "545": "supp_545", "762": "supp_762"}.get(thread, "")
 	body.set_weapon(weapon, sight_id, muzzle_id)
 	mag = _capacity()
@@ -216,6 +278,7 @@ func _physics_process(delta: float) -> void:
 	if dead:
 		return
 	var p := profile()
+	stress = maxf(0.0, stress - delta * (0.09 if tactics == "military" else 0.06))
 	if ai_enabled:
 		brain.update(delta)
 	_update_heal(delta)
@@ -380,7 +443,25 @@ func _update_weapon(delta: float) -> void:
 	var want := (aim_point - body.muzzle_position()).normalized()
 	if aim_forward().angle_to(want) > deg_to_rad(9.0):
 		return
+	# Un compañero se cruzó en la línea de tiro: espera (sin fuego amigo)
+	if _ally_in_line():
+		return
 	_fire(want)
+
+
+func _ally_in_line() -> bool:
+	var from := body.muzzle_position()
+	var rq := PhysicsRayQueryParameters3D.create(from, from + (aim_point - from).limit_length(60.0),
+		1 << (NpcBody.HITBOX_LAYER - 1))
+	rq.exclude = _exclude
+	var hit := get_world_3d().direct_space_state.intersect_ray(rq)
+	if hit.is_empty():
+		return false
+	var c := hit["collider"] as Node
+	if c == null or not c.has_meta("zone_owner"):
+		return false
+	var o: Variant = c.get_meta("zone_owner")
+	return o is HumanNpc and o != self and not (o as HumanNpc).dead
 
 
 func _fire(want: Vector3) -> void:
@@ -413,8 +494,26 @@ func _fire(want: Vector3) -> void:
 	_audio.global_position = origin
 	_audio.play()
 	EventBus.noise_emitted.emit(origin, SHOT_HEAR_SUPPRESSED if sup else SHOT_HEAR, self)
+	if squad_obj != null:
+		squad_obj.note_shot()
 	if burst_left <= 0:
 		_burst_shot = 0
+	# Arma gastada: se traba (más con los nervios)
+	if weapon_condition < 0.6 and mag > 0:
+		var risk := (0.6 - weapon_condition) * 0.05 * (1.0 + stress * 0.5)
+		if rng.randf() < risk:
+			_start_jam()
+
+
+## Se le trabó el arma: tarda en destrabarla (y pierde el cartucho trabado).
+func _start_jam() -> void:
+	_jam = true
+	reloading = true
+	burst_left = 0
+	_reload_left = rng.randf_range(1.6, 3.2) * (1.0 + stress * 0.6)
+	_play_at(SynthSfx.click("dry", 0.9, 0.04), -6.0)
+	if squad_obj != null:
+		squad_obj.say(self, "jam")
 
 
 func _cone(fwd: Vector3, deg: float) -> Vector3:
@@ -434,11 +533,24 @@ func start_reload() -> void:
 	reloading = true
 	burst_left = 0
 	_reload_left = weapon.reload_time_empty * 1.1 if weapon.reload_type == "magazine" else weapon.round_time * 4.0 + 0.6
+	# Con estrés recarga más lento y a veces se le traba la mano (el cargador no entra)
+	_reload_left *= 1.0 + stress * 0.5
+	var fumble := stress * (0.15 if tactics == "military" else 0.3)
+	if rng.randf() < fumble:
+		_reload_left += rng.randf_range(0.8, 2.0)
+		get_tree().create_timer(_reload_left * 0.5, false).timeout.connect(func() -> void:
+			if is_inside_tree() and not dead:
+				_play_at(SynthSfx.click("mag_in", 1.3, 0.03), -8.0))
 	_play_at(SynthSfx.click("mag_out", 0.8, 0.06), -4.0)
 
 
 func _finish_reload() -> void:
 	reloading = false
+	if _jam:
+		_jam = false
+		mag = maxi(0, mag - 1)
+		_play_at(SynthSfx.click("charge", 1.0, 0.05), -4.0)
+		return
 	if weapon.reload_type == "magazine" and not spare_mags.is_empty():
 		# Cambia por el cargador más lleno; el vacío queda (va al botín)
 		spare_mags.sort()
@@ -461,13 +573,18 @@ func _play_at(s: AudioStream, vol: float) -> void:
 
 
 ## Tira una granada hacia `target` (tiro parabólico con algo de error).
-func throw_grenade(target: Vector3, error_m: float) -> void:
-	if grenades <= 0:
-		return
-	grenades -= 1
+func throw_grenade(target: Vector3, error_m: float, id := "grenade_rg5") -> void:
+	if id == "grenade_smoke":
+		if smokes <= 0:
+			return
+		smokes -= 1
+	else:
+		if grenades <= 0:
+			return
+		grenades -= 1
 	var from := body.chest_position() + Vector3(0, 0.45, 0) - global_basis.z * 0.3
 	var aim := target + Vector3(rng.randf_range(-1, 1), 0, rng.randf_range(-1, 1)) * error_m
-	var g := Grenade.make(self)
+	var g := Grenade.make(self, id)
 	get_parent().add_child(g)
 	g.global_position = from
 	g.linear_velocity = Grenade.launch_velocity(from, aim, deg_to_rad(38.0))
@@ -519,6 +636,7 @@ func apply_hit(info: HitInfo) -> bool:
 			if not res.penetrated and info.zone == "head_core":
 				dmg = maxf(minf(dmg, 30.0), 15.0)
 	hp -= dmg
+	add_stress(0.35)
 	brain.on_damaged(info)
 	if hp <= 0.0:
 		_die(info)
@@ -528,6 +646,7 @@ func apply_hit(info: HitInfo) -> bool:
 
 func on_near_miss(origin: Vector3, source: Node) -> void:
 	if not dead:
+		add_stress(0.18)
 		brain.on_near_miss(origin, source)
 
 
@@ -560,7 +679,12 @@ func _die(info: HitInfo) -> void:
 ## Al morir, todo lo que tenía pasa al botín: el arma (con lo que le quedaba en el
 ## cargador), los cargadores de repuesto, la munición, el blindaje y las granadas.
 func _fill_corpse() -> void:
-	var wst := ItemStack.make(ItemDB.weapon_item_id(weapon.id), 1, {"mag": mag, "condition": rng.randf_range(0.45, 0.85)})
+	# Lo que se saquea está gastado (los militares usan su equipo hasta romperlo)
+	var lc: Array = loadout.get("loot_condition", [weapon_condition - 0.1, weapon_condition + 0.05])
+	var wst := ItemStack.make(ItemDB.weapon_item_id(weapon.id), 1,
+		{"mag": mag, "condition": clampf(rng.randf_range(float(lc[0]), float(lc[1])), 0.05, 1.0)})
+	if sight_id != "__fabrica" and sight_id != "":
+		wst.state["sight"] = sight_id
 	if muzzle_id != "":
 		wst.state["muzzle"] = muzzle_id
 	inventory.add(wst)
@@ -570,9 +694,14 @@ func _fill_corpse() -> void:
 			inventory.add(ItemStack.make(mid, 1, {"rounds": r}))
 	if loose_ammo > 0:
 		inventory.add_item(ItemDB.ammo_id(weapon.caliber), loose_ammo)
+	var ac: Array = loadout.get("armor_loot_condition", [])
 	for st: ItemStack in [helmet, vest]:
 		if st != null:
+			if not ac.is_empty():
+				st.state["condition"] = minf(float(st.state.get("condition", 1.0)), rng.randf_range(float(ac[0]), float(ac[1])))
 			inventory.add(st)
+	if smokes > 0:
+		inventory.add_item("grenade_smoke", smokes)
 	if grenades > 0:
 		inventory.add_item("grenade_rg5", grenades)
 	if has_medkit:

@@ -1,0 +1,353 @@
+{
+ "voices": [
+  "v1",
+  "v2",
+  "v3"
+ ],
+ "lines": {
+  "v1": {
+   "contact": [
+    0,
+    1,
+    2
+   ],
+   "cover_me": [
+    0,
+    1,
+    2
+   ],
+   "covering": [
+    0,
+    1,
+    2
+   ],
+   "moving": [
+    0,
+    1,
+    2
+   ],
+   "reloading": [
+    0,
+    1,
+    2
+   ],
+   "grenade_out": [
+    0,
+    1
+   ],
+   "grenade_incoming": [
+    0,
+    1
+   ],
+   "smoke": [
+    0,
+    1
+   ],
+   "lost": [
+    0,
+    1,
+    2
+   ],
+   "flank": [
+    0,
+    1,
+    2
+   ],
+   "man_down": [
+    0,
+    1
+   ],
+   "left": [
+    0,
+    1
+   ],
+   "right": [
+    0,
+    1
+   ],
+   "search": [
+    0,
+    1,
+    2
+   ],
+   "fall_back": [
+    0,
+    1
+   ],
+   "hold": [
+    0,
+    1
+   ],
+   "order_cover": [
+    0,
+    1
+   ],
+   "order_flank": [
+    0,
+    1
+   ],
+   "jam": [
+    0,
+    1
+   ]
+  },
+  "v2": {
+   "contact": [
+    0,
+    1,
+    2
+   ],
+   "cover_me": [
+    0,
+    1,
+    2
+   ],
+   "covering": [
+    0,
+    1,
+    2
+   ],
+   "moving": [
+    0,
+    1,
+    2
+   ],
+   "reloading": [
+    0,
+    1,
+    2
+   ],
+   "grenade_out": [
+    0,
+    1
+   ],
+   "grenade_incoming": [
+    0,
+    1
+   ],
+   "smoke": [
+    0,
+    1
+   ],
+   "lost": [
+    0,
+    1,
+    2
+   ],
+   "flank": [
+    0,
+    1,
+    2
+   ],
+   "man_down": [
+    0,
+    1
+   ],
+   "left": [
+    0,
+    1
+   ],
+   "right": [
+    0,
+    1
+   ],
+   "search": [
+    0,
+    1,
+    2
+   ],
+   "fall_back": [
+    0,
+    1
+   ],
+   "hold": [
+    0,
+    1
+   ],
+   "order_cover": [
+    0,
+    1
+   ],
+   "order_flank": [
+    0,
+    1
+   ],
+   "jam": [
+    0,
+    1
+   ]
+  },
+  "v3": {
+   "contact": [
+    0,
+    1,
+    2
+   ],
+   "cover_me": [
+    0,
+    1,
+    2
+   ],
+   "covering": [
+    0,
+    1,
+    2
+   ],
+   "moving": [
+    0,
+    1,
+    2
+   ],
+   "reloading": [
+    0,
+    1,
+    2
+   ],
+   "grenade_out": [
+    0,
+    1
+   ],
+   "grenade_incoming": [
+    0,
+    1
+   ],
+   "smoke": [
+    0,
+    1
+   ],
+   "lost": [
+    0,
+    1,
+    2
+   ],
+   "flank": [
+    0,
+    1,
+    2
+   ],
+   "man_down": [
+    0,
+    1
+   ],
+   "left": [
+    0,
+    1
+   ],
+   "right": [
+    0,
+    1
+   ],
+   "search": [
+    0,
+    1,
+    2
+   ],
+   "fall_back": [
+    0,
+    1
+   ],
+   "hold": [
+    0,
+    1
+   ],
+   "order_cover": [
+    0,
+    1
+   ],
+   "order_flank": [
+    0,
+    1
+   ],
+   "jam": [
+    0,
+    1
+   ]
+  }
+ },
+ "text": {
+  "contact": [
+   "¡Contacto!",
+   "¡Contacto al frente!",
+   "¡Ahí está!"
+  ],
+  "cover_me": [
+   "¡Cubrí!",
+   "¡Cubrí que avanzo!",
+   "¡Fuego de cobertura!"
+  ],
+  "covering": [
+   "¡Te cubro!",
+   "¡Cubierto, andá!",
+   "¡Dale, andá!"
+  ],
+  "moving": [
+   "¡Avanzo!",
+   "¡Me muevo!",
+   "¡Moviendo!"
+  ],
+  "reloading": [
+   "¡Recargando!",
+   "¡Cambio cargador!",
+   "¡Recargo, cubrí!"
+  ],
+  "grenade_out": [
+   "¡Granada!",
+   "¡Va granada!"
+  ],
+  "grenade_incoming": [
+   "¡Granada, al piso!",
+   "¡Cuidado, granada!"
+  ],
+  "smoke": [
+   "¡Humo!",
+   "¡Tiro humo!"
+  ],
+  "lost": [
+   "¡Lo perdí!",
+   "¿Dónde está?",
+   "Lo perdí de vista."
+  ],
+  "flank": [
+   "¡Lo flanqueo!",
+   "¡Rodeálo!",
+   "¡Voy por el costado!"
+  ],
+  "man_down": [
+   "¡Hombre abajo!",
+   "¡Le dieron a uno!"
+  ],
+  "left": [
+   "¡Está a la izquierda!",
+   "¡Izquierda!"
+  ],
+  "right": [
+   "¡Está a la derecha!",
+   "¡Derecha!"
+  ],
+  "search": [
+   "Revisen la zona.",
+   "Atentos.",
+   "Abran los ojos."
+  ],
+  "fall_back": [
+   "¡Replegarse!",
+   "¡Atrás, atrás!"
+  ],
+  "hold": [
+   "Mantengan la posición.",
+   "Quietos ahí."
+  ],
+  "order_cover": [
+   "¡Ustedes, cobertura!",
+   "¡Tiren, tiren!"
+  ],
+  "order_flank": [
+   "¡Vos, rodeálo!",
+   "¡Por el costado, vamos!"
+  ],
+  "jam": [
+   "¡Se me trabó!",
+   "¡Trabado!"
+  ]
+ }
+}

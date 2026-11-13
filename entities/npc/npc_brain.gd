@@ -58,6 +58,16 @@ var _vis: Array[bool] = [false, false, false]
 ## Esta ráfaga va a la cabeza.
 var _aim_head: bool = false
 var _advance_t: float = 0.0
+## Rol que le dio el comandante de la escuadra ("" = pelea por su cuenta).
+var role: String = ""
+var role_dest: Vector3 = Vector3.INF
+var _role_t: float = 0.0
+var _pending: Array = []
+## Patrulla en formación: dónde ir y hacia dónde mirar (los pone la escuadra).
+var follow_pos: Vector3 = Vector3.INF
+var follow_yaw: float = 0.0
+var _supp_point: Vector3 = Vector3.INF
+var _dodge_t: float = 0.0
 
 
 func _init(n: HumanNpc) -> void:
@@ -81,8 +91,43 @@ func _set_state(s: State) -> void:
 	_flank_tried = false
 
 
+## Rol de la escuadra (con demora: los aliados no militares tardan en obedecer).
+func set_role(r: String, dest := Vector3.INF, delay := 0.0) -> void:
+	if delay > 0.0:
+		_pending = [r, dest, delay]
+		return
+	_pending = []
+	if r != role:
+		_role_t = 0.0
+	role = r
+	role_dest = dest
+	if r in ["advance", "flank", "retreat"] and dest != Vector3.INF:
+		cover = dest
+
+
+## Rol que le dieron y todavía no cumple (está "tardando en obedecer").
+func pending_role() -> String:
+	return String(_pending[0]) if not _pending.is_empty() else ""
+
+
+func role_age() -> float:
+	return _role_t
+
+
+func _squad() -> Squad:
+	return npc.squad_obj
+
+
 func update(delta: float) -> void:
 	state_t += delta
+	_role_t += delta
+	_dodge_t -= delta
+	if not _pending.is_empty():
+		_pending[2] = float(_pending[2]) - delta
+		if float(_pending[2]) <= 0.0:
+			var pr := _pending
+			_pending = []
+			set_role(String(pr[0]), pr[1])
 	_burst_pause -= delta
 	_grenade_t -= delta
 	_under_fire = maxf(0.0, _under_fire - delta)
@@ -179,7 +224,7 @@ func _perceive(dt: float) -> void:
 		for i in pts.size():
 			var rq := PhysicsRayQueryParameters3D.create(eye, pts[i], SIGHT_MASK)
 			rq.exclude = [target.get_rid()] if target is CollisionObject3D else []
-			if space.intersect_ray(rq).is_empty():
+			if space.intersect_ray(rq).is_empty() and not SmokeCloud.blocks(npc.get_tree(), eye, pts[i]):
 				seen += 1
 				if i < 3:
 					_vis[i] = true
@@ -198,6 +243,7 @@ func _perceive(dt: float) -> void:
 		awareness = maxf(0.0, awareness - dt * 0.06)
 	if awareness >= 1.0 and seen > 0 and state != State.COMBAT:
 		_enter_combat(target.global_position, true)
+		_say_contact()
 	target_visible = seen > 0 and state == State.COMBAT
 	if target_visible:
 		last_known = target.global_position
@@ -301,10 +347,19 @@ func _callout() -> void:
 			o.brain.on_callout(last_known)
 
 
-func _investigate_at(p: Vector3) -> void:
+func _investigate_at(p: Vector3, share := true) -> void:
+	var was := state
 	investigate_pos = p
 	_set_state(State.INVESTIGATE)
 	_pause_t = _rng.randf_range(0.4, 1.0)
+	# Militares: en silencio frena a los suyos con una seña (o les habla bajo) y van todos
+	var sq := _squad()
+	if share and sq != null and sq.commanded and npc.tactics == "military" and was != State.INVESTIGATE:
+		sq.say(npc, "hold", true)
+		for o in sq.alive():
+			if o != npc and o.tactics == "military" and o.global_position.distance_to(npc.global_position) < 35.0 \
+					and o.brain.state in [State.IDLE, State.PATROL]:
+				o.brain._investigate_at(p + _jitter(4.0), false)
 
 
 # --- Estados tranquilos ---------------------------------------------------------------
@@ -330,6 +385,14 @@ func _patrol(_dt: float) -> void:
 	npc.crouching = false
 	npc.aim_point = Vector3.INF
 	npc.burst_left = 0
+	if follow_pos != Vector3.INF:
+		# Sigue al líder en formación
+		if npc.global_position.distance_to(follow_pos) > 1.5:
+			npc.go_to(follow_pos, HumanNpc.WALK_SPEED * 1.15)
+		else:
+			npc.stop()
+			npc.look_yaw = follow_yaw
+		return
 	if npc.patrol.size() < 2:
 		_set_state(State.IDLE)
 		return
@@ -376,7 +439,11 @@ func _combat(dt: float) -> void:
 		_set_state(State.RETREAT)
 		cover = _find_cover(last_known, false, 10.0, 22.0)
 		return
-	if target_visible:
+	if _dodge_grenade():
+		return
+	if role != "" and _squad() != null:
+		_squad_combat(dt, p)
+	elif target_visible:
 		_engage(dt, p)
 	else:
 		_lost(dt, p)
@@ -384,6 +451,13 @@ func _combat(dt: float) -> void:
 
 ## Lo ve: dispara en ráfagas y maneja la posición (cubrirse, asomarse, avanzar).
 func _engage(dt: float, p: Dictionary) -> void:
+	_fire_visible(dt, p)
+	var dist := npc.global_position.distance_to(target.global_position)
+	_position(dt, p, dist)
+
+
+## Lo ve: apunta y tira ráfagas (error según la dificultad, el estrés y si se mueve).
+func _fire_visible(dt: float, p: Dictionary) -> void:
 	npc.aim_point = _aim_spot()
 	reaction_left -= dt
 	var floor_k := float(p["settle_floor"])
@@ -394,6 +468,7 @@ func _engage(dt: float, p: Dictionary) -> void:
 		npc.aim_error_deg *= 1.4
 	if _under_fire > 0.0:
 		npc.aim_error_deg *= 1.25
+	npc.aim_error_deg *= 1.0 + npc.stress * 0.8
 	var dist := npc.global_position.distance_to(target.global_position)
 	var moving := npc.move_target != Vector3.INF and not npc.arrived()
 	var can_shoot := reaction_left <= 0.0 and not npc.reloading and (not moving or bool(p["move_shoot"]))
@@ -408,7 +483,10 @@ func _engage(dt: float, p: Dictionary) -> void:
 			npc.burst_left = 1
 		_burst_pause = float(p["burst_pause"]) * _rng.randf_range(0.7, 1.4) + (0.4 if not auto else 0.0)
 		_aim_head = _rng.randf() < float(p["head_aim"])
-	# Posición
+
+
+## Dónde pararse peleando solo: cubrirse, asomarse, acercarse si no llega.
+func _position(dt: float, p: Dictionary, dist: float) -> void:
 	_cover_t -= dt
 	var range_ok := dist < _weapon_range()
 	if npc.reloading and cover == Vector3.INF and _rng.randf() < float(p["cover"]) * dt * 3.0:
@@ -470,6 +548,8 @@ func _lost(dt: float, p: Dictionary) -> void:
 	if unseen > 2.0 and grenade_ready(p) and d > 8.0 and d < 32.0:
 		_grenade_t = 6.0
 		npc.throw_grenade(last_known, lerpf(4.0, 1.5, float(p["grenade"]) / 0.3))
+		if _squad() != null:
+			_squad().say(npc, "grenade_out")
 		return
 	if unseen > 4.0 and not _flank_tried:
 		_flank_tried = true
@@ -661,3 +741,128 @@ func _flank_point() -> Vector3:
 
 func _jitter(r: float) -> Vector3:
 	return Vector3(_rng.randf_range(-r, r), 0, _rng.randf_range(-r, r))
+
+
+
+# --- Escuadra --------------------------------------------------------------------------
+
+## Pelea con el rol que le dio el comandante.
+func _squad_combat(dt: float, p: Dictionary) -> void:
+	var lk := last_known + Vector3(0, 1.2, 0) if last_known != Vector3.INF else Vector3.INF
+	match role:
+		"reload":
+			npc.burst_left = 0
+			if cover == Vector3.INF:
+				cover = _find_cover(last_known, false, 2.0, 9.0)
+			if cover != Vector3.INF and not npc.arrived():
+				npc.go_to(cover, HumanNpc.RUN_SPEED)
+			else:
+				npc.stop()
+				npc.crouching = true
+			npc.aim_point = lk
+		"advance", "flank", "retreat":
+			if role_dest != Vector3.INF and npc.global_position.distance_to(role_dest) > 1.3:
+				npc.go_to(role_dest, HumanNpc.RUN_SPEED)
+				npc.crouching = false
+				if target_visible and bool(p["move_shoot"]):
+					_fire_visible(dt, p)
+				else:
+					npc.burst_left = 0
+					npc.aim_point = lk
+			else:
+				cover = role_dest
+				_hold(dt, p)
+		"suppress":
+			_hold(dt, p)
+			if not target_visible:
+				_suppress_fire(dt, p)
+		_:
+			_hold(dt, p)
+
+
+## A cubierto donde está (o en una cobertura cerca): se asoma y tira si lo ve.
+func _hold(dt: float, p: Dictionary) -> void:
+	_cover_t -= dt
+	if cover == Vector3.INF and _cover_t <= 0.0 and last_known != Vector3.INF:
+		_cover_t = _rng.randf_range(3.0, 6.0)
+		cover = _find_cover(last_known, false, 1.5, 7.0)
+	if cover != Vector3.INF and not npc.arrived() and npc.global_position.distance_to(cover) > 1.0:
+		npc.go_to(cover, HumanNpc.RUN_SPEED if _under_fire > 0.0 else HumanNpc.WALK_SPEED * 1.6)
+		npc.crouching = false
+	else:
+		npc.stop()
+		_peek(dt, p)
+	if target_visible:
+		_fire_visible(dt, p)
+	elif role != "suppress":
+		npc.burst_left = 0
+		if last_known != Vector3.INF:
+			npc.aim_point = last_known + Vector3(0, 1.2, 0)
+
+
+## Fuego de cobertura: ráfagas a donde te vio por última vez (aunque no te vea, y
+## aunque haya humo: no te sigue, tira a donde estabas) para que no te asomes.
+func _suppress_fire(dt: float, p: Dictionary) -> void:
+	if last_known == Vector3.INF:
+		return
+	reaction_left -= dt
+	if reaction_left > 0.0 or npc.reloading:
+		return
+	if npc.burst_left <= 0:
+		_supp_point = last_known + Vector3(0, _rng.randf_range(0.5, 1.5), 0) + _jitter(1.3)
+	npc.aim_point = _supp_point
+	npc.aim_error_deg = float(p["aim_error"]) * 1.3 * (1.0 + npc.stress * 0.8)
+	# Para tirar se para (agachado detrás de la cobertura le pegaría a la cobertura)
+	if npc.burst_left > 0:
+		npc.crouching = false
+	if npc.burst_left <= 0 and _burst_pause <= 0.0 and _clear_line():
+		var auto := npc.weapon.has_mode("auto")
+		npc.burst_left = _rng.randi_range(3, 6) if auto else _rng.randi_range(1, 2)
+		if npc.weapon.pellets > 1 or npc.weapon.bolt_action:
+			npc.burst_left = 1
+		var pause := float(p["burst_pause"]) * _rng.randf_range(0.8, 1.6) + (0.5 if not auto else 0.0)
+		# Si le queda poca munición, cubre con menos
+		if npc.ammo_left() < npc.weapon.mag_size * 2:
+			pause *= 2.0
+		_burst_pause = pause
+
+
+## Una granada (del enemigo) cayó cerca: grita y se aleja corriendo.
+func _dodge_grenade() -> bool:
+	if _dodge_t > 0.0:
+		return npc.move_target != Vector3.INF and not npc.arrived()
+	for n in npc.get_tree().get_nodes_in_group("grenade"):
+		var g := n as Grenade
+		if g == null or g.item_id == "grenade_smoke" or g.thrower == npc:
+			continue
+		if g.thrower is HumanNpc and (g.thrower as HumanNpc).squad == npc.squad and npc.squad != "":
+			continue
+		var d := g.global_position.distance_to(npc.global_position)
+		if d < 7.0 and g.linear_velocity.length() < 6.0:
+			_dodge_t = 3.0
+			var away := (npc.global_position - g.global_position)
+			away.y = 0.0
+			var to := npc.global_position + away.normalized() * 9.0
+			var map := npc.get_world_3d().navigation_map
+			if NavigationServer3D.map_get_iteration_id(map) != 0:
+				to = NavigationServer3D.map_get_closest_point(map, to)
+			npc.go_to(to, HumanNpc.RUN_SPEED)
+			npc.crouching = false
+			npc.burst_left = 0
+			if _squad() != null:
+				_squad().say(npc, "grenade_incoming")
+			return true
+	return false
+
+
+## Avisa el contacto (a veces dice para qué lado estás).
+func _say_contact() -> void:
+	var sq := _squad()
+	if sq == null or npc.voice_id == "" or target == null:
+		return
+	var to := target.global_position - npc.global_position
+	var side := (-npc.global_basis.z.rotated(Vector3.UP, npc._yaw)).cross(to.normalized()).y
+	var key := "contact"
+	if absf(side) > 0.5 and _rng.randf() < 0.5:
+		key = "left" if side > 0.0 else "right"
+	sq.say(npc, key)

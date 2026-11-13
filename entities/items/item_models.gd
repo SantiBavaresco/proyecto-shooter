@@ -107,6 +107,12 @@ static func build(item: ItemData, state := {}) -> Node3D:
 					root.add_child(core)
 					_cyl(root, 0.011, 0.024, Vector3(0, 0.078, 0), _m(Color(0.55, 0.56, 0.5), 0.4, 0.8))
 					_box(root, Vector3(0.008, 0.05, 0.004), Vector3(0.016, 0.06, 0), _m(Color(0.5, 0.52, 0.46), 0.4, 0.8), 0.001)
+				"grenade_smoke":
+					# Lata de humo (tipo RDG): cilindro gris verdoso con franja blanca y espoleta
+					_cyl(root, 0.025, 0.12, Vector3(0, 0.06, 0), _m(Color(0.36, 0.39, 0.33), 0.6, 0.3))
+					_cyl(root, 0.0255, 0.018, Vector3(0, 0.085, 0), _m(Color(0.85, 0.85, 0.82), 0.7, 0.0))
+					_cyl(root, 0.011, 0.02, Vector3(0, 0.13, 0), _m(Color(0.55, 0.56, 0.5), 0.4, 0.8))
+					_box(root, Vector3(0.008, 0.05, 0.004), Vector3(0.016, 0.11, 0), _m(Color(0.5, 0.52, 0.46), 0.4, 0.8), 0.001)
 				"bandage":
 					_cyl(root, 0.03, 0.055, Vector3(0, 0.03, 0), _m(Color(0.92, 0.9, 0.84), 0.95), Vector3(PI * 0.5, 0, 0))
 					_cyl(root, 0.012, 0.056, Vector3(0, 0.03, 0), _m(Color(0.75, 0.72, 0.66), 0.95), Vector3(PI * 0.5, 0, 0))

@@ -38,6 +38,11 @@ var aim_pitch: float = 0.0
 var raise: float = 0.0
 ## Recargando (baja un poco el arma y la mano izquierda va al cargador).
 var reloading: bool = false
+## Seña con la mano izquierda: "hold" (puño arriba: alto), "advance" (señala
+## adelante), "flank" (señala al costado), "down" (palma abajo: agáchense).
+var _sig_kind: String = ""
+var _sig_t: float = 0.0
+var _sig_dur: float = 0.0
 var is_pistol: bool = false
 
 var skeleton: Skeleton3D
@@ -128,6 +133,23 @@ static func short_name(n: String) -> String:
 
 func bone(n: String) -> int:
 	return int(_bones.get(n, -1))
+
+
+## Hace una seña con la mano izquierda (suelta el guardamanos un momento).
+func play_signal(kind: String, dur := 1.4) -> void:
+	_sig_kind = kind
+	_sig_t = 0.0
+	_sig_dur = dur
+
+
+func signal_kind() -> String:
+	return _sig_kind if _sig_t < _sig_dur else ""
+
+
+func _signal_weight() -> float:
+	if _sig_kind == "" or _sig_t >= _sig_dur:
+		return 0.0
+	return smoothstep(0.0, 0.25, _sig_t) * (1.0 - smoothstep(_sig_dur - 0.3, _sig_dur, _sig_t))
 
 
 ## Huesos de padres a hijos.
@@ -403,6 +425,7 @@ func _update_pose(delta: float) -> void:
 	if not is_nan(_last_world_yaw) and delta > 0.0:
 		_turn_s = lerpf(_turn_s, wrapf(wy - _last_world_yaw, -PI, PI) / delta, k.call(5.0))
 	_last_world_yaw = wy
+	_sig_t += delta
 	_breath = fmod(_breath + delta * (1.5 + clampf(_vel_s.length() / 3.0, 0.0, 1.0) * 1.5), TAU)
 	var speed := Vector2(_vel_s.x, _vel_s.z).length()
 	# Pasos: una zancada (dos pasos) cada ~1,4 m caminando
@@ -498,8 +521,28 @@ func _solve(stride: float, phase: float, move_dir: Vector2, fold: float) -> void
 	if weapon_node != null and not dead:
 		var hr := wxf * _hand_r
 		var hl := wxf * (_hand_l if not reloading else Transform3D(Basis(), Vector3(0, -0.12, -0.12)))
+		var hl_o := hl.origin
+		var sw := _signal_weight() if not reloading else 0.0
+		var sh_b := bone("LeftArm")
+		var ch_b := bone("Spine2")
+		if sw > 0.0 and sh_b >= 0 and ch_b >= 0:
+			var sh := g[sh_b].origin
+			var out := sh - g[ch_b].origin
+			out -= up * out.dot(up)
+			out = out.normalized()
+			var tgt: Vector3
+			match _sig_kind:
+				"hold":
+					tgt = sh + (up * 0.34 + fwd * 0.1 + out * 0.08) * unit
+				"advance":
+					tgt = sh + (fwd * (0.52 + sin(_sig_t * 9.0) * 0.05) + up * 0.06) * unit
+				"flank":
+					tgt = sh + (out * 0.42 + fwd * 0.28 + up * 0.08) * unit
+				_:
+					tgt = sh + (fwd * 0.32 - up * (0.12 + sin(_sig_t * 8.0) * 0.06)) * unit
+			hl_o = hl_o.lerp(tgt, sw)
 		_arm_ik(g, "Right", hr.origin, up, fwd, right, -1.0)
-		_arm_ik(g, "Left", hl.origin, up, fwd, right, 1.0)
+		_arm_ik(g, "Left", hl_o, up, fwd, right, 1.0)
 	elif fold > 0.0:
 		for sname: String in ["Left", "Right"]:
 			var arm := bone(sname + "Arm")

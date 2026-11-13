@@ -206,6 +206,30 @@ static func explosion() -> AudioStreamWAV:
 	return w
 
 
+## Granada de humo: "pop" de la espoleta y siseo largo que se apaga.
+static func hiss() -> AudioStreamWAV:
+	var ck := "hiss"
+	if _cache.has(ck):
+		return _cache[ck]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 2207
+	var n := int(RATE * 7.0)
+	var data := PackedFloat32Array()
+	data.resize(n)
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		var nz := rng.randf_range(-1.0, 1.0)
+		lp += (nz - lp) * 0.35
+		var hp := nz - lp
+		var pop := sin(TAU * 140.0 * t) * exp(-t * 40.0) * 0.8
+		var env := minf(1.0, maxf(0.0, t - 0.15) * 6.0) * exp(-maxf(0.0, t - 2.5) * 0.7)
+		data[i] = pop + hp * env * 0.5
+	var w := _to_wav(data, 0.8)
+	_cache[ck] = w
+	return w
+
+
 ## Cuchillo: zumbido de la hoja en el aire (hit = true: golpe en la carne).
 static func knife(hit: bool) -> AudioStreamWAV:
 	var ck := "knife_%s" % hit

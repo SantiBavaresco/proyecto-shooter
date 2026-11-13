@@ -18,6 +18,7 @@
 		{"id": "knife", "kind": "melee", "size": [3, 1], "weight": 0.3, "stack": 1, "price": 150},
 		{"id": "grenade_rg5", "kind": "throwable", "size": [1, 1], "weight": 0.31, "stack": 1, "price": 220},
 		{"id": "grenade_f1", "kind": "throwable", "size": [1, 1], "weight": 0.6, "stack": 1, "price": 260},
+		{"id": "grenade_smoke", "kind": "throwable", "size": [1, 2], "weight": 0.5, "stack": 1, "price": 180},
 		{"id": "helmet_steel", "kind": "helmet", "size": [2, 2], "weight": 1.4, "stack": 1, "price": 900,
 			"protection": 0.25, "class": 2},
 		{"id": "helmet_kevlar", "kind": "helmet", "size": [2, 2], "weight": 1.2, "stack": 1, "price": 1900,

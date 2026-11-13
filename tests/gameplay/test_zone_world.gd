@@ -76,3 +76,26 @@ func test_death_respawns_at_camp_and_leaves_body() -> void:
 		assert_gt((bodies[0] as PlayerCorpse).inventory.count_of("cash"), 0, "con la plata")
 		assert_true(player.inventory.equipment["pistol"] != null, "y reaparece con una pistola")
 		assert_true((bodies[0] as PlayerCorpse).compass_label() != "", "la brújula marca el cuerpo")
+
+
+func test_military_squads_in_zone() -> void:
+	await physics_frames(10)
+	var mil := 0
+	for n in get_tree().get_nodes_in_group("ai_npc"):
+		if (n as HumanNpc).tactics == "military":
+			mil += 1
+	assert_eq(mil, 10, "4 en el galpón, 2 de ronda y 4 en el monte")
+	var galpon: Squad = null
+	for s in get_tree().get_nodes_in_group("squad_coordinator"):
+		if (s as Squad).id == "galpon":
+			galpon = s
+	assert_true(galpon != null and galpon.commanded, "el galpón tiene comandante militar")
+	var bandits := 0
+	for m in galpon.members:
+		if m.tactics != "military":
+			bandits += 1
+	assert_eq(bandits, 5, "y 5 bandidos a sus órdenes")
+	var b: Node = level
+	var c := Vector3(92, 0, -118)
+	var h: float = b.call("height", c.x, c.z)
+	assert_gt(h, -1.6 + 1.0, "el campamento del monte, sobre el agua")

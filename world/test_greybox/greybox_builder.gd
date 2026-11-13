@@ -178,6 +178,10 @@ const ARENA_MAX := Vector2(-30, -52)
 const ARENA_SQUAD := [["bandit_rifle", Vector3(-58, 0, -90), "akm"], ["bandit_rifle", Vector3(-40, 0, -88), "ak74"],
 	["bandit_smg", Vector3(-49, 0, -84), "mp5"], ["bandit_shotgun", Vector3(-62, 0, -78), "shotgun"],
 	["bandit_marksman", Vector3(-36, 0, -95), "svd"]]
+## Escuadra militar de la zona de combate: 8 (líder, tirador y 6 fusileros).
+const ARENA_MILITARY := [["mil_leader", Vector3(-49, 0, -94), ""], ["mil_rifle", Vector3(-55, 0, -92), ""],
+	["mil_rifle", Vector3(-43, 0, -92), ""], ["mil_rifle", Vector3(-60, 0, -88), ""], ["mil_rifle", Vector3(-38, 0, -88), ""],
+	["mil_rifle", Vector3(-52, 0, -86), ""], ["mil_rifle", Vector3(-46, 0, -86), ""], ["mil_marksman", Vector3(-35, 0, -96), ""]]
 
 var _arena_npcs: Array[HumanNpc] = []
 
@@ -212,7 +216,8 @@ func _build_arena(geo: Node3D) -> void:
 	crate.position = Vector3(c.x + 5.0, 0, ARENA_MAX.y + 1.5)
 	crate.rotation = Vector3(0, PI, 0)
 	geo.add_child(crate)
-	for a: Array in [["difficulty", Vector3(c.x - 6.5, 0, ARENA_MAX.y + 1.5)], ["reset", Vector3(c.x - 4.5, 0, ARENA_MAX.y + 1.5)]]:
+	for a: Array in [["difficulty", Vector3(c.x - 6.5, 0, ARENA_MAX.y + 1.5)], ["reset", Vector3(c.x - 4.5, 0, ARENA_MAX.y + 1.5)],
+			["faction", Vector3(c.x - 8.5, 0, ARENA_MAX.y + 1.5)]]:
 		var con := ArenaConsole.new()
 		con.name = "ArenaConsole_" + a[0]
 		con.action = a[0]
@@ -226,7 +231,7 @@ func _build_arena(geo: Node3D) -> void:
 
 
 func _on_console(action: String) -> void:
-	if action == "reset":
+	if action == "reset" or action == "faction":
 		_spawn_arena()
 
 
@@ -236,8 +241,12 @@ func _spawn_arena() -> void:
 		if is_instance_valid(n):
 			n.queue_free()
 	_arena_npcs.clear()
-	for i in ARENA_SQUAD.size():
-		var e: Array = ARENA_SQUAD[i]
+	for sq in get_tree().get_nodes_in_group("squad_coordinator"):
+		if (sq as Squad).id == "arena":
+			sq.queue_free()
+	var list: Array = ARENA_MILITARY if ArenaConsole.faction == "military" else ARENA_SQUAD
+	for i in list.size():
+		var e: Array = list[i]
 		var n := HumanNpc.new()
 		n.name = "ArenaNpc_%d" % i
 		n.loadout_id = e[0]

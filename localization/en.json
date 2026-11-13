@@ -353,7 +353,7 @@
 	"greybox.arena": "COMBAT ZONE",
 	"arena.difficulty": "Difficulty: %s",
 	"arena.change_difficulty": "[%s] Change difficulty",
-	"arena.reset": "[%s] Restart the fight (5 enemies)",
+	"arena.reset": "[%s] Restart the fight",
 	"arena.reset_label": "RESTART",
 	"inv.stat.armor_class": "Armor",
 	"inv.stat.class_n": "Class %d",
@@ -377,5 +377,12 @@
 	"interact.hold_search": "hold [%s]: search",
 	"loot.ground": "Ground (nearby)",
 	"inv.search": "Search",
-	"inv.back": "◂ Back"
+	"inv.back": "◂ Back",
+	"arena.change_faction": "[%s] Switch enemies (bandits / military)",
+	"arena.faction_bandits": "Enemies: bandits (5)",
+	"arena.faction_military": "Enemies: military (8)",
+	"loot.military": "Soldier",
+	"item.grenade_smoke": "RDG smoke grenade",
+	"item.grenade_smoke.desc": "Smoke canister: blocks sight for ~25 s. Hold [G] to throw it.",
+	"zone.mil_camp": "Military camp"
 }

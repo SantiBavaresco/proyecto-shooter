@@ -15,7 +15,7 @@ const MELEE_DAMAGE := 65.0
 const THROW_TIME := 0.95
 const THROW_AT := 0.5
 const THROW_SPEED := 15.0
-const GRENADE_IDS := ["grenade_rg5", "grenade_f1"]
+const GRENADE_IDS := ["grenade_rg5", "grenade_f1", "grenade_smoke"]
 
 var player: Player
 var action: String = ""
@@ -54,8 +54,8 @@ func tick(cmd: PlayerCommand, delta: float) -> void:
 			_anim_knife_idle()
 		if (cmd.melee or (knife_out and cmd.fire_pressed)) and free and has_knife:
 			_start("melee")
-		elif cmd.grenade and free:
-			var gid := _grenade_in_inventory()
+		elif (cmd.grenade or cmd.grenade_smoke) and free:
+			var gid := _grenade_in_inventory(cmd.grenade_smoke)
 			if gid != "":
 				_grenade_id = gid
 				_start("throw")
@@ -83,7 +83,10 @@ func busy() -> bool:
 	return action != ""
 
 
-func _grenade_in_inventory() -> String:
+## La granada a tirar: de fragmentación (o humo si no queda otra); smoke = la de humo.
+func _grenade_in_inventory(smoke := false) -> String:
+	if smoke:
+		return "grenade_smoke" if player.inventory.count_of("grenade_smoke") > 0 else ""
 	for id: String in GRENADE_IDS:
 		if player.inventory.count_of(id) > 0:
 			return id
