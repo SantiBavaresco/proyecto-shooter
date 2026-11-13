@@ -385,5 +385,10 @@
 	"item.grenade_smoke": "RDG smoke grenade",
 	"item.grenade_smoke.desc": "Smoke canister: blocks sight for ~25 s. Hold [G] to throw it.",
 	"zone.mil_camp": "Military camp",
-	"weapon.mags_empty": "Your %s magazines are empty: fill them in the inventory"
+	"weapon.mags_empty": "Your %s magazines are empty: fill them in the inventory",
+	"map.title": "MAP",
+	"map.enemies": "Enemies",
+	"map.loot": "Containers",
+	"map.items": "Loose items",
+	"map.hint": "Wheel: zoom · Drag: pan · [M] or [Esc]: close · (test map: shows enemies)"
 }

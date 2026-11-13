@@ -48,6 +48,8 @@ var quick: Array[String] = ["", "", "", ""]
 var money: int = 0
 ## Consumible en uso (null = nada) y segundos que faltan.
 var using: ItemStack = null
+## De dónde se gasta lo que se está usando, si no es del jugador (null = de lo suyo).
+var _use_src: Inventory = null
 var using_item: ItemData = null
 var use_left: float = 0.0
 var use_total: float = 0.0
@@ -675,11 +677,13 @@ func is_using() -> bool:
 
 
 ## Empieza a usar un consumible de la mochila. Devuelve false si no se puede ahora.
-func use(s: ItemStack) -> bool:
+## from: si el ítem no es tuyo (en un cuerpo, una caja o el piso), de dónde se gasta.
+func use(s: ItemStack, from: Inventory = null) -> bool:
 	if s == null or not s.item.is_consumable() or is_using() or player == null:
 		return false
 	if not player.weapons.can_lower():
 		return false
+	_use_src = from
 	using = s
 	using_item = s.item
 	use_total = maxf(s.item.use_time, 0.1)
@@ -730,6 +734,7 @@ func first_stack(id: String) -> ItemStack:
 func cancel_use() -> void:
 	if not is_using():
 		return
+	_use_src = null
 	using = null
 	using_item = null
 	player.weapons.lowered = false
@@ -743,14 +748,23 @@ func tick(delta: float) -> void:
 	if use_left > 0.0:
 		return
 	var it := using_item
-	var s := using if using != null and storage_of(using) != null else first_stack(it.id)
+	var src := _use_src
+	_use_src = null
+	var s: ItemStack = null
+	var inv: Inventory = null
+	if using != null and src != null and src.has_stack(using):
+		# Usado directo de un cuerpo, una caja o el piso
+		s = using
+		inv = src
+	else:
+		s = using if using != null and storage_of(using) != null else first_stack(it.id)
+		inv = storage_of(s) if s != null else null
 	using = null
 	using_item = null
 	player.weapons.lowered = false
-	if s == null:
+	if s == null or inv == null:
 		EventBus.item_use_finished.emit(it.id, false)
 		return
-	var inv := storage_of(s)
 	s.count -= 1
 	if s.count <= 0:
 		inv.remove(s)

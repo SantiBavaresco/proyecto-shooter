@@ -644,6 +644,10 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 			pinv.use(s)
 		elif pinv.unequip(sl.slot) == null:
 			EventBus.toast.emit(tr("inv.no_room"))
+	elif _is_loot(from) and s.item.is_consumable():
+		# Doble clic en un consumible ajeno: se usa ahí mismo (sin pasarlo a la mochila)
+		if not pinv.use(s, (from as InvGrid).inv):
+			EventBus.toast.emit(tr("inv.cant_now"))
 	elif _is_loot(from):
 		var free := _free_slot(s)
 		if free != "":
@@ -726,7 +730,7 @@ func _open_menu(s: ItemStack, from: Variant, at: Vector2) -> void:
 	var in_loot: bool = _is_loot(from)
 	var equipped: bool = from is InvSlot and (from as InvSlot).slot != "quick"
 	var quick_slot: bool = from is InvSlot and (from as InvSlot).slot == "quick"
-	if s.item.is_consumable() and (in_bag or quick_slot):
+	if s.item.is_consumable() and (in_bag or quick_slot or in_loot):
 		_menu.add_item(tr("inv.use"), Act.USE)
 	if s.item.is_equipment() and (in_bag or in_loot):
 		_menu.add_item(tr("inv.equip"), Act.EQUIP)
@@ -776,7 +780,8 @@ func _on_menu(id: int) -> void:
 		return
 	match id:
 		Act.USE:
-			if not pinv.use(s):
+			var ext: Inventory = (from as InvGrid).inv if _is_loot(from) else null
+			if not pinv.use(s, ext):
 				EventBus.toast.emit(tr("inv.cant_now"))
 		Act.EQUIP:
 			var src: Inventory = (from as InvGrid).inv

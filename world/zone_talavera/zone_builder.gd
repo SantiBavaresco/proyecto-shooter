@@ -74,6 +74,11 @@ func _ready() -> void:
 
 
 ## Altura del terreno en (x, z).
+## Rectángulo (x, z) que muestra el mapa.
+func map_rect() -> Rect2:
+	return Rect2(-SIZE * 0.5, -SIZE * 0.5, SIZE, SIZE)
+
+
 func height(x: float, z: float) -> float:
 	var h := _raw_height(x, z)
 	# Lugares planos y el camino

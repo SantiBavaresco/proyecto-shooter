@@ -385,5 +385,10 @@
 	"item.grenade_smoke": "Granada de humo RDG",
 	"item.grenade_smoke.desc": "Lata de humo: tapa la vista durante ~25 s. Mantené [G] para tirarla.",
 	"zone.mil_camp": "Campamento militar",
-	"weapon.mags_empty": "Tus cargadores de %s están vacíos: llenalos en el inventario"
+	"weapon.mags_empty": "Tus cargadores de %s están vacíos: llenalos en el inventario",
+	"map.title": "MAPA",
+	"map.enemies": "Enemigos",
+	"map.loot": "Cajas",
+	"map.items": "Objetos sueltos",
+	"map.hint": "Rueda: zoom · Arrastrar: mover · [M] o [Esc]: cerrar · (mapa de prueba: muestra a los enemigos)"
 }

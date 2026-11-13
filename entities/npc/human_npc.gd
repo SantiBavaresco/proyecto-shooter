@@ -106,6 +106,8 @@ var weapon_condition: float = 0.8
 var smokes: int = 0
 var _jam: bool = false
 var _voice: AudioStreamPlayer3D
+## Tono propio de cada uno (para que dos con la misma voz no suenen iguales).
+var _voice_pitch: float = 1.0
 
 
 func _ready() -> void:
@@ -172,6 +174,7 @@ func _ready() -> void:
 		var vs := VoiceBank.voices()
 		if not vs.is_empty():
 			voice_id = String(vs[absi(hash(String(name))) % vs.size()])
+			_voice_pitch = 0.88 + float(absi(hash(String(name) + "p")) % 100) / 100.0 * 0.22
 	_voice = AudioStreamPlayer3D.new()
 	_voice.bus = "Voice"
 	_voice.max_polyphony = 1
@@ -202,7 +205,7 @@ func speak(key: String, shout: bool) -> void:
 	_voice.unit_size = 4.5 if shout else 1.4
 	_voice.max_distance = 110.0 if shout else 22.0
 	_voice.volume_db = 0.0 if shout else -5.0
-	_voice.pitch_scale = rng.randf_range(0.96, 1.05) * (1.0 + stress * 0.06)
+	_voice.pitch_scale = _voice_pitch * rng.randf_range(0.98, 1.03) * (1.0 + stress * 0.06)
 	_voice.position = Vector3(0, 1.6, 0)
 	_voice.play()
 

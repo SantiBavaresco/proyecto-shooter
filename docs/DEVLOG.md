@@ -481,3 +481,9 @@
 - Ocultos en follaje: rayos que chocan follaje a < 2,5 m del punto cuentan como "tapado"; si el jugador tiró hace < 2,5 s o se mueve, `concealed`: lo ven, apuntan al cuerpo (sin cabeza) con error ×1,6.
 - Cámara de muerte: caja (no esfera), más amortiguación, se congela al quedar quieta.
 - Inmortal en F8 (y F5).
+
+## 3.1.3
+- Mapa [M] (`ui/map/map_screen.gd`, acción `pda`): foto ortográfica del nivel una vez (SubViewport sobre el mismo World3D, sin niebla) + marcadores en vivo (jugador, NPC por facción/estado/muertos, cajas, WorldItem, cuerpo del jugador, humo). Zoom/arrastre. El nivel puede dar `map_rect()` (Talavera lo hace); si no, se calcula de las colisiones.
+- Usar consumibles desde cajas/cuerpos/piso: `PlayerInventory.use(s, from)` consume de ese inventario.
+- Voces: 4–7 variantes por clave (gen_voices.py), `VoiceBank` evita repetir las últimas, tono por NPC.
+- Arbustos: a < 6 m (alerta) / 3,5 m (tranquilo) te ven igual (`concealed`). Perdido en un arbusto (`_bush_t`): `_suppress_fire` al último punto 7 s desde su lugar; al avanzar sin cobertura se queda a ≥ 7 m.

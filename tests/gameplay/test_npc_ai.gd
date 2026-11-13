@@ -471,6 +471,44 @@ func test_bush_hides_until_you_shoot() -> void:
 	bush.queue_free()
 
 
+func test_bush_close_and_recon_fire() -> void:
+	await _arena()
+	var bush := StaticBody3D.new()
+	bush.collision_layer = 1 << 8
+	bush.collision_mask = 0
+	var cs := CollisionShape3D.new()
+	var sh := SphereShape3D.new()
+	sh.radius = 1.3
+	cs.shape = sh
+	bush.add_child(cs)
+	level.add_child(bush)
+	bush.global_position = Vector3(0, 0.7, 0)
+	player.teleport(Vector3(0, 0.05, 0), 0.0)
+	bot.crouch = true
+	DebugTools.god_mode = true
+	# Te tenía en combate y te metiste en el arbusto: le tira al arbusto desde lejos
+	var n := _npc(Vector3(0, 0.05, -15), FACE_SOUTH, "bandit_rifle", 2)
+	await physics_frames(10)
+	n.brain._enter_combat(player.global_position, true)
+	var shots := 0
+	var start := n.global_position
+	for i in 60 * 5:
+		await physics_frames(1)
+		if n.burst_left > 0:
+			shots += 1
+	assert_false(n.brain.target_visible, "quieto en el arbusto no lo ve")
+	assert_gt(shots, 0, "le tira al arbusto igual")
+	assert_lt(n.global_position.distance_to(start), 2.0, "sin ir a meterse adentro")
+	n.queue_free()
+	# De cerca (alerta) un arbusto no te esconde
+	var m := _npc(Vector3(0, 0.05, -4.5), FACE_SOUTH, "bandit_rifle", 0)
+	m.brain._enter_combat(player.global_position + Vector3(0, 0, -2), true)
+	await physics_frames(60)
+	assert_true(m.brain.target_visible, "a 4 m te ve aunque estés en el arbusto")
+	DebugTools.god_mode = false
+	bush.queue_free()
+
+
 func test_death_cam_settles() -> void:
 	await _arena()
 	DebugTools.god_mode = false

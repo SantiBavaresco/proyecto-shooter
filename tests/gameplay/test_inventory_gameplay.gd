@@ -728,3 +728,38 @@ func test_double_click_equips_into_free_slot() -> void:
 	scr._quick_action(h, g)
 	assert_eq(pinv.equipment.get("helmet"), h, "y el casco a la cabeza")
 	scr.close()
+
+
+func test_use_item_from_corpse_and_ground() -> void:
+	var god := DebugTools.god_mode
+	DebugTools.god_mode = false
+	player.vitals.health = 40.0
+	var a := await _dead_npc(player.global_position + Vector3(1.5, 0.05, -2))
+	a.inventory.add_item("medkit", 1)
+	var scr := _screen()
+	a.interact(player)
+	await process_frames(2)
+	var med: ItemStack = null
+	for st in a.inventory.stacks:
+		if st.item.id == "medkit":
+			med = st
+	var mine := pinv.count_of("medkit")
+	scr._quick_action(med, scr._loot_grids[0])
+	assert_true(pinv.is_using(), "doble clic en el botiquín del muerto: lo usa ahí")
+	await physics_frames(int(60 * (med.item.use_time + 0.5)))
+	assert_gt(player.vitals.health, 40.0, "curó")
+	assert_eq(a.inventory.count_of("medkit"), 0, "se gastó el del cuerpo")
+	assert_eq(pinv.count_of("medkit"), mine, "no uno propio")
+	scr.close()
+	# Del piso
+	player.vitals.health = 40.0
+	var w := WorldItem.spawn(level, ItemStack.make("bandage", 2), player.global_position + Vector3(0.5, 0.2, 0))
+	await physics_frames(20)
+	scr.open(null)
+	var ground := scr.container.get("inventory") as Inventory
+	assert_true(ground.has_stack(w.stack))
+	scr._quick_action(w.stack, scr._loot_grids[0])
+	await physics_frames(int(60 * (w.stack.item.use_time + 0.5)))
+	assert_eq(w.stack.count, 1, "la venda del piso se gastó de a una")
+	scr.close()
+	DebugTools.god_mode = god

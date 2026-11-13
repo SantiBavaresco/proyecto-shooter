@@ -46,6 +46,7 @@ var _hurt_flash: float = 0.0
 var _health_ratio: float = 1.0
 var _death: Control
 var inventory_screen: InventoryScreen
+var map_screen: MapScreen
 
 
 func _ready() -> void:
@@ -55,6 +56,9 @@ func _ready() -> void:
 	inventory_screen = InventoryScreen.new()
 	inventory_screen.name = "InventoryScreen"
 	add_child(inventory_screen)
+	map_screen = MapScreen.new()
+	map_screen.name = "MapScreen"
+	add_child(map_screen)
 	EventBus.health_changed.connect(_on_health)
 	EventBus.player_damaged.connect(func(a: float) -> void: _hurt_flash = minf(1.0, _hurt_flash + 0.25 + a * 0.03))
 	EventBus.inventory_changed.connect(_on_inventory)

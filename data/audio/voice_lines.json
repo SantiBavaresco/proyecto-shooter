@@ -9,258 +9,408 @@
    "contact": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5,
+    6
    ],
    "cover_me": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "covering": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "moving": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "reloading": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "grenade_out": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "grenade_incoming": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "smoke": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "lost": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "flank": [
     0,
     1,
-    2
+    2,
+    3,
+    4
    ],
    "man_down": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "left": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "right": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "search": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "fall_back": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "hold": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "order_cover": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "order_flank": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "jam": [
     0,
-    1
+    1,
+    2,
+    3
    ]
   },
   "v2": {
    "contact": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5,
+    6
    ],
    "cover_me": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "covering": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "moving": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "reloading": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "grenade_out": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "grenade_incoming": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "smoke": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "lost": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "flank": [
     0,
     1,
-    2
+    2,
+    3,
+    4
    ],
    "man_down": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "left": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "right": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "search": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "fall_back": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "hold": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "order_cover": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "order_flank": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "jam": [
     0,
-    1
+    1,
+    2,
+    3
    ]
   },
   "v3": {
    "contact": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5,
+    6
    ],
    "cover_me": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "covering": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "moving": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "reloading": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "grenade_out": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "grenade_incoming": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "smoke": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "lost": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "flank": [
     0,
     1,
-    2
+    2,
+    3,
+    4
    ],
    "man_down": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "left": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "right": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "search": [
     0,
     1,
-    2
+    2,
+    3,
+    4,
+    5
    ],
    "fall_back": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "hold": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "order_cover": [
     0,
-    1
+    1,
+    2,
+    3,
+    4
    ],
    "order_flank": [
     0,
-    1
+    1,
+    2,
+    3
    ],
    "jam": [
     0,
-    1
+    1,
+    2,
+    3
    ]
   }
  },
@@ -268,86 +418,136 @@
   "contact": [
    "¡Contacto!",
    "¡Contacto al frente!",
-   "¡Ahí está!"
+   "¡Ahí está!",
+   "¡Lo tengo!",
+   "¡Enemigo a la vista!",
+   "¡Ahí, ahí!",
+   "¡Lo veo!"
   ],
   "cover_me": [
    "¡Cubrí!",
    "¡Cubrí que avanzo!",
-   "¡Fuego de cobertura!"
+   "¡Fuego de cobertura!",
+   "¡Cubrime, cubrime!",
+   "¡Tapalo que paso!",
+   "¡Necesito cobertura!"
   ],
   "covering": [
    "¡Te cubro!",
    "¡Cubierto, andá!",
-   "¡Dale, andá!"
+   "¡Dale, andá!",
+   "¡Andá que te cubro!",
+   "¡Lo tengo tapado, movete!",
+   "¡Ya, ahora!"
   ],
   "moving": [
    "¡Avanzo!",
    "¡Me muevo!",
-   "¡Moviendo!"
+   "¡Moviendo!",
+   "¡Voy!",
+   "¡Cambio de posición!",
+   "¡Paso!"
   ],
   "reloading": [
    "¡Recargando!",
    "¡Cambio cargador!",
-   "¡Recargo, cubrí!"
+   "¡Recargo, cubrí!",
+   "¡Estoy seco!",
+   "¡Sin balas, recargo!",
+   "¡Cargador!"
   ],
   "grenade_out": [
    "¡Granada!",
-   "¡Va granada!"
+   "¡Va granada!",
+   "¡Tiro granada!",
+   "¡Granada va!",
+   "¡Ahí te va!"
   ],
   "grenade_incoming": [
    "¡Granada, al piso!",
-   "¡Cuidado, granada!"
+   "¡Cuidado, granada!",
+   "¡Granada, salgan!",
+   "¡Corran, granada!"
   ],
   "smoke": [
    "¡Humo!",
-   "¡Tiro humo!"
+   "¡Tiro humo!",
+   "¡Humo, humo!",
+   "¡Pongan humo!"
   ],
   "lost": [
    "¡Lo perdí!",
    "¿Dónde está?",
-   "Lo perdí de vista."
+   "Lo perdí de vista.",
+   "¿Alguien lo ve?",
+   "¡Se escondió!",
+   "No lo veo."
   ],
   "flank": [
    "¡Lo flanqueo!",
    "¡Rodeálo!",
-   "¡Voy por el costado!"
+   "¡Voy por el costado!",
+   "¡Lo agarro de costado!",
+   "¡Rodeo por acá!"
   ],
   "man_down": [
    "¡Hombre abajo!",
-   "¡Le dieron a uno!"
+   "¡Le dieron a uno!",
+   "¡Cayó uno!",
+   "¡Lo bajaron!",
+   "¡Herido, herido!"
   ],
   "left": [
    "¡Está a la izquierda!",
-   "¡Izquierda!"
+   "¡Izquierda!",
+   "¡A tu izquierda!",
+   "¡Por la izquierda!"
   ],
   "right": [
    "¡Está a la derecha!",
-   "¡Derecha!"
+   "¡Derecha!",
+   "¡A tu derecha!",
+   "¡Por la derecha!"
   ],
   "search": [
    "Revisen la zona.",
    "Atentos.",
-   "Abran los ojos."
+   "Abran los ojos.",
+   "Busquen bien.",
+   "Separados, revisen todo.",
+   "Tiene que estar cerca."
   ],
   "fall_back": [
    "¡Replegarse!",
-   "¡Atrás, atrás!"
+   "¡Atrás, atrás!",
+   "¡Retirada!",
+   "¡Nos vamos, atrás!"
   ],
   "hold": [
    "Mantengan la posición.",
-   "Quietos ahí."
+   "Quietos ahí.",
+   "Esperen.",
+   "Nadie se mueve.",
+   "Aguanten."
   ],
   "order_cover": [
    "¡Ustedes, cobertura!",
-   "¡Tiren, tiren!"
+   "¡Tiren, tiren!",
+   "¡Fuego, fuego!",
+   "¡No paren de tirar!",
+   "¡Tápenlo!"
   ],
   "order_flank": [
    "¡Vos, rodeálo!",
-   "¡Por el costado, vamos!"
+   "¡Por el costado, vamos!",
+   "¡Dos por la derecha!",
+   "¡Rodéenlo!"
   ],
   "jam": [
    "¡Se me trabó!",
-   "¡Trabado!"
+   "¡Trabado!",
+   "¡No dispara!",
+   "¡Se trabó, cubrime!"
   ]
  }
 }

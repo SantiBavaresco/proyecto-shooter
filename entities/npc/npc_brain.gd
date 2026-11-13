@@ -71,6 +71,14 @@ var _dodge_t: float = 0.0
 ## Lo ve "a través" de un arbusto: no lo ve de verdad, pero el fogonazo o el
 ## movimiento lo delatan; tira al cuerpo, con más error y nunca a la cabeza.
 var concealed: bool = false
+## Cuánto hace que lo vio por última vez metido en un arbusto (para "tirarle al arbusto").
+var _bush_t: float = 99.0
+var _bush_lost: bool = false
+## Escondido en un arbusto: a menos de esto te ven igual (alerta / tranquilo).
+const BUSH_SEEN_ALERT := 6.0
+const BUSH_SEEN_CALM := 3.5
+## Cuántos segundos le tiran al arbusto donde te perdieron antes de pasar a otra cosa.
+const BUSH_FIRE_TIME := 7.0
 
 
 func _init(n: HumanNpc) -> void:
@@ -239,9 +247,14 @@ func _perceive(dt: float) -> void:
 				veiled += 1  # lo tapa un arbusto que tiene encima
 	# Metido en un arbusto: si tira (fogonazo) o se mueve, se delata
 	concealed = false
+	_bush_t += dt
+	if veiled > 0:
+		_bush_t = 0.0
 	if seen == 0 and veiled > 0 and pl != null:
 		var spd0 := Vector2(pl.velocity.x, pl.velocity.z).length()
-		if pl.fired_recently(2.5) or spd0 > 1.5:
+		# De cerca un arbusto no esconde a nadie (alerta, a unos metros se nota el bulto)
+		var close := BUSH_SEEN_ALERT if alert else BUSH_SEEN_CALM
+		if pl.fired_recently(2.5) or spd0 > 1.5 or dist < close:
 			seen = 1
 			concealed = true
 			_vis = [false, true, false]
@@ -579,13 +592,22 @@ func _crouched_sees() -> bool:
 
 ## Lo perdió de vista: espera, flanquea, avanza o tira una granada.
 func _lost(dt: float, p: Dictionary) -> void:
-	npc.burst_left = 0
-	npc.crouching = false
 	if last_known == Vector3.INF:
 		_set_state(State.SEARCH)
 		return
-	npc.aim_point = last_known + Vector3(0, 1.2, 0)
 	var d := npc.global_position.distance_to(last_known)
+	# Se metió en un arbusto: le tira al arbusto (reconocimiento por fuego) desde donde
+	# está, en vez de ir a meterse adentro hasta chocarlo
+	if _bush_t < 1.5 or (unseen < BUSH_FIRE_TIME and _bush_lost):
+		_bush_lost = true
+		if unseen < BUSH_FIRE_TIME and d > 3.0 and d < 45.0 and npc.ammo_left() > 0:
+			npc.stop()
+			_suppress_fire(dt, p)
+			return
+	_bush_lost = false
+	npc.burst_left = 0
+	npc.crouching = false
+	npc.aim_point = last_known + Vector3(0, 1.2, 0)
 	if unseen > 2.0 and grenade_ready(p) and d > 8.0 and d < 32.0:
 		_grenade_t = 6.0
 		npc.throw_grenade(last_known, lerpf(4.0, 1.5, float(p["grenade"]) / 0.3))
@@ -605,7 +627,8 @@ func _lost(dt: float, p: Dictionary) -> void:
 		# Avanza a una cobertura más cerca de donde estabas
 		_advance_t = _rng.randf_range(5.0, 9.0)
 		var c := _find_cover(last_known, true)
-		cover = c if c != Vector3.INF else last_known
+		# Sin cobertura: se arrima, pero no hasta encima de donde te perdió
+		cover = c if c != Vector3.INF else last_known + (npc.global_position - last_known).normalized() * minf(d, 7.0)
 	# Esperando a que reaparezcas: no parado en el medio de la nada
 	_cover_t -= dt
 	if cover == Vector3.INF and _cover_t <= 0.0:
