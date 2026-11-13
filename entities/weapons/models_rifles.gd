@@ -111,9 +111,16 @@ static func _fixed_stock(root: Node3D, m: Material, y_top := 0.017) -> void:
 		0.339, -0.114, 0.003], 0.042, WeaponModelBuilder.mat("rubber"), 0.003)
 
 
-static func _irons_flip(root: Node3D, z_rear: float, z_front: float, rail_top: float, h: float) -> void:
+static func _irons_flip(root: Node3D, z_rear: float, z_front: float, rail_top: float, h: float, folded := false) -> void:
 	# Miras plegables sobre riel (alza de anillo y guion)
 	var m := WeaponModelBuilder.mat("anodized")
+	if folded:
+		# Plegadas (hay una mira montada): las bases y las hojas acostadas sobre el riel
+		WeaponModelBuilder.rbox(root, "FlipRearBase", Vector3(0.022, 0.009, 0.03), Vector3(0, rail_top + 0.0045, z_rear), m, 0.002)
+		WeaponModelBuilder.rbox(root, "FlipRearFolded", Vector3(0.016, 0.004, 0.026), Vector3(0, rail_top + 0.011, z_rear - 0.004), m, 0.001)
+		WeaponModelBuilder.rbox(root, "FlipFrontBase", Vector3(0.02, 0.009, 0.026), Vector3(0, rail_top + 0.0045, z_front), m, 0.002)
+		WeaponModelBuilder.rbox(root, "FlipFrontFolded", Vector3(0.012, 0.004, 0.024), Vector3(0, rail_top + 0.011, z_front + 0.004), m, 0.001)
+		return
 	WeaponModelBuilder.rbox(root, "FlipRearBase", Vector3(0.022, 0.009, 0.03), Vector3(0, rail_top + 0.0045, z_rear), m, 0.002)
 	WeaponModelBuilder.prism(root, "FlipRearTower", [z_rear + 0.007, rail_top + 0.008, 0.0, z_rear - 0.009, rail_top + 0.008, 0.0,
 		z_rear - 0.006, h - 0.006, 0.002, z_rear + 0.005, h - 0.006, 0.002], 0.016, m, 0.001)
@@ -270,7 +277,7 @@ static func ar(data: WeaponData) -> Node3D:
 				sight = Vector3(0, ih, zf)
 			else:
 				var zf := hf + 0.015
-				_irons_flip(root, 0.045, zf, 0.031, ih)
+				_irons_flip(root, 0.045, zf, 0.031, ih, bool(p.get("irons_folded", false)))
 				sight = Vector3(0, ih, zf)
 			eye = _eye_irons(id, sight.z)
 
@@ -332,7 +339,7 @@ static func scar(data: WeaponData) -> Node3D:
 	if data.sight == "red_dot":
 		sight = WeaponModelBuilder.red_dot(root, 0.034, -0.07)
 	else:
-		_irons_flip(root, 0.045, rf + 0.02, 0.034, 0.065)
+		_irons_flip(root, 0.045, rf + 0.02, 0.034, 0.065, bool(data.model_params.get("irons_folded", false)))
 		sight = Vector3(0, 0.065, rf + 0.02)
 		eye = _eye_irons(data.id, sight.z)
 	var mag := WeaponModelBuilder.group(root, "Mag", Vector3(0, -0.07, -0.14))

@@ -1,5 +1,8 @@
 class_name WorldItem
 extends RigidBody3D
+
+## Capa 13: objetos sueltos en el piso.
+const LAYER := 13
 ## Ítem suelto en el mundo (tirado desde el inventario o puesto en el nivel).
 ## [F] lo agarra: va a la mochila si entra (la plata, al contador).
 
@@ -32,8 +35,10 @@ static func make(id: String, n := 1) -> WorldItem:
 
 func _ready() -> void:
 	add_to_group("world_items")
-	collision_layer = 1
-	collision_mask = 1
+	# Capa propia: se apoya en el piso y en otros objetos, pero no frena al jugador
+	# ni a los enemigos (pasan por encima) y no tapa la vista de la IA
+	collision_layer = 1 << (LAYER - 1)
+	collision_mask = 1 | (1 << (LAYER - 1))
 	continuous_cd = true
 	set_meta("surface", "metal" if stack.item.kind in ["weapon", "ammo"] else "wood")
 	var model := ItemModels.build(stack.item, stack.state)

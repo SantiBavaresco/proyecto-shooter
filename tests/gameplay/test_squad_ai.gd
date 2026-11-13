@@ -317,3 +317,21 @@ func test_bandit_allies_take_orders() -> void:
 			break
 	assert_true(got, "los bandidos del mismo trabajo reciben órdenes")
 	assert_true(team[0].squad_obj.members.has(b1))
+
+
+func test_smoke_spreads_with_wind_and_lasts_60s() -> void:
+	await _arena()
+	var c := SmokeCloud.spawn(level, Vector3(0, 0, -10))
+	c.t = 20.0
+	var w := SmokeCloud.wind
+	var side := w.cross(Vector3.UP).normalized()
+	var o := Vector3(0, 1.5, -10)
+	# A favor del viento tapa lejos; de costado y por arriba, poco
+	assert_true(SmokeCloud.blocks(get_tree(), o + w * 12.0 + side * 6.0, o + w * 12.0 - side * 6.0), "tapa 12 m a favor del viento")
+	assert_false(SmokeCloud.blocks(get_tree(), o - w * 9.0 + side * 6.0, o - w * 9.0 - side * 6.0), "contra el viento casi no")
+	assert_false(SmokeCloud.blocks(get_tree(), o + Vector3(0, 4.5, 0) + side * 6.0, o + Vector3(0, 4.5, 0) - side * 6.0), "es baja")
+	c.t = 55.0
+	assert_gt(c.radius(), 0.5, "a los 55 s todavía tapa")
+	c.t = 61.0
+	assert_lt(c.radius(), 0.5, "a los 60 s se fue")
+	c.queue_free()

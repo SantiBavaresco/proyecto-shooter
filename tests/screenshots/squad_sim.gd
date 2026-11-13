@@ -66,7 +66,7 @@ func _ready() -> void:
 			if h._voice.playing and last_voice.get(h, null) != h._voice.stream:
 				last_voice[h] = h._voice.stream
 				var k := String(h._voice.stream.resource_path.get_file().get_basename())
-				k = k.substr(0, k.rfind("_", k.rfind("_") - 1)) + ("(grito)" if h._voice.unit_size > 5.0 else "(hablado)")
+				k = k.substr(0, k.rfind("_", k.rfind("_") - 1)) + ("(grito)" if h._voice.unit_size > 3.0 else "(hablado)")
 				said[k] = int(said.get(k, 0)) + 1
 			elif not h._voice.playing:
 				last_voice[h] = null

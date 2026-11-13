@@ -560,3 +560,171 @@ func test_knife_on_key_4() -> void:
 	await physics_frames(3)
 	assert_false(player.actions.knife_out, "1: vuelve al arma")
 	assert_false(weapons.lowered)
+
+
+func _dead_npc(at: Vector3, lo := "bandit_rifle") -> HumanNpc:
+	var n := HumanNpc.new()
+	n.loadout_id = lo
+	n.seed_value = 4242
+	n.ai_enabled = false
+	n.position = at
+	level.add_child(n)
+	await physics_frames(10)
+	var hi := HitInfo.new()
+	hi.damage = 500.0
+	hi.zone = "head_core"
+	hi.penetration = 9.0
+	hi.direction = Vector3(0, 0, -1)
+	hi.position = n.body.head_position()
+	n.apply_hit(hi)
+	await physics_frames(5)
+	return n
+
+
+func test_loot_second_corpse_after_unloading_weapon() -> void:
+	var p := player.global_position
+	var a := await _dead_npc(p + Vector3(1.5, 0.05, -2))
+	var b := await _dead_npc(p + Vector3(-1.5, 0.05, -2))
+	(pinv.equipment["backpack"] as ItemStack).contents[0] = Inventory.new(10, 12)
+	var scr := _screen()
+	a.interact(player)
+	await process_frames(2)
+	assert_true(scr.is_open and scr.container == a, "abre el primer cuerpo")
+	var w: ItemStack = null
+	for st in a.inventory.stacks:
+		if st.item.kind == "weapon":
+			w = st
+	assert_true(w != null)
+	scr._take_from_loot(w, a.inventory)
+	assert_true(pinv.storage_of(w) != null, "el arma pasó a la mochila")
+	pinv.unload(w)
+	assert_eq(int(w.state.get("mag", 0)), 0, "descargada")
+	scr.close()
+	await process_frames(2)
+	b.interact(player)
+	await process_frames(2)
+	assert_true(scr.is_open and scr.container == b, "abre el segundo cuerpo")
+	var before := b.inventory.stacks.size()
+	var st2: ItemStack = b.inventory.stacks[0]
+	scr._take_from_loot(st2, b.inventory)
+	assert_lt(float(b.inventory.stacks.size()), float(before), "se puede sacar algo del segundo")
+	scr.take_all()
+	assert_lt(float(b.inventory.stacks.size()), float(before) - 1.0, "y tomar todo")
+	scr.close()
+
+
+func test_loot_after_equipping_and_unloading_corpse_weapon() -> void:
+	var p := player.global_position
+	var a := await _dead_npc(p + Vector3(1.5, 0.05, -2))
+	var b := await _dead_npc(p + Vector3(-1.5, 0.05, -2))
+	var scr := _screen()
+	a.interact(player)
+	await process_frames(2)
+	var w: ItemStack = null
+	for st in a.inventory.stacks:
+		if st.item.kind == "weapon":
+			w = st
+	var slot := pinv.slot_for(w)
+	assert_true(pinv.equip(w, slot, a.inventory), "equipa el arma del muerto")
+	await process_frames(2)
+	pinv.unload(w)
+	await physics_frames(30)
+	scr.close()
+	await process_frames(2)
+	b.interact(player)
+	await process_frames(2)
+	assert_true(scr.is_open and scr.container == b, "abre el segundo cuerpo")
+	var before := b.inventory.stacks.size()
+	scr.take_all()
+	assert_lt(float(b.inventory.stacks.size()), float(before), "se puede tomar del segundo (%d → %d)" % [before, b.inventory.stacks.size()])
+	scr.close()
+
+
+func test_reload_with_corpse_mags_in_rig() -> void:
+	var bad := []
+	for wid in ["akm", "ak74", "sks", "hk416", "ar15", "scarl", "pp19", "mp5", "vityaz", "svd", "sr22", "g3", "bersa9", "pistol", "m1911"]:
+		var n := HumanNpc.new()
+		n.loadout_id = "bandit_rifle"
+		n.weapon_id = wid
+		n.seed_value = 99
+		n.ai_enabled = false
+		n.position = player.global_position + Vector3(0, 0.05, -2.5)
+		level.add_child(n)
+		await physics_frames(8)
+		var hi := HitInfo.new()
+		hi.damage = 500.0
+		hi.zone = "head_core"
+		hi.penetration = 9.0
+		hi.direction = Vector3(0, 0, -1)
+		hi.position = n.body.head_position()
+		n.apply_hit(hi)
+		await physics_frames(3)
+		var w: ItemStack = null
+		var mags: Array = []
+		for st in n.inventory.stacks:
+			if st.item.kind == "weapon":
+				w = st
+			elif st.item.kind == "mag":
+				mags.append(st)
+		# Chaleco vacío con lugar para los cargadores
+		if pinv.equipment.get("rig") != null:
+			pinv.take_equipped("rig")
+		pinv.place_equipped(ItemStack.make("rig_assault"), "rig")
+		var slot := "weapon1" if w.item.equip_slots().has("weapon1") else String(w.item.equip_slots()[0])
+		var old := pinv.equipment.get(slot) as ItemStack
+		if old != null:
+			pinv.take_equipped(slot)
+		pinv.equip(w, slot, n.inventory)
+		for m: ItemStack in mags:
+			var rigs: Array = (pinv.equipment["rig"] as ItemStack).contents
+			var placed := false
+			for g: Inventory in rigs:
+				if pinv.transfer(m, n.inventory, g):
+					placed = true
+					break
+			if not placed:
+				pinv.transfer(m, n.inventory, null)
+		await physics_frames(2)
+		var ws := player.weapons
+		bot.select_slot(int(PlayerInventory.WEAPON_SLOT[slot]))
+		await physics_frames(90)
+		var c: WeaponController.WeaponSlot = ws.current()
+		if c == null or c.base_data.id != wid:
+			bad.append("%s: no quedó en la mano" % wid)
+		else:
+			c.mag = 0
+			var ok := ws._can_reload(c)
+			var have := pinv.mags_of(c.family).size()
+			if have == 0 and mags.size() > 0:
+				bad.append("%s: los cargadores no entraron al chaleco ni a la mochila" % wid)
+			elif mags.size() > 0 and not ok:
+				bad.append("%s: %d cargadores (%s, %s balas) y no recarga (familia %s, mag_id %s)" % [wid, mags.size(),
+					(mags[0] as ItemStack).item.id, (mags[0] as ItemStack).rounds(), c.family, c.mag_id])
+		n.queue_free()
+		await physics_frames(2)
+	assert_eq(bad, [], "con los cargadores del muerto se recarga")
+
+
+func test_double_click_equips_into_free_slot() -> void:
+	var a := await _dead_npc(player.global_position + Vector3(1.5, 0.05, -2), "mil_rifle")
+	var scr := _screen()
+	a.interact(player)
+	await process_frames(2)
+	# Ranuras libres: sin arma larga 2, sin casco
+	if pinv.equipment.get("weapon2") != null:
+		pinv.take_equipped("weapon2")
+	if pinv.equipment.get("helmet") != null:
+		pinv.take_equipped("helmet")
+	var w: ItemStack = null
+	var h: ItemStack = null
+	for st in a.inventory.stacks:
+		if st.item.kind == "weapon":
+			w = st
+		elif st.item.kind == "helmet":
+			h = st
+	var g: InvGrid = scr._loot_grids[0]
+	scr._quick_action(w, g)
+	assert_true(pinv.equipment.values().has(w), "doble clic: el arma va a la ranura libre")
+	scr._quick_action(h, g)
+	assert_eq(pinv.equipment.get("helmet"), h, "y el casco a la cabeza")
+	scr.close()

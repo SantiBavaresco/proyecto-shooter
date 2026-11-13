@@ -462,3 +462,15 @@
 - Botín de militares gastado (arma 0,15–0,45, blindaje 0,2–0,5).
 - Pista: consola de enemigos (bandidos 5 / militares 8). Isla: galpón con 4 militares a cargo de 5 bandidos, ronda de 2 y campamento de 4 en el monte.
 - Corrección: los enemigos ahora oyen los disparos del jugador.
+
+
+## 3.1.1 — Correcciones de la prueba de la 3.1
+- FOV: la opción es horizontal (`camera.keep_aspect = KEEP_WIDTH`); antes 90 vertical = 121° horizontales. El cálculo del visor convierte a vertical.
+- Miras plegables (`fold_irons` en el montaje): con óptica, alza y guion acostados sobre el riel (K416, SC-L, R-22S).
+- Humo: viento único (`SmokeCloud.wind`), nube baja y larga (radio 4,2 m, alto 2 m, hasta 16 m a sotavento), 60 s; el bloqueo de vista usa esa forma (cápsula achatada).
+- Cobertura: `CoverIndex` (core/ai/cover_index.gd) indexa troncos, arbustos, cajas y tramos de muro desde las formas de colisión; `_find_cover` evalúa el punto detrás de cada uno (+10 al azar). Sin cobertura se agachan; esperando, a cubierto o agachados.
+- Puntería NPC: `spread` (m a 1 m, crece con √d) reemplaza el error angular fijo; tiempo de reacción al reaparecer el blanco.
+- Voces: bus "Voice" con reverb corta, paneo 1,6, filtro por distancia, radios menores.
+- Cámara de muerte (RigidBody con la cámara) y viewmodel oculto.
+- WorldItem en capa 13 (no frena al jugador ni a la IA).
+- Doble clic: equipa en ranura libre desde contenedores; aviso de R sin cargadores / vacíos.

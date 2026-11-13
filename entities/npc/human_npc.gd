@@ -173,8 +173,14 @@ func _ready() -> void:
 		if not vs.is_empty():
 			voice_id = String(vs[absi(hash(String(name))) % vs.size()])
 	_voice = AudioStreamPlayer3D.new()
-	_voice.bus = "SFX_World"
+	_voice.bus = "Voice"
 	_voice.max_polyphony = 1
+	# Que se note de dónde viene: cae con la distancia, de lejos suena apagada y el
+	# balance izquierda/derecha es marcado
+	_voice.panning_strength = 1.6
+	_voice.attenuation_filter_cutoff_hz = 3800.0
+	_voice.attenuation_filter_db = -22.0
+	_voice.doppler_tracking = AudioStreamPlayer3D.DOPPLER_TRACKING_DISABLED
 	add_child(_voice)
 	_join_squad.call_deferred()
 
@@ -193,9 +199,9 @@ func speak(key: String, shout: bool) -> void:
 	if st == null:
 		return
 	_voice.stream = st
-	_voice.unit_size = 9.0 if shout else 2.2
+	_voice.unit_size = 4.5 if shout else 1.4
 	_voice.max_distance = 110.0 if shout else 22.0
-	_voice.volume_db = 2.0 if shout else -6.0
+	_voice.volume_db = 0.0 if shout else -5.0
 	_voice.pitch_scale = rng.randf_range(0.96, 1.05) * (1.0 + stress * 0.06)
 	_voice.position = Vector3(0, 1.6, 0)
 	_voice.play()

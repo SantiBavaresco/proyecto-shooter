@@ -444,6 +444,13 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 			_start_reload()
 		player.input_provider.cancel_aim()
 		cmd.aim = false
+	elif cmd.reload and state == State.READY and c.family != "" and inv != null and not DebugTools.infinite_ammo:
+		# No hay con qué recargar: decir por qué (cargadores vacíos o ninguno de esta arma)
+		var mags := inv.mags_of(c.family)
+		if mags.is_empty():
+			EventBus.toast.emit(tr("weapon.no_mags") % ItemDB.mag_family_name(c.family))
+		elif inv.best_mag(c.family).is_empty():
+			EventBus.toast.emit(tr("weapon.mags_empty") % ItemDB.mag_family_name(c.family))
 
 	# Cerrojo: si se mantiene el gatillo, se acciona sin sacar el ojo del visor
 	var keep_aim := state == State.CYCLING and aiming and cmd.fire

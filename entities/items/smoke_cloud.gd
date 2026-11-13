@@ -4,9 +4,15 @@ extends Node3D
 ## vista de la IA (nadie ve a través: a lo sumo tiran de cobertura adonde te vieron
 ## por última vez) y la del jugador (es humo de verdad en pantalla).
 
-const MAX_RADIUS := 5.5
-const GROW := 4.0
-const HOLD := 22.0
+## Viento (por ahora uno solo para todo el mapa): el humo se estira para ese lado.
+static var wind: Vector3 = Vector3(1.0, 0.0, 0.35).normalized()
+## Ancho (radio horizontal) y alto (radio vertical) de la nube: es baja y ancha.
+const MAX_RADIUS := 4.2
+const HEIGHT_RADIUS := 2.0
+## Largo que alcanza la nube a favor del viento.
+const MAX_LENGTH := 16.0
+const GROW := 5.0
+const HOLD := 49.0
 const FADE := 6.0
 
 var t: float = 0.0
@@ -21,7 +27,7 @@ static func spawn(parent: Node, at: Vector3) -> SmokeCloud:
 	return c
 
 
-## Radio que tapa ahora (0 si ya no tapa).
+## Radio (horizontal) que tapa ahora (0 si ya no tapa). Dura 60 s en total.
 func radius() -> float:
 	if t < GROW:
 		return MAX_RADIUS * smoothstep(0.0, GROW, t) * 0.95
@@ -30,49 +36,77 @@ func radius() -> float:
 	return MAX_RADIUS * clampf(1.0 - (t - GROW - HOLD) / FADE, 0.0, 1.0) * 1.1
 
 
-## ¿El segmento a→b pasa por adentro de alguna nube? (lo bastante adentro: un poco de
-## humo en el borde no tapa)
+## Largo de la nube a favor del viento (va creciendo).
+func length() -> float:
+	return MAX_LENGTH * smoothstep(0.0, GROW * 3.0, t)
+
+
+## Eje de la nube: de la lata hacia donde sopla el viento, a media altura.
+func axis() -> Array:
+	var y := Vector3(0, HEIGHT_RADIUS * 0.75, 0)
+	var a := global_position + y
+	return [a, a + wind * length()]
+
+
+## ¿El segmento a→b pasa por adentro de alguna nube? Se mide en un espacio donde la
+## nube (baja y larga) es redonda; un poco de humo en el borde no tapa.
 static func blocks(tree: SceneTree, a: Vector3, b: Vector3) -> bool:
 	for n in tree.get_nodes_in_group("smoke_cloud"):
 		var c := n as SmokeCloud
 		if c == null:
 			continue
-		var r := c.radius() * 0.8
+		var r := c.radius() * 0.85
 		if r < 0.5:
 			continue
-		var center := c.global_position + Vector3(0, r * 0.45, 0)
-		var ab := b - a
-		var k := clampf((center - a).dot(ab) / maxf(ab.length_squared(), 0.0001), 0.0, 1.0)
-		if (a + ab * k).distance_to(center) < r:
-			return true
+		var ax: Array = c.axis()
+		var k := Vector3(1.0, MAX_RADIUS / HEIGHT_RADIUS, 1.0)
+		var p0 := (ax[0] as Vector3) * k
+		var p1 := (ax[1] as Vector3) * k
+		var sa := a * k
+		var sb := b * k
+		var steps := clampi(int(sa.distance_to(sb) / (r * 0.5)) + 2, 3, 48)
+		for i in steps + 1:
+			var q := sa.lerp(sb, float(i) / steps)
+			if _dist_to_segment(q, p0, p1) < r:
+				return true
 	return false
+
+
+static func _dist_to_segment(q: Vector3, p0: Vector3, p1: Vector3) -> float:
+	var d := p1 - p0
+	var l2 := d.length_squared()
+	if l2 < 0.0001:
+		return q.distance_to(p0)
+	var u := clampf((q - p0).dot(d) / l2, 0.0, 1.0)
+	return q.distance_to(p0 + d * u)
 
 
 func _ready() -> void:
 	add_to_group("smoke_cloud")
 	_puffs = CPUParticles3D.new()
-	_puffs.amount = 70
-	_puffs.lifetime = 9.0
-	_puffs.preprocess = 0.0
+	_puffs.amount = 120
+	_puffs.lifetime = 16.0
 	_puffs.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	_puffs.emission_sphere_radius = 0.6
-	_puffs.direction = Vector3.UP
-	_puffs.spread = 180.0
-	_puffs.initial_velocity_min = 0.6
+	_puffs.emission_sphere_radius = 0.8
+	# Sale a ras del piso hacia donde sopla el viento, abriéndose a los costados
+	_puffs.direction = (wind + Vector3(0, 0.12, 0)).normalized()
+	_puffs.spread = 40.0
+	_puffs.initial_velocity_min = 0.8
 	_puffs.initial_velocity_max = 2.2
-	_puffs.gravity = Vector3(0.15, 0.12, 0.05)
-	_puffs.damping_min = 0.35
-	_puffs.damping_max = 0.6
-	_puffs.scale_amount_min = 2.6
-	_puffs.scale_amount_max = 4.2
+	_puffs.gravity = wind * 0.32 + Vector3(0, 0.03, 0)
+	_puffs.damping_min = 0.25
+	_puffs.damping_max = 0.45
+	_puffs.scale_amount_min = 3.0
+	_puffs.scale_amount_max = 4.8
 	var curve := Curve.new()
+	curve.max_value = 1.5
 	curve.add_point(Vector2(0, 0.35))
-	curve.add_point(Vector2(0.3, 1.0))
-	curve.add_point(Vector2(1, 1.25))
+	curve.add_point(Vector2(0.25, 1.0))
+	curve.add_point(Vector2(1, 1.35))
 	_puffs.scale_amount_curve = curve
 	var m := SphereMesh.new()
 	m.radius = 0.5
-	m.height = 1.0
+	m.height = 0.62
 	m.radial_segments = 10
 	m.rings = 5
 	var mat := StandardMaterial3D.new()
@@ -103,7 +137,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	t += delta
-	if t > GROW + HOLD - 2.0 and _puffs.emitting:
+	if t > GROW + HOLD - 10.0 and _puffs.emitting:
 		_puffs.emitting = false
-	if t > GROW + HOLD + FADE + 4.0:
+	if t > GROW + HOLD + FADE + 2.0:
 		queue_free()

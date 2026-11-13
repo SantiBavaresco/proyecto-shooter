@@ -48,6 +48,9 @@ var actions: PlayerActions
 var inventory: PlayerInventory
 var vitals: Vitals = Vitals.new()
 var is_dead: bool = false
+## Al morir la cámara se suelta y cae como un objeto (la "cabeza" del muerto).
+var _death_cam: RigidBody3D
+var _cam_local: Transform3D
 ## Alambre de púas de la zona de prueba: ya cortó al entrar.
 var _hurt_inside: bool = false
 const HURT_DPS := 6.0
@@ -101,6 +104,10 @@ var _stamina_emit_accum: float = 0.0
 func _ready() -> void:
 	add_to_group("player")
 	_rng.randomize()
+	# El campo de visión de las opciones es HORIZONTAL (como en los shooters): con
+	# 90° se ve de lado a lado 90°, no 121° (antes se tomaba como vertical y todo se
+	# veía chico y lejos)
+	camera.keep_aspect = Camera3D.KEEP_WIDTH
 	# Choca con los cuerpos de los enemigos y con los alambrados (capa 10)
 	collision_mask |= (1 << (NPC_BODY_LAYER - 1)) | (1 << 9)
 	if config == null:
@@ -183,6 +190,8 @@ func _process(delta: float) -> void:
 	_update_lean(delta)
 	_update_camera_effects(delta)
 	_update_head_transform()
+	if is_dead:
+		_update_death_cam()
 
 
 ## Patada de retroceso: sube la mira (pitch) y la desvía (yaw), en radianes.
@@ -685,6 +694,7 @@ func _die() -> void:
 		return
 	is_dead = true
 	inventory.cancel_use()
+	_start_death_cam()
 	EventBus.player_died.emit()
 	# El nivel decide: dejar el cuerpo con el equipo y reaparecer en el campamento
 	var lvl := get_tree().current_scene
@@ -702,8 +712,60 @@ func _die() -> void:
 				GameState.start_level(path))
 
 
+## Cámara de muerte: una esfera con la cámara que cae con lo que traías de velocidad,
+## golpea el piso y rueda un poco. El arma desaparece de la pantalla.
+func _start_death_cam() -> void:
+	if weapons != null and weapons.view != null:
+		weapons.view.set_shown(false)
+	if not is_inside_tree():
+		return
+	_cam_local = camera.transform
+	var rb := RigidBody3D.new()
+	rb.name = "DeathCam"
+	rb.top_level = true
+	rb.collision_layer = 1 << 11
+	rb.collision_mask = 1
+	rb.mass = 4.5
+	rb.angular_damp = 1.6
+	rb.linear_damp = 0.3
+	rb.continuous_cd = true
+	var cs := CollisionShape3D.new()
+	var sh := SphereShape3D.new()
+	sh.radius = 0.11
+	cs.shape = sh
+	rb.add_child(cs)
+	var pm := PhysicsMaterial.new()
+	pm.friction = 0.9
+	pm.bounce = 0.15
+	rb.physics_material_override = pm
+	add_child(rb)
+	rb.global_transform = Transform3D(camera.global_basis.orthonormalized(), camera.global_position)
+	rb.reset_physics_interpolation()
+	# Cae para atrás o para el costado, con un giro
+	var back := global_basis.z * _rng.randf_range(0.6, 1.4) + global_basis.x * _rng.randf_range(-0.8, 0.8)
+	rb.linear_velocity = Vector3(velocity.x, maxf(velocity.y, 0.0), velocity.z) + back
+	rb.angular_velocity = global_basis.x * _rng.randf_range(-2.5, -1.2) + global_basis.z * _rng.randf_range(-1.5, 1.5)
+	_death_cam = rb
+
+
+func _update_death_cam() -> void:
+	if _death_cam == null or not is_instance_valid(_death_cam):
+		return
+	camera.global_transform = _death_cam.get_global_transform_interpolated()
+
+
+func _end_death_cam() -> void:
+	if _death_cam != null and is_instance_valid(_death_cam):
+		_death_cam.queue_free()
+	_death_cam = null
+	camera.transform = _cam_local
+	if weapons != null and weapons.view != null:
+		weapons.view.set_shown(true)
+
+
 ## Vuelve a la vida en otro lugar (después de morir): salud llena, sin sangrado.
 func respawn_at(pos: Vector3, facing_yaw: float) -> void:
+	_end_death_cam()
 	vitals.reset()
 	is_dead = false
 	combat_stress = 0.0

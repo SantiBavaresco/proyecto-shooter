@@ -858,7 +858,12 @@ func _update_scope(c: WeaponController.WeaponSlot, a: float) -> void:
 	var d: float = lens.get_meta("lens_d", 0.034)
 	var a_vm := 2.0 * atan((d * 0.5) / dist)
 	var frac := tan(a_vm * 0.5) / tan(deg_to_rad(vm_camera.fov) * 0.5)
-	var a_main := 2.0 * atan(frac * tan(deg_to_rad(main.fov) * 0.5))
+	# El mundo usa FOV horizontal: su ángulo vertical depende del ancho de pantalla
+	var main_v := deg_to_rad(main.fov)
+	if main.keep_aspect == Camera3D.KEEP_WIDTH:
+		var vs := get_viewport().get_visible_rect().size
+		main_v = 2.0 * atan(tan(main_v * 0.5) * vs.y / maxf(vs.x, 1.0))
+	var a_main := 2.0 * atan(frac * tan(main_v * 0.5))
 	scope_cam.fov = clampf(rad_to_deg(a_main) / wc.scope_mag(c), 0.3, 60.0)
 	# Mira por el eje del arma (incluye retroceso y balanceo)
 	scope_cam.global_transform = Transform3D(main.global_basis * rig.basis, main.global_position)
@@ -1029,3 +1034,10 @@ static func _make_flame_mesh() -> ArrayMesh:
 				st.set_uv(tri[3 + k])
 				st.add_vertex(tri[k])
 	return st.commit()
+
+
+
+## Muestra u oculta el arma en pantalla (al morir se oculta).
+func set_shown(on: bool) -> void:
+	if _vm_layer != null:
+		_vm_layer.visible = on

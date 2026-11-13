@@ -24,13 +24,19 @@ static func muzzle_of(st: Dictionary) -> String:
 ## Datos con los que se arma el modelo: con mira montada, las armas que lo piden
 ## ("no_rear" en el montaje) se arman sin el alza (si no, tapa la mira o la obliga
 ## a ir muy alta).
+## Las que tienen miras plegables ("fold_irons") las pliegan sobre el riel.
 static func model_data(base: WeaponData, sight_id: String) -> WeaponData:
 	var mt := ItemDB.mount(base.id)
-	if sight_id == "" or not bool(mt.get("no_rear", false)):
+	var no_rear := bool(mt.get("no_rear", false))
+	var fold := bool(mt.get("fold_irons", false))
+	if sight_id == "" or not (no_rear or fold):
 		return base
 	var d := base.duplicate() as WeaponData
 	d.model_params = base.model_params.duplicate(true)
-	d.model_params["no_rear"] = true
+	if no_rear:
+		d.model_params["no_rear"] = true
+	if fold:
+		d.model_params["irons_folded"] = true
 	return d
 
 

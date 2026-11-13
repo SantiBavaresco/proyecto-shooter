@@ -314,7 +314,7 @@
 	"inv.stat.muzzle": "Boca",
 	"inv.stat.slots": "Grillas",
 	"loot.weapons": "Caja de armas",
-	"weapon.no_mags": "Sin cargadores con balas",
+	"weapon.no_mags": "No tenés cargadores de %s",
 	"weapon.from_backpack": "Buscando en la mochila…",
 	"weapon.slam_fire": "¡Disparo accidental!",
 	"inv.dropped_no_room": "No hay lugar: %s quedó en el piso",
@@ -384,5 +384,6 @@
 	"loot.military": "Militar",
 	"item.grenade_smoke": "Granada de humo RDG",
 	"item.grenade_smoke.desc": "Lata de humo: tapa la vista durante ~25 s. Mantené [G] para tirarla.",
-	"zone.mil_camp": "Campamento militar"
+	"zone.mil_camp": "Campamento militar",
+	"weapon.mags_empty": "Tus cargadores de %s están vacíos: llenalos en el inventario"
 }

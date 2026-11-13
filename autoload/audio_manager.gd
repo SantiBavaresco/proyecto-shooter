@@ -45,3 +45,16 @@ func _ensure_buses() -> void:
 			var idx := AudioServer.bus_count - 1
 			AudioServer.set_bus_name(idx, bus_name)
 			AudioServer.set_bus_send(idx, "Master")
+	# Voces de los personajes: un poco de ambiente (eco corto de exterior) para que se
+	# ubiquen en el lugar y no suenen "pegadas a la oreja"
+	var vi := AudioServer.get_bus_index("Voice")
+	if vi >= 0 and AudioServer.get_bus_effect_count(vi) == 0:
+		var rv := AudioEffectReverb.new()
+		rv.room_size = 0.45
+		rv.damping = 0.55
+		rv.spread = 0.8
+		rv.hipass = 0.15
+		rv.dry = 0.9
+		rv.wet = 0.22
+		rv.predelay_msec = 35.0
+		AudioServer.add_bus_effect(vi, rv)

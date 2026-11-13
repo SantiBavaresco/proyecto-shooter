@@ -65,9 +65,15 @@ func test_death_respawns_at_camp_and_leaves_body() -> void:
 	var b: Node = level
 	player.teleport((b.call("ground", Vector3(-100, 0, 100)) as Vector3) + Vector3(0, 0.1, 0))
 	await physics_frames(5)
+	var eye_y := player.camera.global_position.y
 	player.take_damage(500.0)
-	await physics_frames(int(60 * (Player.RESTART_AFTER_DEATH + 0.5)))
+	await physics_frames(90)
+	assert_lt(player.camera.global_position.y, eye_y - 1.0, "la cámara cayó al piso")
+	assert_false(player.weapons.view._vm_layer.visible, "sin arma en pantalla")
+	await physics_frames(int(60 * (Player.RESTART_AFTER_DEATH + 0.5)) - 90)
 	assert_false(player.is_dead)
+	assert_true(player.weapons.view._vm_layer.visible, "al volver, el arma vuelve")
+	assert_lt(player.camera.position.length(), 0.01, "y la cámara a su lugar")
 	assert_lt(player.global_position.distance_to(Vector3(-150, player.global_position.y, 150)), 12.0, "volvió al campamento")
 	var bodies := get_tree().get_nodes_in_group("player_corpse")
 	assert_eq(bodies.size(), 1)
@@ -99,3 +105,21 @@ func test_military_squads_in_zone() -> void:
 	var c := Vector3(92, 0, -118)
 	var h: float = b.call("height", c.x, c.z)
 	assert_gt(h, -1.6 + 1.0, "el campamento del monte, sobre el agua")
+
+
+func test_npc_finds_cover_in_the_woods() -> void:
+	await physics_frames(10)
+	var found := 0
+	var tried := 0
+	for n in get_tree().get_nodes_in_group("ai_npc"):
+		var h := n as HumanNpc
+		if h.squad != "monte" and h.squad != "chacra":
+			continue
+		tried += 1
+		var threat := h.global_position + Vector3(25, 0, 10)
+		var c := h.brain._find_cover(threat, false)
+		if c != Vector3.INF:
+			found += 1
+			assert_lt(c.distance_to(h.global_position), 15.0, "%s: cerca" % h.name)
+	assert_gt(float(found), float(tried) * 0.6, "en el monte encuentran detrás de qué cubrirse (%d de %d)" % [found, tried])
+	assert_gt(float(CoverIndex.near(player, Vector3(92, 0, -118), 20.0).size()), 5.0, "hay troncos y arbustos indexados")

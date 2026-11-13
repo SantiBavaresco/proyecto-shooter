@@ -244,7 +244,12 @@ func _perceive(dt: float) -> void:
 	if awareness >= 1.0 and seen > 0 and state != State.COMBAT:
 		_enter_combat(target.global_position, true)
 		_say_contact()
+	var was_visible := target_visible
 	target_visible = seen > 0 and state == State.COMBAT
+	if target_visible and not was_visible and unseen > 0.6:
+		# Lo vuelve a ver (se asomó): necesita su tiempo para reaccionar, aunque ya
+		# estuviera apuntando a esa esquina
+		reaction_left = maxf(reaction_left, float(prof()["reaction"]) * _rng.randf_range(0.75, 1.1))
 	if target_visible:
 		last_known = target.global_position
 		unseen = 0.0
@@ -462,7 +467,8 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 	reaction_left -= dt
 	var floor_k := float(p["settle_floor"])
 	var settle := clampf(track_time / float(p["settle_time"]), 0.0, 1.0)
-	npc.aim_error_deg = float(p["aim_error"]) * lerpf(1.0, floor_k, settle)
+	var d0 := npc.global_position.distance_to(target.global_position)
+	npc.aim_error_deg = _base_error(p, d0) * lerpf(1.0, floor_k, settle)
 	var tp := target as Player
 	if tp != null and Vector2(tp.velocity.x, tp.velocity.z).length() > 2.0:
 		npc.aim_error_deg *= 1.4
@@ -485,6 +491,13 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 		_aim_head = _rng.randf() < float(p["head_aim"])
 
 
+## Error de puntería (grados) a esa distancia: dispersión en metros que crece con la
+## raíz de la distancia (ver Difficulty, "spread").
+func _base_error(p: Dictionary, dist: float) -> float:
+	var d := maxf(dist, 1.0)
+	return rad_to_deg(atan(float(p.get("spread", 0.6)) * sqrt(d) / d))
+
+
 ## Dónde pararse peleando solo: cubrirse, asomarse, acercarse si no llega.
 func _position(dt: float, p: Dictionary, dist: float) -> void:
 	_cover_t -= dt
@@ -493,7 +506,7 @@ func _position(dt: float, p: Dictionary, dist: float) -> void:
 		cover = _find_cover(target.global_position, false)
 	if _cover_t <= 0.0:
 		_cover_t = _rng.randf_range(4.0, 8.0)
-		var want_cover := _under_fire > 0.0 or _exposure > 0.6
+		var want_cover := _under_fire > 0.0 or _exposure > 0.3 or target_visible
 		if not range_ok:
 			cover = _find_cover(target.global_position, true)
 		elif want_cover and _rng.randf() < float(p["cover"]):
@@ -507,8 +520,11 @@ func _position(dt: float, p: Dictionary, dist: float) -> void:
 			npc.crouching = false
 	else:
 		npc.stop()
-		# Sin cobertura: agacharse a veces para achicar el blanco
-		npc.crouching = _under_fire > 0.0 and float(p["cover"]) > 0.5 and dist > 12.0
+		# Sin cobertura: agachado achica el blanco (si agachado igual lo ve)
+		if dist > 8.0 and (_under_fire > 0.0 or float(p["cover"]) > 0.5):
+			npc.crouching = _crouched_sees() or npc.burst_left <= 0
+		else:
+			npc.crouching = false
 
 
 ## A cubierto: agachado cuando no tira, se asoma (se para) para la ráfaga.
@@ -565,10 +581,18 @@ func _lost(dt: float, p: Dictionary) -> void:
 		_advance_t = _rng.randf_range(5.0, 9.0)
 		var c := _find_cover(last_known, true)
 		cover = c if c != Vector3.INF else last_known
+	# Esperando a que reaparezcas: no parado en el medio de la nada
+	_cover_t -= dt
+	if cover == Vector3.INF and _cover_t <= 0.0:
+		_cover_t = _rng.randf_range(2.5, 4.5)
+		cover = _find_cover(last_known, false, 1.5, 10.0)
 	if cover != Vector3.INF:
 		npc.go_to(cover, HumanNpc.WALK_SPEED * 1.4)
 		if npc.arrived():
 			npc.stop()
+			npc.crouching = true
+	else:
+		npc.crouching = true
 	if unseen > 20.0 + float(p["reaction"]) * 10.0:
 		_start_search()
 
@@ -682,11 +706,29 @@ func _find_cover(threat: Vector3, advance: bool, rmin := 3.0, rmax := 14.0) -> V
 	var best_s := INF
 	var d_now := me.distance_to(threat)
 	var claimed := _claimed_covers()
-	for i in 16:
-		var a := TAU * i / 16.0 + _rng.randf_range(-0.15, 0.15)
-		var r := _rng.randf_range(rmin, rmax)
-		var c := NavigationServer3D.map_get_closest_point(map, me + Vector3(cos(a), 0, sin(a)) * r)
-		if c.distance_to(me + Vector3(cos(a), 0, sin(a)) * r) > 2.5:
+	# Candidatos: detrás de cada cosa que tapa (tronco, arbusto, caja, muro), del lado
+	# contrario a la amenaza; y además unos puntos al azar por si hay pozos o lomas
+	var cands: Array = []
+	for e: Array in CoverIndex.near(npc, me, rmax + 1.0):
+		var oc: Vector3 = e[0]
+		var away := Vector3(oc.x - threat.x, 0, oc.z - threat.z)
+		if away.length() < 0.1:
+			continue
+		var want := oc + away.normalized() * (float(e[1]) + 0.55)
+		var dm := Vector2(want.x - me.x, want.z - me.z).length()
+		if dm < 0.6 or dm > rmax + 1.0:
+			continue
+		cands.append([want, bool(e[2])])
+	cands.sort_custom(func(x: Array, y: Array) -> bool:
+		return (x[0] as Vector3).distance_squared_to(me) < (y[0] as Vector3).distance_squared_to(me))
+	cands = cands.slice(0, 28)
+	for i in 10:
+		var a := TAU * i / 10.0 + _rng.randf_range(-0.2, 0.2)
+		cands.append([me + Vector3(cos(a), 0, sin(a)) * _rng.randf_range(rmin, rmax), true])
+	for cd: Array in cands:
+		var want_p: Vector3 = cd[0]
+		var c := NavigationServer3D.map_get_closest_point(map, want_p)
+		if Vector2(c.x - want_p.x, c.z - want_p.z).length() > 1.2:
 			continue
 		var dt := c.distance_to(threat)
 		if dt < 6.0:
@@ -708,7 +750,9 @@ func _find_cover(threat: Vector3, advance: bool, rmin := 3.0, rmax := 14.0) -> V
 		var rq2 := PhysicsRayQueryParameters3D.create(c + Vector3(0, 1.55, 0), eye_t, SIGHT_MASK)
 		rq2.exclude = rq.exclude
 		var peek := space.intersect_ray(rq2).is_empty()
-		var s := c.distance_to(me) * 0.6 - (3.0 if peek else 0.0) + absf(dt - 22.0) * 0.08
+		# Más cerca es mejor; poder asomarse parado, también; lo que para balas, mejor
+		# que un arbusto que solo tapa la vista
+		var s := c.distance_to(me) * 0.6 - (3.0 if peek else 0.0) + absf(dt - 22.0) * 0.08 - (2.0 if bool(cd[1]) else 0.0)
 		if advance:
 			s += dt * 0.3
 		if s < best_s:
@@ -789,6 +833,10 @@ func _hold(dt: float, p: Dictionary) -> void:
 	if cover != Vector3.INF and not npc.arrived() and npc.global_position.distance_to(cover) > 1.0:
 		npc.go_to(cover, HumanNpc.RUN_SPEED if _under_fire > 0.0 else HumanNpc.WALK_SPEED * 1.6)
 		npc.crouching = false
+	elif cover == Vector3.INF:
+		# Sin dónde cubrirse: agachado (se para solo para tirar si agachado no ve)
+		npc.stop()
+		npc.crouching = _crouched_sees() or npc.burst_left <= 0
 	else:
 		npc.stop()
 		_peek(dt, p)
@@ -811,7 +859,7 @@ func _suppress_fire(dt: float, p: Dictionary) -> void:
 	if npc.burst_left <= 0:
 		_supp_point = last_known + Vector3(0, _rng.randf_range(0.5, 1.5), 0) + _jitter(1.3)
 	npc.aim_point = _supp_point
-	npc.aim_error_deg = float(p["aim_error"]) * 1.3 * (1.0 + npc.stress * 0.8)
+	npc.aim_error_deg = _base_error(p, npc.global_position.distance_to(_supp_point)) * 1.3 * (1.0 + npc.stress * 0.8)
 	# Para tirar se para (agachado detrás de la cobertura le pegaría a la cobertura)
 	if npc.burst_left > 0:
 		npc.crouching = false

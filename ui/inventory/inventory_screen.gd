@@ -645,7 +645,12 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 		elif pinv.unequip(sl.slot) == null:
 			EventBus.toast.emit(tr("inv.no_room"))
 	elif _is_loot(from):
-		if s.item.is_container() and s.has_contents() and not _can_pick(s):
+		var free := _free_slot(s)
+		if free != "":
+			# Doble clic en algo equipable con su ranura libre: te lo ponés directo
+			if not pinv.equip(s, free, (from as InvGrid).inv):
+				_take_from_loot(s, (from as InvGrid).inv)
+		elif s.item.is_container() and s.has_contents() and not _can_pick(s):
 			open_bag(s)
 		else:
 			_take_from_loot(s, (from as InvGrid).inv)
@@ -653,7 +658,8 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 		if not pinv.use(s):
 			EventBus.toast.emit(tr("inv.cant_now"))
 	elif s.item.is_equipment():
-		pinv.equip(s, pinv.slot_for(s), (from as InvGrid).inv)
+		var free := _free_slot(s)
+		pinv.equip(s, free if free != "" else pinv.slot_for(s), (from as InvGrid).inv)
 	elif s.item.kind == "mag":
 		pinv.fill_mag(s)
 	elif s.item.is_attachment():
@@ -661,6 +667,16 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 		if not ws.is_empty():
 			pinv.attach(ws[0], s, (from as InvGrid).inv)
 	_refresh()
+
+
+## Ranura de equipo libre donde va esto ("" si no hay ninguna libre).
+func _free_slot(s: ItemStack) -> String:
+	if not s.item.is_equipment():
+		return ""
+	for o in s.item.equip_slots():
+		if pinv.equipment.get(o) == null and pinv.can_equip(s, o):
+			return o
+	return ""
 
 
 ## Armas equipadas donde va este accesorio.

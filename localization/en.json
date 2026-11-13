@@ -314,7 +314,7 @@
 	"inv.stat.muzzle": "Muzzle",
 	"inv.stat.slots": "Grids",
 	"loot.weapons": "Weapons crate",
-	"weapon.no_mags": "No loaded magazines",
+	"weapon.no_mags": "You have no %s magazines",
 	"weapon.from_backpack": "Digging through the backpack…",
 	"weapon.slam_fire": "Accidental discharge!",
 	"inv.dropped_no_room": "No room: %s was dropped",
@@ -384,5 +384,6 @@
 	"loot.military": "Soldier",
 	"item.grenade_smoke": "RDG smoke grenade",
 	"item.grenade_smoke.desc": "Smoke canister: blocks sight for ~25 s. Hold [G] to throw it.",
-	"zone.mil_camp": "Military camp"
+	"zone.mil_camp": "Military camp",
+	"weapon.mags_empty": "Your %s magazines are empty: fill them in the inventory"
 }
