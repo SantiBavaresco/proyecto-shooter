@@ -69,7 +69,7 @@ func interact(_player: Node) -> void:
 		GameState.difficulty = (GameState.difficulty + 1) % 3
 		EventBus.toast.emit(tr("arena.difficulty") % tr(Difficulty.name_key(GameState.difficulty)))
 	elif action == "faction":
-		faction = "military" if faction == "bandits" else "bandits"
+		faction = {"bandits": "military", "military": "lowcal"}.get(faction, "bandits")
 		EventBus.toast.emit(tr("arena.faction_" + faction))
 	Foley.play(get_tree(), "equip", -8.0)
 	refresh()

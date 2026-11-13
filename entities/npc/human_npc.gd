@@ -222,13 +222,8 @@ func finish_off() -> void:
 func _update_agony(delta: float) -> void:
 	if not is_agonizing():
 		return
-	_groan_t -= delta
-	if _groan_t <= 0.0:
-		var r := body.ragdoll
-		var k := clampf(r.agony_left / maxf(r.agony_total, 0.1), 0.0, 1.0)
-		# Cada vez más espaciados y más bajos
-		_groan_t = lerpf(6.0, 2.2, k) * rng.randf_range(0.7, 1.3)
-		_pain("groan", k > 0.6, lerpf(-12.0, -2.0, k))
+	# Se mueve pero no se queja (solo grita al caer: ver _die)
+	pass
 
 
 ## Ruidos de dolor (todos tienen, hablen o no): grito al morir, quejidos en el piso.

@@ -183,6 +183,12 @@ const ARENA_MILITARY := [["mil_leader", Vector3(-49, 0, -94), ""], ["mil_rifle",
 	["mil_rifle", Vector3(-43, 0, -92), ""], ["mil_rifle", Vector3(-60, 0, -88), ""], ["mil_rifle", Vector3(-38, 0, -88), ""],
 	["mil_rifle", Vector3(-52, 0, -86), ""], ["mil_rifle", Vector3(-46, 0, -86), ""], ["mil_marksman", Vector3(-35, 0, -96), ""]]
 
+## Pistolas de calibre chico y escopetas (prueba de combate corto): 7.
+const ARENA_LOWCAL := [["bandit_pistol", Vector3(-58, 0, -90), "p22"], ["bandit_pistol", Vector3(-40, 0, -88), "p22"],
+	["bandit_pistol", Vector3(-49, 0, -92), "bersa9"], ["bandit_pistol", Vector3(-36, 0, -94), "pistol"],
+	["bandit_shotgun", Vector3(-62, 0, -78), "shotgun"], ["bandit_shotgun", Vector3(-46, 0, -84), "sawedoff"],
+	["bandit_shotgun", Vector3(-54, 0, -86), "ou_hunt"]]
+
 var _arena_npcs: Array[HumanNpc] = []
 
 
@@ -244,7 +250,7 @@ func _spawn_arena() -> void:
 	for sq in get_tree().get_nodes_in_group("squad_coordinator"):
 		if (sq as Squad).id == "arena":
 			sq.queue_free()
-	var list: Array = ARENA_MILITARY if ArenaConsole.faction == "military" else ARENA_SQUAD
+	var list: Array = {"military": ARENA_MILITARY, "lowcal": ARENA_LOWCAL}.get(ArenaConsole.faction, ARENA_SQUAD)
 	for i in list.size():
 		var e: Array = list[i]
 		var n := HumanNpc.new()

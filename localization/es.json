@@ -381,6 +381,7 @@
 	"arena.change_faction": "[%s] Cambiar enemigos (bandidos / militares)",
 	"arena.faction_bandits": "Enemigos: bandidos (5)",
 	"arena.faction_military": "Enemigos: militares (8)",
+	"arena.faction_lowcal": "Enemigos: pistolas chicas y escopetas (7)",
 	"loot.military": "Militar",
 	"item.grenade_smoke": "Granada de humo RDG",
 	"item.grenade_smoke.desc": "Lata de humo: tapa la vista durante ~25 s. Mantené [G] para tirarla.",

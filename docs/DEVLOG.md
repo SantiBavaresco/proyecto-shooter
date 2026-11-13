@@ -495,3 +495,8 @@
 - NPC: `SPRINT_SPEED` 6,2 en combate para tramos > 5 m (no dispara, arma baja, mira a donde corre). `low_ammo()` (último cargador): ráfagas 1–2, pausa ×1,8, error ×0,7. Pistola de repuesto (`sidearm_id`), `_draw_sidearm`, botín con ambas armas.
 - Oído: `ALLY_JOIN` 45 m / `ALLY_CHECK` 80 m para tiroteos de aliados; `FAR_SHOT` 95 m solo alerta. Granada del jugador: la pista es el lanzador ± 3–9 m.
 - Muerte: `death_cry` y `groan` (tools/audio/gen_groans.py, MBROLA a mano + aire/temblor); sin tiro a la cabeza `Ragdoll.start_agony(20–30 s)` con impulsos de dolor decrecientes; tiro a la cabeza en el piso → `finish_off()`.
+
+## 3.1.5
+- Sin quejidos en la agonía (`_update_agony` ya no llama `_pain("groan")`); queda `death_cry` al caer sin tiro en la cabeza.
+- Talavera: `height()` pondera el camino por (1 − peso del lugar plano): el camino ya no hunde BASE_A (alambrado/contenedores flotando). Más props en el patio de BASE_A.
+- Greybox: `ARENA_LOWCAL` (p22 ×2, bersa9, pistol, shotgun, sawedoff, ou_hunt); la consola rota bandits → military → lowcal.

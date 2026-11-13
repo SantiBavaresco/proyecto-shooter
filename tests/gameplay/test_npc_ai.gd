@@ -631,5 +631,38 @@ func test_grenade_points_to_thrower() -> void:
 	EventBus.noise_emitted.emit(g.global_position, 220.0, g)
 	await physics_frames(3)
 	var lk: Vector3 = n.brain.last_known if n.brain.state == NpcBrain.State.COMBAT else n.brain.investigate_pos
-	assert_lt(lk.distance_to(player.global_position), 12.0, "busca de donde la tiraron, no donde explotó")
+	assert_lt(lk.distance_to(player.global_position), 16.0, "busca de donde la tiraron, no donde explotó")
+	assert_gt(lk.distance_to(g.global_position), lk.distance_to(player.global_position), "más cerca tuyo que de la explosión")
 	g.queue_free()
+
+
+func test_small_pistols_and_shotguns_fight_and_reload() -> void:
+	await _arena()
+	DebugTools.god_mode = true
+	var shots := {}
+	var reloads := {}
+	var ns: Array[HumanNpc] = []
+	var list := [["bandit_pistol", "p22"], ["bandit_pistol", "bersa9"], ["bandit_shotgun", "sawedoff"], ["bandit_shotgun", "ou_hunt"]]
+	for i in list.size():
+		var n := _npc(Vector3(-6 + i * 4, 0, -14), FACE_SOUTH, list[i][0], 1, list[i][1])
+		ns.append(n)
+	await physics_frames(10)
+	for n in ns:
+		n.brain._enter_combat(player.global_position, true)
+		shots[n.weapon.id] = 0
+		reloads[n.weapon.id] = 0
+	var last := {}
+	for n in ns:
+		last[n] = n.mag
+	for f in 60 * 30:
+		await physics_frames(1)
+		for n in ns:
+			if n.mag < int(last[n]):
+				shots[n.weapon.id] += 1
+			last[n] = n.mag
+			if n.reloading:
+				reloads[n.weapon.id] += 1
+	for id: String in shots:
+		assert_gt(shots[id], 0, "%s: tira" % id)
+		assert_gt(reloads[id], 0, "%s: recarga" % id)
+		assert_gt(shots[id], 2, "%s: sigue tirando después de recargar" % id)

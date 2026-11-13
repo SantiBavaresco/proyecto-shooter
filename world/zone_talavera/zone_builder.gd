@@ -87,9 +87,16 @@ func height(x: float, z: float) -> float:
 		var r: float = PADS[i][1]
 		var d := Vector2(x - c.x, z - c.z).length()
 		h = lerpf(h, _pad_h[i], 1.0 - smoothstep(r, r + 18.0, d))
+	# El camino no hunde los lugares planos (antes dentro del galpón el piso bajaba
+	# donde pasa el camino y el alambrado y los contenedores quedaban flotando)
+	var pad_w := 0.0
+	for i in PADS.size():
+		var c2: Vector3 = PADS[i][0]
+		pad_w = maxf(pad_w, 1.0 - smoothstep(float(PADS[i][1]), float(PADS[i][1]) + 18.0, Vector2(x - c2.x, z - c2.z).length()))
 	var rd := _road_dist(x, z)
-	if rd < 8.0:
-		h = lerpf(h, _raw_height(x, z) * 0.7, 1.0 - smoothstep(3.0, 8.0, rd)) - (1.0 - smoothstep(1.5, 3.5, rd)) * 0.08
+	if rd < 8.0 and pad_w < 1.0:
+		var road_h := lerpf(h, _raw_height(x, z) * 0.7, 1.0 - smoothstep(3.0, 8.0, rd)) - (1.0 - smoothstep(1.5, 3.5, rd)) * 0.08
+		h = lerpf(road_h, h, pad_w)
 	return h
 
 
@@ -359,6 +366,22 @@ func _build_base_a() -> void:
 	for i in 3:
 		Structures.barrel(_geo, c + Vector3(-6 + i * 0.7, 0, 6))
 	Structures.sign_post(_geo, c + Vector3(-34, 0, 26), 2.3, tr("zone.base_a_sign"))
+	# Más cosas en el patio para moverse cubierto: autos, bloques, cajones, tambores
+	Structures.car_wreck(_geo, c + Vector3(-4, 0, 20), 2.2, "car_white")
+	Structures.car_wreck(_geo, c + Vector3(26, 0, 4), 0.3, "car_red")
+	Structures.car_wreck(_geo, c + Vector3(-26, 0, -6), 1.6)
+	Structures.car_wreck(_geo, c + Vector3(-22, 0, 1), 2.9, "car_green")
+	Structures.container(_geo, c + Vector3(26, 0, -6), PI * 0.5, Color("5a4a2e"))
+	for jp: Array in [[Vector3(2, 0, 3), 0.1], [Vector3(-12, 0, 4), -0.3], [Vector3(9, 0, 20), 0.0], [Vector3(-8, 0, -20), 0.0],
+			[Vector3(24, 0, 16), 1.3]]:
+		Structures.jersey(_geo, c + jp[0], jp[1])
+	Structures.crates(_geo, c + Vector3(-26, 0, -14), 0.2, 3)
+	Structures.crates(_geo, c + Vector3(6, 0, 12), 0.4, 2)
+	Structures.crates(_geo, c + Vector3(-14, 0, 18), -0.5, 2)
+	for i in 3:
+		Structures.barrel(_geo, c + Vector3(17 + i * 0.7, 0, 20))
+	Structures.barrel(_geo, c + Vector3(-24, 0, -10))
+	Structures.sandbags(_geo, c + Vector3(-2, 0, -20), 0.0, 4.0)
 
 
 ## Estación de bombeo contra el río.
