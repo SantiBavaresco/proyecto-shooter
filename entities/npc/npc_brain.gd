@@ -68,6 +68,9 @@ var follow_pos: Vector3 = Vector3.INF
 var follow_yaw: float = 0.0
 var _supp_point: Vector3 = Vector3.INF
 var _dodge_t: float = 0.0
+## Lo ve "a través" de un arbusto: no lo ve de verdad, pero el fogonazo o el
+## movimiento lo delatan; tira al cuerpo, con más error y nunca a la cabeza.
+var concealed: bool = false
 
 
 func _init(n: HumanNpc) -> void:
@@ -218,19 +221,34 @@ func _perceive(dt: float) -> void:
 	var flat := Vector3(to.x, 0, to.z)
 	var ang := fwd.normalized().angle_to(flat.normalized()) if flat.length() > 0.01 else 0.0
 	var seen := 0
+	var veiled := 0
 	_vis = [false, false, false]
 	if dist < rng_eff and ang < fov * 0.5:
 		var space := npc.get_world_3d().direct_space_state
 		for i in pts.size():
 			var rq := PhysicsRayQueryParameters3D.create(eye, pts[i], SIGHT_MASK)
 			rq.exclude = [target.get_rid()] if target is CollisionObject3D else []
-			if space.intersect_ray(rq).is_empty() and not SmokeCloud.blocks(npc.get_tree(), eye, pts[i]):
+			var hit := space.intersect_ray(rq)
+			if SmokeCloud.blocks(npc.get_tree(), eye, pts[i]):
+				continue
+			if hit.is_empty():
 				seen += 1
 				if i < 3:
 					_vis[i] = true
-	_exposure = seen / float(pts.size())
+			elif _is_foliage(hit) and (hit["position"] as Vector3).distance_to(pts[i]) < 2.5:
+				veiled += 1  # lo tapa un arbusto que tiene encima
+	# Metido en un arbusto: si tira (fogonazo) o se mueve, se delata
+	concealed = false
+	if seen == 0 and veiled > 0 and pl != null:
+		var spd0 := Vector2(pl.velocity.x, pl.velocity.z).length()
+		if pl.fired_recently(2.5) or spd0 > 1.5:
+			seen = 1
+			concealed = true
+			_vis = [false, true, false]
+	_exposure = seen / float(pts.size()) * (0.6 if concealed else 1.0)
 	if seen > 0:
-		var rate := 1.0 / float(p["notice"]) * clampf(20.0 / maxf(dist, 4.0), 0.2, 3.0) * _exposure
+		# De lejos cuesta bastante más darse cuenta (cae más rápido que la distancia)
+		var rate := 1.0 / float(p["notice"]) * clampf(pow(20.0 / maxf(dist, 4.0), 1.5), 0.08, 3.0) * _exposure
 		if ang > fov * 0.25:
 			rate *= 0.5
 		if alert:
@@ -475,6 +493,8 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 	if _under_fire > 0.0:
 		npc.aim_error_deg *= 1.25
 	npc.aim_error_deg *= 1.0 + npc.stress * 0.8
+	if concealed:
+		npc.aim_error_deg *= 1.6
 	var dist := npc.global_position.distance_to(target.global_position)
 	var moving := npc.move_target != Vector3.INF and not npc.arrived()
 	var can_shoot := reaction_left <= 0.0 and not npc.reloading and (not moving or bool(p["move_shoot"]))
@@ -541,6 +561,11 @@ func _peek(dt: float, p: Dictionary) -> void:
 		npc.crouching = _under_fire > 0.0 or _rng.randf() < 0.5
 		if not _crouched_sees() and npc.crouching and _burst_pause <= 0.1:
 			npc.crouching = false
+
+
+func _is_foliage(hit: Dictionary) -> bool:
+	var c := hit.get("collider") as CollisionObject3D
+	return c != null and (c.collision_layer & (1 << 8)) != 0
 
 
 func _crouched_sees() -> bool:
@@ -651,6 +676,9 @@ func _retreat(_dt: float) -> void:
 func _aim_spot() -> Vector3:
 	var pts := _target_points(target)
 	var spot := pts[1]
+	if concealed:
+		# Tira al bulto dentro del arbusto: al cuerpo, sin cabeza, a donde vio el fogonazo
+		return pts[1].lerp(pts[2], _rng.randf()) + _jitter(0.35)
 	if pts.size() >= 3:
 		# A lo que se ve: el pecho; si está tapado, la cabeza o la cadera
 		if not _vis[1]:

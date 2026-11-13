@@ -474,3 +474,10 @@
 - Cámara de muerte (RigidBody con la cámara) y viewmodel oculto.
 - WorldItem en capa 13 (no frena al jugador ni a la IA).
 - Doble clic: equipa en ranura libre desde contenedores; aviso de R sin cargadores / vacíos.
+
+
+## 3.1.2
+- Vista NPC: sight_range 40/55/70 y caída de la detección con (20/d)^1,5.
+- Ocultos en follaje: rayos que chocan follaje a < 2,5 m del punto cuentan como "tapado"; si el jugador tiró hace < 2,5 s o se mueve, `concealed`: lo ven, apuntan al cuerpo (sin cabeza) con error ×1,6.
+- Cámara de muerte: caja (no esfera), más amortiguación, se congela al quedar quieta.
+- Inmortal en F8 (y F5).

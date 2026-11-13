@@ -51,6 +51,7 @@ var is_dead: bool = false
 ## Al morir la cámara se suelta y cae como un objeto (la "cabeza" del muerto).
 var _death_cam: RigidBody3D
 var _cam_local: Transform3D
+var _death_still: float = 0.0
 ## Alambre de púas de la zona de prueba: ya cortó al entrar.
 var _hurt_inside: bool = false
 const HURT_DPS := 6.0
@@ -64,6 +65,8 @@ const NPC_BODY_LAYER := 5
 const DAMAGE_MODEL := preload("res://data/combat/damage_model.tres")
 ## Estrés de combate (0–1): sube al recibir tiros o cuando pasan cerca, baja solo.
 var combat_stress: float = 0.0
+## Cuándo tiró por última vez (el fogonazo delata aunque esté en un arbusto).
+var last_shot_msec: int = -100000
 ## Presión de combate actual (0..0.9) y cada cuánto se recalcula.
 var pressure: float = 0.0
 var _pressure_t: float = 0.0
@@ -299,6 +302,10 @@ func _combat_pressure() -> float:
 				w *= 2.0
 		sum += w * 0.3
 	return minf(sum, 0.9)
+
+
+func fired_recently(secs: float) -> bool:
+	return Time.get_ticks_msec() - last_shot_msec < int(secs * 1000.0)
 
 
 ## ¿Hay techo encima? (combate en interiores)
@@ -726,17 +733,19 @@ func _start_death_cam() -> void:
 	rb.collision_layer = 1 << 11
 	rb.collision_mask = 1
 	rb.mass = 4.5
-	rb.angular_damp = 1.6
-	rb.linear_damp = 0.3
+	rb.angular_damp = 4.0
+	rb.linear_damp = 0.6
 	rb.continuous_cd = true
+	# Forma de cabeza (no una pelota): cae, golpea y queda tendida, no rueda
 	var cs := CollisionShape3D.new()
-	var sh := SphereShape3D.new()
-	sh.radius = 0.11
+	var sh := BoxShape3D.new()
+	sh.size = Vector3(0.17, 0.2, 0.22)
 	cs.shape = sh
 	rb.add_child(cs)
 	var pm := PhysicsMaterial.new()
-	pm.friction = 0.9
-	pm.bounce = 0.15
+	pm.friction = 1.0
+	pm.rough = true
+	pm.bounce = 0.05
 	rb.physics_material_override = pm
 	add_child(rb)
 	rb.global_transform = Transform3D(camera.global_basis.orthonormalized(), camera.global_position)
@@ -746,11 +755,19 @@ func _start_death_cam() -> void:
 	rb.linear_velocity = Vector3(velocity.x, maxf(velocity.y, 0.0), velocity.z) + back
 	rb.angular_velocity = global_basis.x * _rng.randf_range(-2.5, -1.2) + global_basis.z * _rng.randf_range(-1.5, 1.5)
 	_death_cam = rb
+	_death_still = 0.0
 
 
 func _update_death_cam() -> void:
 	if _death_cam == null or not is_instance_valid(_death_cam):
 		return
+	# Cuando ya cayó y casi no se mueve, queda quieta (tiesa) en el piso
+	if not _death_cam.freeze:
+		var slow := _death_cam.linear_velocity.length() < 0.25 and _death_cam.angular_velocity.length() < 0.8
+		_death_still = _death_still + get_process_delta_time() if slow else 0.0
+		if _death_still > 0.35:
+			_death_cam.freeze_mode = RigidBody3D.FREEZE_MODE_STATIC
+			_death_cam.freeze = true
 	camera.global_transform = _death_cam.get_global_transform_interpolated()
 
 

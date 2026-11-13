@@ -436,3 +436,50 @@ func test_npc_hears_real_player_shot() -> void:
 	bot.press_fire()
 	await physics_frames(20)
 	assert_true(n.brain.state in [NpcBrain.State.COMBAT, NpcBrain.State.INVESTIGATE], "oye el tiro del jugador a 70 m")
+
+
+func test_bush_hides_until_you_shoot() -> void:
+	await _arena()
+	# Arbusto (capa de follaje) con el jugador agachado adentro
+	var bush := StaticBody3D.new()
+	bush.collision_layer = 1 << 8
+	bush.collision_mask = 0
+	var cs := CollisionShape3D.new()
+	var sh := SphereShape3D.new()
+	sh.radius = 1.3
+	cs.shape = sh
+	bush.add_child(cs)
+	level.add_child(bush)
+	bush.global_position = Vector3(0, 0.7, 0)
+	player.teleport(Vector3(0, 0.05, 0), 0.0)
+	bot.crouch = true
+	var n := _npc(Vector3(0, 0.05, -15), FACE_SOUTH, "bandit_rifle", 2)
+	await physics_frames(60 * 3)
+	assert_lt(n.brain.awareness, 0.3, "quieto adentro del arbusto no lo ven (%.2f)" % n.brain.awareness)
+	# Tira: el fogonazo lo delata
+	for i in 60 * 3:
+		player.last_shot_msec = Time.get_ticks_msec()
+		await physics_frames(1)
+		if n.brain.target_visible:
+			break
+	assert_true(n.brain.concealed, "lo ve a través del arbusto")
+	assert_true(n.brain.target_visible, "y le tira")
+	var head := player.camera.global_position
+	for i in 20:
+		var a := n.brain._aim_spot()
+		assert_gt(a.distance_to(head), 0.3, "sin apuntar a la cabeza")
+	bush.queue_free()
+
+
+func test_death_cam_settles() -> void:
+	await _arena()
+	DebugTools.god_mode = false
+	player.velocity = Vector3(3, 0, 0)
+	player.take_damage(500.0)
+	await physics_frames(60 * 4)
+	var cam := player._death_cam
+	assert_true(cam != null and cam.freeze, "la cabeza cayó y quedó quieta")
+	var t0 := player.camera.global_transform
+	await physics_frames(60)
+	assert_lt(player.camera.global_transform.origin.distance_to(t0.origin), 0.01, "no sigue rodando")
+	assert_lt(player.camera.global_position.y, 0.5, "en el piso")
