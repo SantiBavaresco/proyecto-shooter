@@ -661,10 +661,11 @@ func test_reload_with_corpse_mags_in_rig() -> void:
 		await physics_frames(3)
 		var w: ItemStack = null
 		var mags: Array = []
+		var wfam := ItemDB.standard_mag(wid)
 		for st in n.inventory.stacks:
-			if st.item.kind == "weapon":
+			if st.item.kind == "weapon" and st.item.weapon().id == wid:
 				w = st
-			elif st.item.kind == "mag":
+			elif st.item.kind == "mag" and st.item.id == wfam:
 				mags.append(st)
 		# Chaleco vacío con lugar para los cargadores
 		if pinv.equipment.get("rig") != null:
@@ -718,7 +719,7 @@ func test_double_click_equips_into_free_slot() -> void:
 	var w: ItemStack = null
 	var h: ItemStack = null
 	for st in a.inventory.stacks:
-		if st.item.kind == "weapon":
+		if st.item.kind == "weapon" and st.item.weapon().slot != 3:
 			w = st
 		elif st.item.kind == "helmet":
 			h = st
@@ -744,8 +745,10 @@ func test_use_item_from_corpse_and_ground() -> void:
 		if st.item.id == "medkit":
 			med = st
 	var mine := pinv.count_of("medkit")
-	scr._quick_action(med, scr._loot_grids[0])
-	assert_true(pinv.is_using(), "doble clic en el botiquín del muerto: lo usa ahí")
+	scr._menu_stack = med
+	scr._menu_from = scr._loot_grids[0]
+	scr._on_menu(InventoryScreen.Act.USE)
+	assert_true(pinv.is_using(), "clic derecho > Usar en el botiquín del muerto: lo usa ahí")
 	await physics_frames(int(60 * (med.item.use_time + 0.5)))
 	assert_gt(player.vitals.health, 40.0, "curó")
 	assert_eq(a.inventory.count_of("medkit"), 0, "se gastó el del cuerpo")
@@ -758,8 +761,32 @@ func test_use_item_from_corpse_and_ground() -> void:
 	scr.open(null)
 	var ground := scr.container.get("inventory") as Inventory
 	assert_true(ground.has_stack(w.stack))
-	scr._quick_action(w.stack, scr._loot_grids[0])
+	scr._menu_stack = w.stack
+	scr._menu_from = scr._loot_grids[0]
+	scr._on_menu(InventoryScreen.Act.USE)
 	await physics_frames(int(60 * (w.stack.item.use_time + 0.5)))
 	assert_eq(w.stack.count, 1, "la venda del piso se gastó de a una")
 	scr.close()
 	DebugTools.god_mode = god
+
+
+func test_grenades_go_to_rig_and_only_throw_from_there() -> void:
+	var a := await _dead_npc(player.global_position + Vector3(1.5, 0.05, -2))
+	a.inventory.add_item("grenade_f1", 1)
+	var scr := _screen()
+	a.interact(player)
+	await process_frames(2)
+	var g: ItemStack = null
+	for st in a.inventory.stacks:
+		if st.item.id == "grenade_f1":
+			g = st
+	var before := pinv.count_quick("grenade_f1")
+	scr._quick_action(g, scr._loot_grids[0])
+	assert_eq(pinv.count_quick("grenade_f1"), before + 1, "la granada agarrada va al chaleco o bolsillos")
+	scr.close()
+	# Una en la mochila no se puede tirar
+	for id: String in ["grenade_rg5", "grenade_f1", "grenade_smoke"]:
+		pinv.take(id, 99)
+	pinv.bag_grids()[0].add_item("grenade_rg5", 1)
+	assert_eq(player.actions._grenade_in_inventory(), "", "en la mochila no cuenta")
+	assert_true(player.actions._grenade_in_bag(), "pero avisa que está ahí")

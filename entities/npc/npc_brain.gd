@@ -74,6 +74,11 @@ var concealed: bool = false
 ## Cuánto hace que lo vio por última vez metido en un arbusto (para "tirarle al arbusto").
 var _bush_t: float = 99.0
 var _bush_lost: bool = false
+## Tiroteo de un compañero: a menos de ALLY_JOIN se suma; hasta ALLY_CHECK va a ver.
+const ALLY_JOIN := 45.0
+const ALLY_CHECK := 80.0
+## Un disparo o explosión más lejos que esto: solo alerta (no va hasta allá).
+const FAR_SHOT := 95.0
 ## Escondido en un arbusto: a menos de esto te ven igual (alerta / tranquilo).
 const BUSH_SEEN_ALERT := 6.0
 const BUSH_SEEN_CALM := 3.5
@@ -293,6 +298,12 @@ func _perceive(dt: float) -> void:
 			_investigate_at(target.global_position)
 
 
+## Mira hacia ese punto (guardia que oyó algo lejos).
+func _face(p: Vector3) -> void:
+	var to := p - npc.global_position
+	npc.look_yaw = atan2(-to.x, -to.z)
+
+
 ## Ruido: disparos, pasos, explosiones. Los aliados que disparan también alertan.
 func on_noise(pos: Vector3, radius: float, source: Node) -> void:
 	var d := pos.distance_to(npc.global_position)
@@ -300,14 +311,38 @@ func on_noise(pos: Vector3, radius: float, source: Node) -> void:
 		return
 	var ally := source is HumanNpc
 	if ally:
+		# Un compañero tirotea: los de cerca se meten; los de más lejos van a ver con
+		# cuidado; los muy lejos solo se ponen alerta (no cruzan el mapa por un tiroteo
+		# ajeno, ni se encadena la alarma de grupo en grupo)
 		var other := source as HumanNpc
-		if other.brain != null and other.brain.state == State.COMBAT and other.brain.last_known != Vector3.INF:
-			if state != State.COMBAT:
+		if other.brain != null and other.brain.state == State.COMBAT and other.brain.last_known != Vector3.INF \
+				and state != State.COMBAT:
+			if d < ALLY_JOIN:
 				_enter_combat(other.brain.last_known + _jitter(4.0), false)
+			elif d < ALLY_CHECK and state in [State.IDLE, State.PATROL]:
+				awareness = maxf(awareness, 0.6)
+				_investigate_at(other.global_position.lerp(npc.global_position, 0.4) + _jitter(6.0), false)
+			else:
+				awareness = maxf(awareness, 0.5)
+				_face(pos)
 		return
 	if source != null and not source.is_in_group("player") and not (source is Grenade):
 		return
+	# Granada: lo que se oye es la explosión, pero de dónde vino es la pista (la
+	# tiraron desde por allá, no está parado donde explotó)
+	if source is Grenade and (source as Grenade).thrower is Node3D and is_instance_valid((source as Grenade).thrower):
+		var thr := (source as Grenade).thrower as Node3D
+		if thr.is_in_group("player"):
+			var away := thr.global_position - pos
+			pos = thr.global_position + _jitter(clampf(away.length() * 0.35, 3.0, 9.0))
+			d = pos.distance_to(npc.global_position)
 	var err := _jitter(d * 0.12)
+	if radius >= 40.0 and d > FAR_SHOT:
+		# Muy lejos: se pone alerta y mira para ese lado, pero no deja su puesto
+		awareness = maxf(awareness, 0.5)
+		if state in [State.IDLE, State.PATROL]:
+			_face(pos)
+		return
 	if radius >= 40.0:
 		# Un disparo o una explosión: sabe más o menos de dónde vino
 		awareness = maxf(awareness, 0.95 if d < radius * 0.35 else 0.7)
@@ -508,9 +543,13 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 	npc.aim_error_deg *= 1.0 + npc.stress * 0.8
 	if concealed:
 		npc.aim_error_deg *= 1.6
+	# Con el último cargador: tira menos pero cuida cada tiro
+	if npc.low_ammo():
+		npc.aim_error_deg *= 0.7
 	var dist := npc.global_position.distance_to(target.global_position)
 	var moving := npc.move_target != Vector3.INF and not npc.arrived()
-	var can_shoot := reaction_left <= 0.0 and not npc.reloading and (not moving or bool(p["move_shoot"]))
+	var can_shoot := reaction_left <= 0.0 and not npc.reloading and (not moving or bool(p["move_shoot"])) \
+		and not npc.sprinting
 	if can_shoot and npc.burst_left <= 0 and _burst_pause <= 0.0 and _clear_line():
 		var b: Array = p["burst"]
 		var auto := npc.weapon.has_mode("auto")
@@ -521,6 +560,9 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 		if npc.weapon.pellets > 1 or npc.weapon.bolt_action:
 			npc.burst_left = 1
 		_burst_pause = float(p["burst_pause"]) * _rng.randf_range(0.7, 1.4) + (0.4 if not auto else 0.0)
+		if npc.low_ammo():
+			npc.burst_left = mini(npc.burst_left, _rng.randi_range(1, 2))
+			_burst_pause = _burst_pause * 1.8 + 0.4
 		_aim_head = _rng.randf() < float(p["head_aim"])
 
 
@@ -701,7 +743,9 @@ func _aim_spot() -> Vector3:
 	var spot := pts[1]
 	if concealed:
 		# Tira al bulto dentro del arbusto: al cuerpo, sin cabeza, a donde vio el fogonazo
-		return pts[1].lerp(pts[2], _rng.randf()) + _jitter(0.35)
+		var j := _jitter(0.35)
+		j.y = -absf(j.y)  # nunca para arriba (hacia la cabeza)
+		return pts[1].lerp(pts[2], _rng.randf()) + j
 	if pts.size() >= 3:
 		# A lo que se ve: el pecho; si está tapado, la cabeza o la cadera
 		if not _vis[1]:

@@ -274,7 +274,7 @@ func test_military_loot_is_worn() -> void:
 	var w: ItemStack = null
 	var v: ItemStack = null
 	for st in n.inventory.stacks:
-		if st.item.kind == "weapon":
+		if st.item.kind == "weapon" and st.item.weapon().slot != 3:
 			w = st
 		elif st.item.kind == "armor":
 			v = st

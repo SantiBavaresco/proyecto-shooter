@@ -211,6 +211,23 @@ func take(id: String, n: int) -> int:
 	return got
 
 
+## Lo mismo pero solo de bolsillos y chaleco (lo que se usa sin abrir la mochila).
+func count_quick(id: String) -> int:
+	var n := 0
+	for inv in quick_storages():
+		n += inv.count_of(id)
+	return n
+
+
+func take_quick(id: String, n: int) -> int:
+	var got := 0
+	for inv in quick_storages():
+		if got >= n:
+			break
+		got += inv.take(id, n - got)
+	return got
+
+
 func ammo_count(caliber: String) -> int:
 	var id := ItemDB.ammo_id(caliber)
 	return count_of(id) if id != "" else 0
@@ -787,7 +804,7 @@ func receive(s: ItemStack) -> int:
 	if s.has_contents():
 		return s.count
 	var order: Array[Inventory] = []
-	if s.item.kind in ["mag"]:
+	if s.item.kind in ["mag", "throwable"]:
 		order.append_array(rig_grids())
 		order.append_array(pockets)
 		order.append_array(bag_grids())

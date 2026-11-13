@@ -487,3 +487,11 @@
 - Usar consumibles desde cajas/cuerpos/piso: `PlayerInventory.use(s, from)` consume de ese inventario.
 - Voces: 4–7 variantes por clave (gen_voices.py), `VoiceBank` evita repetir las últimas, tono por NPC.
 - Arbustos: a < 6 m (alerta) / 3,5 m (tranquilo) te ven igual (`concealed`). Perdido en un arbusto (`_bush_t`): `_suppress_fire` al último punto 7 s desde su lugar; al avanzar sin cobertura se queda a ≥ 7 m.
+
+## 3.1.4
+- Inventario: doble clic propio (al soltar, sin arrastre, 350 ms); sin "usar" con doble clic en loot. `receive` manda `throwable` al chaleco/bolsillos; tirar granadas usa `count_quick`/`take_quick` (aviso `grenade.in_bag`).
+- Vainas de NPC: `CombatWorld.spawn_shell_other` (física a < 18 m de la cámara; si no, directo al piso). REST_LIFETIME 600 s, MAX_REST 1500.
+- Isla: 620 árboles, ~1150+ arbustos con matorrales.
+- NPC: `SPRINT_SPEED` 6,2 en combate para tramos > 5 m (no dispara, arma baja, mira a donde corre). `low_ammo()` (último cargador): ráfagas 1–2, pausa ×1,8, error ×0,7. Pistola de repuesto (`sidearm_id`), `_draw_sidearm`, botín con ambas armas.
+- Oído: `ALLY_JOIN` 45 m / `ALLY_CHECK` 80 m para tiroteos de aliados; `FAR_SHOT` 95 m solo alerta. Granada del jugador: la pista es el lanzador ± 3–9 m.
+- Muerte: `death_cry` y `groan` (tools/audio/gen_groans.py, MBROLA a mano + aire/temblor); sin tiro a la cabeza `Ragdoll.start_agony(20–30 s)` con impulsos de dolor decrecientes; tiro a la cabeza en el piso → `finish_off()`.

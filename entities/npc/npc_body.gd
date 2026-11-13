@@ -372,6 +372,15 @@ func _weapon_model(data: WeaponData, sight: String, muzzle: String) -> Node3D:
 	return m
 
 
+## Por dónde salen las vainas (marcador "Ejection" del arma) y hacia dónde (derecha).
+func ejection_xform() -> Transform3D:
+	if weapon_node != null:
+		var e := weapon_node.get_node_or_null("Ejection") as Node3D
+		if e != null:
+			return e.global_transform
+	return Transform3D(global_basis, muzzle_position() + global_basis.z * 0.45)
+
+
 func muzzle_position() -> Vector3:
 	if weapon_node != null:
 		var mz := weapon_node.get_node_or_null("Muzzle") as Node3D

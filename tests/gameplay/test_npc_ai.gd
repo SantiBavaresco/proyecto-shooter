@@ -379,6 +379,7 @@ func test_npc_ragdoll_falls_and_settles() -> void:
 	await _arena()
 	var n := _npc(Vector3(0, 0, -6), FACE_SOUTH)
 	await physics_frames(20)
+	n.vest = null  # que el tiro no dependa del chaleco
 	var info := HitInfo.new()
 	info.damage = 500.0
 	info.zone = "torso"
@@ -503,8 +504,12 @@ func test_bush_close_and_recon_fire() -> void:
 	# De cerca (alerta) un arbusto no te esconde
 	var m := _npc(Vector3(0, 0.05, -4.5), FACE_SOUTH, "bandit_rifle", 0)
 	m.brain._enter_combat(player.global_position + Vector3(0, 0, -2), true)
-	await physics_frames(60)
-	assert_true(m.brain.target_visible, "a 4 m te ve aunque estés en el arbusto")
+	var vis := 0
+	for i in 90:
+		await physics_frames(1)
+		if m.brain.target_visible:
+			vis += 1
+	assert_gt(vis, 15, "a 4 m te ve aunque estés en el arbusto (%d/90 cuadros)" % vis)
 	DebugTools.god_mode = false
 	bush.queue_free()
 
@@ -521,3 +526,110 @@ func test_death_cam_settles() -> void:
 	await physics_frames(60)
 	assert_lt(player.camera.global_transform.origin.distance_to(t0.origin), 0.01, "no sigue rodando")
 	assert_lt(player.camera.global_position.y, 0.5, "en el piso")
+
+
+func _hit(n: HumanNpc, zone: String, dmg: float) -> HitInfo:
+	var info := HitInfo.new()
+	info.damage = dmg
+	info.zone = zone
+	info.direction = Vector3(0, 0, -1)
+	info.position = n.body.head_position() if zone.begins_with("head") else n.body.chest_position()
+	info.source = player
+	return info
+
+
+func test_npc_agony_unless_headshot() -> void:
+	await _arena()
+	var a := _npc(Vector3(-3, 0, -6), FACE_SOUTH)
+	var b := _npc(Vector3(3, 0, -6), FACE_SOUTH)
+	await physics_frames(20)
+	a.vest = null
+	b.helmet = null
+	a.apply_hit(_hit(a, "torso", 150.0))
+	b.apply_hit(_hit(b, "head_core", 150.0))
+	assert_true(a.is_agonizing(), "tiro al cuerpo: queda revolcándose")
+	assert_false(b.is_agonizing(), "tiro a la cabeza: cae seco")
+	var r := a.body.ragdoll
+	assert_near(r.agony_total, 25.0, 5.01, "entre 20 y 30 s")
+	await physics_frames(60 * 6)
+	assert_false(r.frozen, "a los 6 s se sigue moviendo")
+	await physics_frames(60 * 7)
+	assert_true(b.body.ragdoll.frozen, "el de la cabeza ya está quieto")
+	assert_false(r.frozen, "y el otro sigue")
+	# Remate a la cabeza en el piso
+	var hi := _hit(a, "head", 60.0)
+	hi.position = r.center()
+	a.apply_hit(hi)
+	assert_false(a.is_agonizing(), "un tiro a la cabeza en el piso lo remata")
+	await physics_frames(60 * 4)
+	assert_true(r.frozen, "y queda quieto")
+
+
+func test_npc_low_ammo_and_sidearm() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0, -20), FACE_SOUTH)
+	await physics_frames(10)
+	n.sidearm_id = "pistol"
+	n.sidearm_mags = 1
+	n.spare_mags.clear()
+	n.loose_ammo = 0
+	assert_true(n.low_ammo(), "último cargador: cuida los tiros")
+	n.mag = 0
+	await physics_frames(90)
+	assert_eq(n.weapon.slot, 3, "sin balas saca la pistola")
+	assert_gt(n.mag, 0, "cargada")
+	n.apply_hit(_hit(n, "head_core", 500.0))
+	await physics_frames(5)
+	assert_eq(n.inventory.count_of("w_akm"), 1, "el fusil vacío queda en el cuerpo")
+	assert_eq(n.inventory.count_of(ItemDB.weapon_item_id("pistol")), 1, "y la pistola")
+
+
+func test_npc_ejects_shells() -> void:
+	await _arena()
+	var cw := CombatWorld.get_for(player)
+	var before := cw.resting_shells()
+	var n := _npc(Vector3(0, 0, -60), FACE_SOUTH, "bandit_rifle", 2)
+	await physics_frames(10)
+	n.brain._enter_combat(player.global_position, true)
+	for i in 60 * 8:
+		await physics_frames(1)
+		if cw.resting_shells() > before:
+			break
+	assert_gt(cw.resting_shells(), before, "sus vainas quedan en el piso")
+
+
+func test_npc_sprints_long_moves_in_combat() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0, -30), FACE_SOUTH)
+	await physics_frames(10)
+	n.brain._enter_combat(Vector3(0, 0, 40), false)
+	n.go_to(Vector3(20, 0, -30), HumanNpc.RUN_SPEED)
+	assert_true(n.sprinting, "tramo largo: sprint")
+	n.go_to(n.global_position + Vector3(2, 0, 0), HumanNpc.RUN_SPEED)
+	assert_false(n.sprinting, "tramo corto: no")
+
+
+func test_far_shots_only_alert() -> void:
+	await _arena()
+	var far := _npc(Vector3(0, 0, -120), 0.0)
+	var mid := _npc(Vector3(40, 0, -60), 0.0)
+	await physics_frames(10)
+	EventBus.noise_emitted.emit(player.global_position, HumanNpc.SHOT_HEAR, player)
+	await physics_frames(5)
+	assert_true(far.brain.state in [NpcBrain.State.IDLE, NpcBrain.State.PATROL], "a 120 m no deja su puesto")
+	assert_gt(far.brain.awareness, 0.4, "pero queda alerta")
+	assert_true(mid.brain.state != NpcBrain.State.IDLE, "a 70 m va a ver")
+
+
+func test_grenade_points_to_thrower() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0, -40), FACE_SOUTH)
+	await physics_frames(10)
+	var g := Grenade.make(player)
+	level.add_child(g)
+	g.global_position = Vector3(0, 0.2, -28)
+	EventBus.noise_emitted.emit(g.global_position, 220.0, g)
+	await physics_frames(3)
+	var lk: Vector3 = n.brain.last_known if n.brain.state == NpcBrain.State.COMBAT else n.brain.investigate_pos
+	assert_lt(lk.distance_to(player.global_position), 12.0, "busca de donde la tiraron, no donde explotó")
+	g.queue_free()

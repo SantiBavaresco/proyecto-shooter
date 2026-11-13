@@ -390,5 +390,6 @@
 	"map.enemies": "Enemigos",
 	"map.loot": "Cajas",
 	"map.items": "Objetos sueltos",
-	"map.hint": "Rueda: zoom · Arrastrar: mover · [M] o [Esc]: cerrar · (mapa de prueba: muestra a los enemigos)"
+	"map.hint": "Rueda: zoom · Arrastrar: mover · [M] o [Esc]: cerrar · (mapa de prueba: muestra a los enemigos)",
+	"grenade.in_bag": "Las granadas están en la mochila: pasalas al chaleco o a los bolsillos"
 }

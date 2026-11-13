@@ -25,9 +25,9 @@ const MAX_TRACERS := 32
 const SHELL_LIFETIME := 6.0
 ## Casquillos en el piso: cuánto duran, hasta qué distancia se dibujan y cuántos hay
 ## como máximo por tipo (los más viejos se reemplazan).
-const REST_LIFETIME := 270.0
+const REST_LIFETIME := 600.0
 const REST_RANGE := 150.0
-const MAX_REST := 600
+const MAX_REST := 1500
 const TRAJ_LIFETIME := 6.0
 const TRAJ_MAX_SEGMENTS := 3000
 ## Capa de colisión de los casquillos (no chocan con el jugador ni con balas).
@@ -174,6 +174,32 @@ func spawn_shell(xform: Transform3D, velocity: Vector3, big: bool = false, ignor
 	s.linear_velocity = velocity
 	s.angular_velocity = Vector3(rng.randf_range(-20, 20), rng.randf_range(-20, 20), rng.randf_range(-20, 20))
 	s.sleeping = false
+
+
+## Casquillo de alguien que no es el jugador (enemigos): cerca de la cámara vuela con
+## física como los tuyos; lejos (no se ve volar) cae directo al piso, sin gastar los
+## cuerpos físicos que usan tus vainas.
+func spawn_shell_other(xform: Transform3D, velocity: Vector3, big: bool = false, ignore: PhysicsBody3D = null) -> void:
+	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
+	if cam != null and cam.global_position.distance_to(xform.origin) < 18.0:
+		spawn_shell(xform, velocity, big, ignore)
+		return
+	var land := xform.origin + Vector3(velocity.x, 0, velocity.z).normalized() * rng.randf_range(0.6, 1.6)
+	var rq := PhysicsRayQueryParameters3D.create(land + Vector3.UP * 0.5, land + Vector3.DOWN * 4.0, 1)
+	var hit := get_world_3d().direct_space_state.intersect_ray(rq)
+	if hit.is_empty():
+		return
+	var n: Vector3 = hit["normal"]
+	var side := n.cross(Vector3(rng.randf() - 0.5, 0, rng.randf() - 0.5).normalized()).normalized()
+	if side.length() < 0.5:
+		side = Vector3.RIGHT
+	# Acostada sobre el piso (el eje largo del casquillo es Y)
+	var b := Basis(n.cross(side), side, n).orthonormalized()
+	var list: Array = _rest[1 if big else 0]
+	if list.size() >= MAX_REST:
+		list.pop_front()
+	list.append([Transform3D(b, (hit["position"] as Vector3) + n * 0.006), REST_LIFETIME])
+	_rest_dirty = true
 
 
 ## Destello de luz en la boca del arma (luz real del mundo).

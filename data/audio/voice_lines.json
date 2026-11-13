@@ -139,6 +139,23 @@
     1,
     2,
     3
+   ],
+   "death_cry": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "groan": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
    ]
   },
   "v2": {
@@ -275,6 +292,23 @@
     1,
     2,
     3
+   ],
+   "death_cry": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "groan": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
    ]
   },
   "v3": {
@@ -411,6 +445,21 @@
     1,
     2,
     3
+   ],
+   "death_cry": [
+    0,
+    1,
+    2,
+    4,
+    5
+   ],
+   "groan": [
+    0,
+    1,
+    2,
+    4,
+    5,
+    6
    ]
   }
  },
@@ -548,6 +597,23 @@
    "¡Trabado!",
    "¡No dispara!",
    "¡Se trabó, cubrime!"
+  ],
+  "death_cry": [
+   "(grito)",
+   "(grito)",
+   "(grito)",
+   "(grito)",
+   "(grito)",
+   "(grito)"
+  ],
+  "groan": [
+   "(quejido)",
+   "(quejido)",
+   "(quejido)",
+   "(quejido)",
+   "(quejido)",
+   "(quejido)",
+   "(quejido)"
   ]
  }
 }

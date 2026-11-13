@@ -45,6 +45,68 @@ var _still: float = 0.0
 var frozen: bool = false
 ## Bisagras (rodillas y codos): [padre, parte, eje en el espacio del padre] para medirlas.
 var hinges: Array = []
+## Agonía: segundos que le quedan revolcándose (0 = quieto/muerto del todo).
+var agony_left: float = 0.0
+var agony_total: float = 0.0
+var _twitch_t: float = 0.0
+var _rng := RandomNumberGenerator.new()
+
+
+## Herido de muerte (no en la cabeza): se retuerce cada vez menos hasta quedar quieto.
+func start_agony(seconds: float) -> void:
+	agony_total = seconds
+	agony_left = seconds
+	_twitch_t = _rng.randf_range(0.6, 1.2)
+	if frozen:
+		_unfreeze()
+
+
+func end_agony() -> void:
+	agony_left = 0.0
+
+
+func is_agonizing() -> bool:
+	return agony_left > 0.0
+
+
+## Un movimiento de dolor: encoge una pierna, se agarra (brazo al pecho), se gira a
+## medias o levanta la cabeza. Cada vez más débil.
+func _twitch(k: float) -> void:
+	var hips := parts.get(body.bone("Hips")) as RigidBody3D
+	var chest := parts.get(body.bone("Spine2")) as RigidBody3D
+	if hips == null or chest == null:
+		return
+	var up := Vector3.UP
+	var along := (chest.global_position - hips.global_position).normalized()
+	match _rng.randi() % 5:
+		0, 1:
+			# Encoge una pierna (rodilla hacia el pecho) o la estira pateando
+			var side := "Left" if _rng.randf() < 0.5 else "Right"
+			var leg := parts.get(body.bone(side + "Leg")) as RigidBody3D
+			var thigh := parts.get(body.bone(side + "UpLeg")) as RigidBody3D
+			if leg != null and thigh != null:
+				var pull := (along * 1.0 + up * 0.6).normalized() * (_rng.randf_range(0.6, 1.0) if _rng.randf() < 0.7 else -0.7)
+				thigh.apply_central_impulse(pull * 9.0 * k)
+				leg.apply_central_impulse(pull * 4.0 * k + up * 1.5 * k)
+		2:
+			# Se agarra donde le duele: un antebrazo hacia el pecho
+			var side2 := "Left" if _rng.randf() < 0.5 else "Right"
+			var fa := parts.get(body.bone(side2 + "ForeArm")) as RigidBody3D
+			if fa != null:
+				var to := (chest.global_position - fa.global_position).normalized()
+				fa.apply_central_impulse((to + up * 0.5).normalized() * 3.2 * k)
+		3:
+			# Medio giro (de costado y vuelve)
+			var roll := along * _rng.randf_range(-1.0, 1.0) * 7.0 * k
+			chest.apply_torque_impulse(roll)
+			hips.apply_torque_impulse(roll * 0.8)
+		4:
+			# Levanta la cabeza y los hombros un poco y se deja caer
+			var head := parts.get(body.bone("Head")) as RigidBody3D
+			if head != null:
+				head.apply_central_impulse(up * 2.6 * k)
+			chest.apply_central_impulse(up * 7.0 * k)
+	_still = 0.0
 
 
 ## Arma el muñeco con la pose actual del esqueleto. vel: velocidad que traía;
@@ -217,6 +279,16 @@ func _physics_process(delta: float) -> void:
 	if frozen or parts.is_empty():
 		return
 	_t += delta
+	if agony_left > 0.0:
+		agony_left -= delta
+		_t = minf(_t, MAX_TIME - 3.0)  # no se congela mientras se mueve
+		_twitch_t -= delta
+		var k := clampf(agony_left / maxf(agony_total, 0.1), 0.0, 1.0)
+		if _twitch_t <= 0.0:
+			# Al principio seguido y fuerte; al final, de vez en cuando y apenas
+			_twitch_t = lerpf(3.2, 0.7, k) * _rng.randf_range(0.6, 1.4)
+			_twitch(0.35 + k * 0.65)
+		return
 	var moving := false
 	for b: int in parts:
 		var rb := parts[b] as RigidBody3D

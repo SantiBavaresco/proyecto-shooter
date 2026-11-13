@@ -476,7 +476,7 @@ func _build_vegetation() -> void:
 	var bushes: Array = []
 	var half := SIZE * 0.5 - 6.0
 	var tries := 0
-	while trees.size() < 380 and tries < 6000:
+	while trees.size() < 620 and tries < 16000:
 		tries += 1
 		var x := _rng.randf_range(-half, half)
 		var z := _rng.randf_range(-half, half)
@@ -484,7 +484,7 @@ func _build_vegetation() -> void:
 			continue
 		# Más espeso en los bordes y en el bañado
 		var edge := maxf(absf(x), absf(z)) / half
-		if _rng.randf() > 0.35 + edge * 0.6 and _noise.get_noise_2d(x * 2.0, z * 2.0) < 0.1:
+		if _rng.randf() > 0.5 + edge * 0.5 and _noise.get_noise_2d(x * 2.0, z * 2.0) < 0.05:
 			continue
 		var h := ground(Vector3(x, 0, z))
 		if h.y < WATER_Y + 0.2:
@@ -494,7 +494,7 @@ func _build_vegetation() -> void:
 			kind = 0  # sauces cerca del agua
 		trees.append([h - Vector3(0, 0.2, 0), _rng.randf_range(6.0, 13.0) * (1.4 if kind == 1 else 1.0), kind])
 	tries = 0
-	while bushes.size() < 520 and tries < 6000:
+	while bushes.size() < 1150 and tries < 16000:
 		tries += 1
 		var x := _rng.randf_range(-half, half)
 		var z := _rng.randf_range(-half, half)
@@ -504,6 +504,14 @@ func _build_vegetation() -> void:
 		if h.y < WATER_Y + 0.1:
 			continue
 		bushes.append([h - Vector3(0, 0.15, 0), _rng.randf_range(0.6, 1.4)])
+		# A veces en matorral (2–3 juntos): da para esconderse y moverse tapado
+		if _rng.randf() < 0.3:
+			for k in _rng.randi_range(1, 2):
+				var o := Vector3(_rng.randf_range(-2.2, 2.2), 0, _rng.randf_range(-2.2, 2.2))
+				if _free_spot(x + o.x, z + o.z, 2.0):
+					var h2 := ground(Vector3(x + o.x, 0, z + o.z))
+					if h2.y >= WATER_Y + 0.1:
+						bushes.append([h2 - Vector3(0, 0.15, 0), _rng.randf_range(0.7, 1.3)])
 	var veg := Node3D.new()
 	veg.name = "Vegetation"
 	_geo.add_child(veg)

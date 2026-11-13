@@ -390,5 +390,6 @@
 	"map.enemies": "Enemies",
 	"map.loot": "Containers",
 	"map.items": "Loose items",
-	"map.hint": "Wheel: zoom · Drag: pan · [M] or [Esc]: close · (test map: shows enemies)"
+	"map.hint": "Wheel: zoom · Drag: pan · [M] or [Esc]: close · (test map: shows enemies)",
+	"grenade.in_bag": "Your grenades are in the backpack: move them to the rig or pockets"
 }

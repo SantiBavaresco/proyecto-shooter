@@ -59,6 +59,8 @@ func tick(cmd: PlayerCommand, delta: float) -> void:
 			if gid != "":
 				_grenade_id = gid
 				_start("throw")
+			elif _grenade_in_bag(cmd.grenade_smoke):
+				EventBus.toast.emit(tr("grenade.in_bag"))
 			else:
 				EventBus.toast.emit(tr("grenade.none"))
 		return
@@ -84,13 +86,21 @@ func busy() -> bool:
 
 
 ## La granada a tirar: de fragmentación (o humo si no queda otra); smoke = la de humo.
+## Solo las que están a mano (chaleco o bolsillos): las de la mochila no se pueden tirar.
 func _grenade_in_inventory(smoke := false) -> String:
 	if smoke:
-		return "grenade_smoke" if player.inventory.count_of("grenade_smoke") > 0 else ""
+		return "grenade_smoke" if player.inventory.count_quick("grenade_smoke") > 0 else ""
 	for id: String in GRENADE_IDS:
-		if player.inventory.count_of(id) > 0:
+		if player.inventory.count_quick(id) > 0:
 			return id
 	return ""
+
+
+func _grenade_in_bag(smoke := false) -> bool:
+	for id: String in (["grenade_smoke"] as Array[String] if smoke else GRENADE_IDS):
+		if player.inventory.count_of(id) > player.inventory.count_quick(id):
+			return true
+	return false
 
 
 func _start(a: String) -> void:
@@ -214,7 +224,7 @@ func backstab(npc: HumanNpc) -> bool:
 # --- Granada ----------------------------------------------------------------------------
 
 func _throw() -> void:
-	if player.inventory.take(_grenade_id, 1) <= 0:
+	if player.inventory.take_quick(_grenade_id, 1) <= 0:
 		return
 	var cam := player.camera
 	var fwd := -cam.global_basis.z

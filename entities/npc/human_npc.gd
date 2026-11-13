@@ -15,6 +15,9 @@ const BODY_LAYER := 5
 const FOLIAGE_LAYER := 9
 const WALK_SPEED := 1.5
 const RUN_SPEED := 4.0
+## En combate, los tramos de más de SPRINT_MIN m los hace corriendo de verdad (sin tirar).
+const SPRINT_SPEED := 6.2
+const SPRINT_MIN := 5.0
 const CROUCH_SPEED := 1.0
 const TURN_SPEED := 5.0
 var _yaw_rate: float = 0.0
@@ -51,6 +54,15 @@ var weapon: WeaponData
 var sight_id: String = "__fabrica"
 var muzzle_id: String = ""
 var mag: int = 0
+## Agonía al morir sin tiro en la cabeza (segundos).
+const AGONY_MIN := 20.0
+const AGONY_MAX := 30.0
+var _groan_t: float = 0.0
+## Pistola que lleva de repuesto ("" = ninguna o ya la sacó) y sus cargadores.
+var sidearm_id: String = ""
+var sidearm_mags: int = 0
+## El arma larga, guardada al sacar la pistola (para el botín).
+var _primary: Dictionary = {}
 ## Cargadores de repuesto (balas en cada uno) o munición suelta (escopetas).
 var spare_mags: Array[int] = []
 var loose_ammo: int = 0
@@ -67,6 +79,7 @@ var rng := RandomNumberGenerator.new()
 var move_target: Vector3 = Vector3.INF
 var move_speed: float = WALK_SPEED
 var crouching: bool = false
+var sprinting: bool = false
 ## Punto al que apunta (INF = mira hacia donde camina).
 var aim_point: Vector3 = Vector3.INF
 ## 0 = arma baja; 1 = al hombro.
@@ -174,7 +187,7 @@ func _ready() -> void:
 		var vs := VoiceBank.voices()
 		if not vs.is_empty():
 			voice_id = String(vs[absi(hash(String(name))) % vs.size()])
-			_voice_pitch = 0.88 + float(absi(hash(String(name) + "p")) % 100) / 100.0 * 0.22
+	_voice_pitch = 0.88 + float(absi(hash(String(name) + "p")) % 100) / 100.0 * 0.22
 	_voice = AudioStreamPlayer3D.new()
 	_voice.bus = "Voice"
 	_voice.max_polyphony = 1
@@ -192,6 +205,51 @@ func _join_squad() -> void:
 	squad_obj = Squad.get_for(self)
 	if squad_obj != null:
 		squad_obj.add(self)
+
+
+## Agonizando en el piso (se mueve y se queja).
+func is_agonizing() -> bool:
+	return dead and body.ragdoll != null and body.ragdoll.is_agonizing()
+
+
+## Remate: deja de moverse y de quejarse ya.
+func finish_off() -> void:
+	if body.ragdoll != null:
+		body.ragdoll.end_agony()
+	_voice.stop()
+
+
+func _update_agony(delta: float) -> void:
+	if not is_agonizing():
+		return
+	_groan_t -= delta
+	if _groan_t <= 0.0:
+		var r := body.ragdoll
+		var k := clampf(r.agony_left / maxf(r.agony_total, 0.1), 0.0, 1.0)
+		# Cada vez más espaciados y más bajos
+		_groan_t = lerpf(6.0, 2.2, k) * rng.randf_range(0.7, 1.3)
+		_pain("groan", k > 0.6, lerpf(-12.0, -2.0, k))
+
+
+## Ruidos de dolor (todos tienen, hablen o no): grito al morir, quejidos en el piso.
+func _pain(key: String, loud: bool, db: float) -> void:
+	var v := voice_id
+	if v == "":
+		var vs := VoiceBank.voices()
+		if vs.is_empty():
+			return
+		v = String(vs[absi(hash(String(name))) % vs.size()])
+	var st := VoiceBank.stream(v, key, loud, rng)
+	if st == null:
+		return
+	_voice.stream = st
+	_voice.unit_size = 3.5 if loud else 1.6
+	_voice.max_distance = 70.0 if loud else 28.0
+	_voice.volume_db = db
+	_voice.pitch_scale = _voice_pitch * rng.randf_range(0.95, 1.05)
+	var at: Vector3 = body.ragdoll.center() + Vector3(0, 0.25, 0) if body.ragdoll != null else global_position + Vector3(0, 1.4, 0)
+	_voice.global_position = at
+	_voice.play()
 
 
 ## Dice una frase: gritada (se oye de lejos) o hablada (solo de cerca).
@@ -249,6 +307,12 @@ func _equip() -> void:
 	else:
 		var am: Array = loadout.get("ammo", [weapon.mag_size, weapon.mag_size * 2])
 		loose_ammo = rng.randi_range(int(am[0]), int(am[1]))
+	# Pistola de repuesto (los militares siempre; los bandidos a veces)
+	if weapon.slot != 3 and rng.randf() < float(loadout.get("sidearm", 1.0 if tactics == "military" else 0.5)):
+		sidearm_id = ["pistol", "bersa9", "m1911"][rng.randi() % 3]
+		if load("res://data/weapons/%s.tres" % sidearm_id) == null:
+			sidearm_id = ""
+		sidearm_mags = rng.randi_range(1, 2)
 	var gm: Array = loadout.get("grenades", [0, 0])
 	grenades = rng.randi_range(int(gm[0]), int(gm[1]))
 	has_medkit = bool(loadout.get("medkit", false)) or rng.randf() < 0.3
@@ -274,6 +338,37 @@ func _capacity() -> int:
 	return weapon.mag_size
 
 
+## Le queda un solo cargador (o menos): tira de a poco y con más cuidado.
+func low_ammo() -> bool:
+	return ammo_left() <= _capacity() and not on_sidearm()
+
+
+func on_sidearm() -> bool:
+	return not _primary.is_empty()
+
+
+## Se quedó sin balas en el arma larga: saca la pistola (si tiene).
+func _draw_sidearm() -> void:
+	_primary = {"weapon": weapon, "sight": sight_id, "muzzle": muzzle_id, "condition": weapon_condition,
+		"mags": spare_mags.duplicate()}
+	weapon = load("res://data/weapons/%s.tres" % sidearm_id) as WeaponData
+	sidearm_id = ""
+	sight_id = ""
+	muzzle_id = ""
+	weapon_condition = maxf(weapon_condition, 0.6)
+	body.set_weapon(weapon, sight_id, muzzle_id)
+	body.is_pistol = true
+	mag = _capacity()
+	spare_mags.clear()
+	for i in sidearm_mags:
+		spare_mags.append(_capacity())
+	loose_ammo = 0
+	burst_left = 0
+	reloading = true
+	_reload_left = 1.1
+	_play_at(SynthSfx.click("charge", 1.2, 0.05), -6.0)
+
+
 func ammo_left() -> int:
 	var n := mag + loose_ammo
 	for m in spare_mags:
@@ -285,6 +380,7 @@ func ammo_left() -> int:
 
 func _physics_process(delta: float) -> void:
 	if dead:
+		_update_agony(delta)
 		return
 	var p := profile()
 	stress = maxf(0.0, stress - delta * (0.09 if tactics == "military" else 0.06))
@@ -368,12 +464,23 @@ func go_to(p: Vector3, speed := WALK_SPEED) -> void:
 		if off.length() > leash:
 			p = brain.home + off.normalized() * leash
 	move_target = p
-	move_speed = speed
+	# Tramo largo en combate (a cubrirse, a flanquear, a avanzar): sprint
+	var d := Vector2(p.x - global_position.x, p.z - global_position.z).length()
+	var tactical := brain != null and brain.state in [NpcBrain.State.COMBAT, NpcBrain.State.RETREAT]
+	sprinting = tactical and speed >= WALK_SPEED * 1.4 and not crouching and not reloading_blocks_sprint() \
+		and d > (2.5 if sprinting else SPRINT_MIN)
+	move_speed = SPRINT_SPEED if sprinting else speed
 	_stuck_t = 0.0
+
+
+## Recargando o curándose no esprinta (anda al trote).
+func reloading_blocks_sprint() -> bool:
+	return is_healing()
 
 
 func stop() -> void:
 	move_target = Vector3.INF
+	sprinting = false
 
 
 func is_moving() -> bool:
@@ -385,7 +492,7 @@ func _update_body(delta: float, p: Dictionary) -> void:
 	var hv := Vector3(velocity.x, 0, velocity.z)
 	var want_yaw := _yaw
 	var aim_dir := Vector3.ZERO
-	if aim_point != Vector3.INF:
+	if aim_point != Vector3.INF and not (sprinting and hv.length() > 2.0):
 		aim_dir = aim_point - body.eye_position()
 		want_yaw = atan2(-aim_dir.x, -aim_dir.z)
 	elif hv.length() > 0.4:
@@ -419,7 +526,7 @@ func _update_body(delta: float, p: Dictionary) -> void:
 	body.crouch = 1.0 if crouching else 0.0
 	body.aim_yaw = _torso_yaw
 	body.aim_pitch = _pitch
-	body.raise = 1.0 if raised else 0.0
+	body.raise = 1.0 if raised and not (sprinting and is_moving()) else 0.0
 	body.reloading = reloading or _heal_left > 0.0
 
 
@@ -441,10 +548,12 @@ func _update_weapon(delta: float) -> void:
 	if mag <= 0:
 		if ammo_left() > 0:
 			start_reload()
+		elif sidearm_id != "":
+			_draw_sidearm()
 		else:
 			burst_left = 0
 		return
-	if burst_left <= 0 or _cooldown > 0.0 or aim_point == Vector3.INF or not raised:
+	if burst_left <= 0 or _cooldown > 0.0 or aim_point == Vector3.INF or not raised or (sprinting and is_moving()):
 		if burst_left <= 0:
 			_burst_shot = 0
 		return
@@ -503,6 +612,12 @@ func _fire(want: Vector3) -> void:
 	_audio.global_position = origin
 	_audio.play()
 	EventBus.noise_emitted.emit(origin, SHOT_HEAR_SUPPRESSED if sup else SHOT_HEAR, self)
+	# La vaina (las escopetas de quebrar las sueltan al recargar, no al tirar)
+	if w.reload_type != "break":
+		var ex := body.ejection_xform()
+		var right := ex.basis.x.normalized()
+		var vel := right * rng.randf_range(1.6, 2.4) + Vector3.UP * rng.randf_range(1.0, 1.6) + velocity
+		combat.spawn_shell_other(Transform3D(ex.basis, ex.origin), vel, w.pellets > 1, self)
 	if squad_obj != null:
 		squad_obj.note_shot()
 	if burst_left <= 0:
@@ -631,8 +746,10 @@ func refine_zone(zone: String, hit_pos: Vector3, dir: Vector3) -> String:
 ## Recibe un tiro (o esquirla). Devuelve true si lo mató.
 func apply_hit(info: HitInfo) -> bool:
 	if dead:
-		# Ya muerto: el tiro mueve el cuerpo
+		# Ya muerto: el tiro mueve el cuerpo; a la cabeza, al que agonizaba lo remata
 		body.push(info.position, info.direction.normalized() * clampf(info.damage * 0.25, 3.0, 15.0))
+		if is_agonizing() and info.zone.begins_with("head"):
+			finish_off()
 		return false
 	var dmg := info.damage
 	var piece := helmet if info.zone.begins_with("head") else (vest if info.zone == "torso" else null)
@@ -675,6 +792,13 @@ func _die(info: HitInfo) -> void:
 	velocity = Vector3.ZERO
 	body.die(info.direction if info != null else -global_basis.z, false,
 		info.position if info != null else Vector3.INF, vel)
+	# Tiro en la cabeza: cae seco. Si no, grita y queda revolcándose un rato
+	var head := info != null and info.zone.begins_with("head")
+	if not head:
+		_pain("death_cry", true, 0.0)
+		if body.ragdoll != null and info != null and info.damage < 400.0:
+			body.ragdoll.start_agony(rng.randf_range(AGONY_MIN, AGONY_MAX))
+			_groan_t = rng.randf_range(1.2, 2.5)
 	# Golpe del cuerpo y del arma contra el piso
 	get_tree().create_timer(0.75, false).timeout.connect(func() -> void:
 		if is_inside_tree():
@@ -715,6 +839,28 @@ func _fill_corpse() -> void:
 		inventory.add_item("grenade_rg5", grenades)
 	if has_medkit:
 		inventory.add_item("medkit", 1)
+	# El arma larga vacía (si sacó la pistola) o la pistola que no llegó a usar
+	if not _primary.is_empty():
+		var pw: WeaponData = _primary["weapon"]
+		var pst := ItemStack.make(ItemDB.weapon_item_id(pw.id), 1, {"mag": 0,
+			"condition": clampf(rng.randf_range(float(lc[0]), float(lc[1])), 0.05, 1.0)})
+		if String(_primary["sight"]) not in ["", "__fabrica"]:
+			pst.state["sight"] = _primary["sight"]
+		if String(_primary["muzzle"]) != "":
+			pst.state["muzzle"] = _primary["muzzle"]
+		inventory.add(pst)
+		var pmid := ItemDB.standard_mag(pw.id)
+		if pmid != "":
+			for r: int in _primary["mags"]:
+				inventory.add(ItemStack.make(pmid, 1, {"rounds": r}))
+	elif sidearm_id != "":
+		var sw := load("res://data/weapons/%s.tres" % sidearm_id) as WeaponData
+		var smid := ItemDB.standard_mag(sw.id)
+		var cap := ItemDB.get_item(smid).capacity if smid != "" and ItemDB.has(smid) else sw.mag_size
+		inventory.add(ItemStack.make(ItemDB.weapon_item_id(sw.id), 1, {"mag": cap, "condition": rng.randf_range(0.35, 0.8)}))
+		if smid != "":
+			for i in sidearm_mags:
+				inventory.add(ItemStack.make(smid, 1, {"rounds": cap}))
 
 
 func get_interact_text() -> String:

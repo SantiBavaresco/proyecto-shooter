@@ -74,6 +74,12 @@ var _press_stack: ItemStack = null
 var _press_from: Variant = null  # InvGrid o InvSlot
 var _press_pos := Vector2.ZERO
 var _dragging := false
+## Doble clic hecho a mano (ver _input).
+const DBL_MS := 350
+var _dbl_pending := false
+var _last_click_stack: ItemStack = null
+var _last_click_msec: int = 0
+var _last_click_pos := Vector2.ZERO
 var _drag_rot := false
 var _grab := Vector2.ZERO  # punto agarrado relativo a la esquina del ítem (px, sin girar)
 var _menu_stack: ItemStack = null
@@ -262,16 +268,26 @@ func _input(event: InputEvent) -> void:
 		var m := _mouse()
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			if mb.pressed:
-				if mb.double_click:
-					_cancel_drag()
-					var hit := _hit(m)
-					if hit[0] != null:
-						_quick_action(hit[0], hit[1])
-				else:
-					_press(m, Input.is_action_pressed("inv_quick_move"))
+				# Doble clic: se resuelve al soltar y solo si no se arrastró (clic para
+				# elegir y enseguida agarrar para arrastrar no cuenta como doble clic)
+				var now := Time.get_ticks_msec()
+				var h0 := _hit(m)
+				_dbl_pending = h0[0] != null and h0[0] == _last_click_stack and now - _last_click_msec < DBL_MS \
+					and m.distance_to(_last_click_pos) < DRAG_START_PX
+				_last_click_stack = h0[0]
+				_last_click_msec = now
+				_last_click_pos = m
+				_press(m, Input.is_action_pressed("inv_quick_move") and not _dbl_pending)
 			else:
 				if _dragging:
 					_drop(m)
+					_last_click_stack = null
+				elif _dbl_pending and _press_stack != null:
+					var hit := _hit(m)
+					if hit[0] == _press_stack:
+						_quick_action(hit[0], hit[1])
+					_last_click_stack = null
+				_dbl_pending = false
 				_press_stack = null
 				_dragging = false
 				_drag_ctl.queue_redraw()
@@ -635,7 +651,8 @@ func _draw_drag() -> void:
 
 # --- Acciones ------------------------------------------------------------------------
 
-## Doble clic: consumible → usar; equipo → equipar; en el contenedor → tomar;
+## Doble clic: consumible → usar; equipo → equipar; en el contenedor → tomar (o
+## equipar en la ranura libre);
 ## equipado → desequipar.
 func _quick_action(s: ItemStack, from: Variant) -> void:
 	if from is InvSlot:
@@ -644,10 +661,6 @@ func _quick_action(s: ItemStack, from: Variant) -> void:
 			pinv.use(s)
 		elif pinv.unequip(sl.slot) == null:
 			EventBus.toast.emit(tr("inv.no_room"))
-	elif _is_loot(from) and s.item.is_consumable():
-		# Doble clic en un consumible ajeno: se usa ahí mismo (sin pasarlo a la mochila)
-		if not pinv.use(s, (from as InvGrid).inv):
-			EventBus.toast.emit(tr("inv.cant_now"))
 	elif _is_loot(from):
 		var free := _free_slot(s)
 		if free != "":
