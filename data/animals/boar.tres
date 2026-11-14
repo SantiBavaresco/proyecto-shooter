@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="AnimalSpecies" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/animals/animal_species.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "boar"
+shape = "boar"
+attack_style = "charge"
+hp = 260.0
+size = Vector3(0.64, 0.68, 1.6)
+leg = 0.44
+mass = 120.0
+colors = Array[Color]([Color(0.2, 0.16, 0.13, 1), Color(0.27, 0.21, 0.16, 1), Color(0.16, 0.14, 0.13, 1)])
+walk = 1.1
+trot = 2.8
+run = 9.8
+accel = 5.5
+sight = 30.0
+smell = 12.0
+fov = 110.0
+damage = Vector2(22.0, 34.0)
+reach = 1.7
+reach_up = 0.7
+hit_gap = 1.1
+hits = Vector2i(1, 1)
+push = 10.0
+retreat = Vector2(14.0, 24.0)
+courage = 0.95
+flee_frac = 0.67
+territory = 26.0
+pack = Vector2i(3, 4)
+hides_in_water = false
+bites_only_cornered = false

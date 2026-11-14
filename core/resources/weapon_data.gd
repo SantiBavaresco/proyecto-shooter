@@ -76,6 +76,9 @@ extends Resource
 @export var kick_rot: float = 4.0
 ## Multiplicador de retroceso apuntando.
 @export var recoil_ads_mult: float = 0.7
+## Retroceso disparando desde la cadera (× el de apuntar). 0 = automático: pistolas 1,
+## fusiles 1,8, escopetas 1,4 (ver WeaponController._hip_recoil_k).
+@export var hip_recoil_mult: float = 0.0
 
 @export_group("Tiempos (s)")
 @export var reload_time: float = 2.2

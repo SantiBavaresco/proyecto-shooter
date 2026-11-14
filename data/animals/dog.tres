@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="AnimalSpecies" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://entities/animals/animal_species.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "dog"
+shape = "dog"
+attack_style = "pack"
+hp = 55.0
+size = Vector3(0.36, 0.42, 0.95)
+leg = 0.42
+mass = 25.0
+colors = Array[Color]([Color(0.36, 0.25, 0.16, 1), Color(0.12, 0.11, 0.1, 1), Color(0.62, 0.5, 0.33, 1), Color(0.4, 0.4, 0.38, 1)])
+walk = 1.4
+trot = 3.4
+run = 9.0
+accel = 9.0
+sight = 38.0
+smell = 14.0
+fov = 120.0
+damage = Vector2(7.0, 13.0)
+reach = 1.35
+reach_up = 0.9
+hit_gap = 0.75
+hits = Vector2i(1, 2)
+push = 0.0
+retreat = Vector2(10.0, 20.0)
+courage = 0.35
+flee_frac = 0.34
+territory = 0.0
+pack = Vector2i(3, 5)
+hides_in_water = false
+bites_only_cornered = false

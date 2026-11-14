@@ -12,6 +12,7 @@ const QUICK_ACTIONS: Array[String] = ["quick_1", "quick_2", "quick_3", "quick_4"
 
 ## Agacharse en modo alternar: estado actual.
 var _crouch_state: bool = false
+var _sprint_tapped: bool = false
 var _mouse_accum: Vector2 = Vector2.ZERO
 # Pulsaciones encoladas en _unhandled_input para no perderlas entre ticks de física.
 var _jump_queued: bool = false
@@ -84,6 +85,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action("crouch") and bool(Settings.get_value("controls", "crouch_toggle")):
 		if event.is_pressed() and not event.is_echo():
 			_crouch_state = not _crouch_state
+	if event.is_action_pressed("sprint") and not event.is_echo():
+		_sprint_tapped = true
 	if event.is_action("aim"):
 		var toggle: bool = Settings.get_value("controls", "aim_toggle")
 		if toggle:
@@ -114,9 +117,11 @@ func poll_command(_delta: float) -> PlayerCommand:
 	cmd.jump = _jump_queued
 	cmd.sprint = Input.is_action_pressed("sprint")
 	if bool(Settings.get_value("controls", "crouch_toggle")):
-		# Alternar: apretás y queda agachado; apretás de nuevo (o corrés) y se para
-		if cmd.sprint and cmd.move.length() > 0.1:
+		# Alternar: apretás y queda agachado; apretás de nuevo (o apretás correr
+		# mientras te movés) y se para. Tener Shift apretado de antes no lo para.
+		if _sprint_tapped and cmd.move.length() > 0.1:
 			_crouch_state = false
+		_sprint_tapped = false
 		cmd.crouch = _crouch_state
 	else:
 		cmd.crouch = Input.is_action_pressed("crouch")

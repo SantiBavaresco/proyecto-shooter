@@ -517,3 +517,12 @@
 - Sangre: `core/fx/blood.gd` (CPUParticles + Decals con texturas de tools/fx/gen_blood.py; personajes en capa visual 2 para que no se les pinte).
 - Armas: `_hip_recoil_k` (×1,8 fusiles, ×1,4 escopetas desde la cadera); `wall_amount` (rayo del largo del arma; bloquea apuntar y tirar; pose levantada).
 - Opción `controls/crouch_toggle`. Isla: casco y mochila puestos; alijo con ak74, rifle (FMR), xm2010, bolt22+optic_acog (montura nueva), pistol+supp_pistol.
+
+## 3.1.9
+- Refactor a datos: `AiTuning` (data/ai/ai_tuning.tres), `AnimalSpecies` (data/animals/{dog,boar,capy}.tres), `BloodSettings` (data/fx/blood.tres), `WeaponData.hip_recoil_mult`.
+- Animales separados en `Animal` (IA), `AnimalBody` (modelo/animación/ragdoll), `AnimalSounds`. Cuerpos con elipsoides y conos en vez de cajas.
+- Sangre: `Blood.on_hit` (spray + salpicadura en pared/piso detrás), `headshot` (cono de salpicaduras), `pool` (charco con satélites y río pendiente abajo), `smear`. Texturas procedurales con máscara de borde (tools/fx/gen_blood.py).
+- Jabalí: más grande, retirada 14–24 m antes de volver a cargar.
+- Miras: `SCOPE_EYE_RELIEF_MULT` 0.62 → visor ocupa más pantalla.
+- Isla: jauría junto a la granja de bandidos.
+- Fix: agacharse en toggle ya no se cancela al moverse con Shift apretado.

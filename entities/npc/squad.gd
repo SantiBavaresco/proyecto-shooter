@@ -164,7 +164,7 @@ func _evaluate() -> void:
 	elif n >= 2 and _flank_t <= 0.0 and (min_unseen > 4.0 or (mode == "hold" and _mode_t > 6.0)):
 		# Te perdieron, o la pelea se estancó: uno o dos te rodean y te entran
 		mode = "flank"
-		_flank_t = 16.0
+		_flank_t = AiTuning.get_default().flank_cooldown
 	elif mode == "flank" and (_flank_t > 4.0 or _someone_with_role("assault", null) != null or _someone_with_role("flank", null) != null):
 		pass  # dejan que los que rodean lleguen y entren
 	elif avg_d > 24.0:
@@ -321,7 +321,7 @@ func may_suppress(m: HumanNpc) -> bool:
 			continue
 		if k != m and now - int(_supp_at[k]) < 2500:
 			busy += 1
-	return busy < 2
+	return busy < AiTuning.get_default().suppress_max_shooters
 
 
 func note_suppress(m: HumanNpc) -> void:

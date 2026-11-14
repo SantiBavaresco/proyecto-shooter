@@ -710,7 +710,8 @@ func _free_spot(x: float, z: float, margin: float) -> bool:
 ## Perros cimarrones y jabalíes: sueltos por el monte y el bañado, lejos del puesto.
 func _spawn_animals() -> void:
 	var k := 0
-	for spec: Array in [["dog", Vector3(-40, 0, -72), 26.0], ["dog", Vector3(70, 0, 150), 24.0],
+	# La jauría de la chacra está pegada a los bandidos de ahí: para ver cómo se pelean
+	for spec: Array in [["dog", Vector3(-40, 0, -72), 26.0], ["dog", Vector3(70, 0, 150), 24.0], ["dog", FARM + Vector3(24, 0, -4), 8.0],
 			["boar", Vector3(15, 0, -150), 20.0], ["boar", Vector3(-175, 0, -40), 20.0], ["boar", Vector3(150, 0, -60), 18.0]]:
 		k += 1
 		var p: Vector3 = spec[1]

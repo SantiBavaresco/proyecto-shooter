@@ -296,8 +296,9 @@ func _physics_process(delta: float) -> void:
 		if _blood_t <= 0.0 and hips != null:
 			_blood_t = _rng.randf_range(0.5, 1.1)
 			if hips.global_position.distance_to(_last_blood) > 0.15:
+				var moved := hips.global_position - _last_blood if _last_blood != Vector3.INF else Vector3.ZERO
 				_last_blood = hips.global_position
-				Blood.stain(body, hips.global_position + Vector3(_rng.randf_range(-0.25, 0.25), 0, _rng.randf_range(-0.25, 0.25)), _rng.randf_range(0.25, 0.6))
+				Blood.smear(body, hips.global_position, moved)
 		_t = minf(_t, MAX_TIME - 3.0)  # no se congela mientras se mueve
 		_twitch_t -= delta
 		var k := clampf(agony_left / maxf(agony_total, 0.1), 0.0, 1.0)

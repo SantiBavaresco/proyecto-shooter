@@ -19,8 +19,8 @@ var _rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	_rng.seed = seed_value
 	home = global_position
-	var pr: Array = Animal.SPECIES.get(species, Animal.SPECIES["dog"])["pack"]
-	var n := count if count > 0 else _rng.randi_range(int(pr[0]), int(pr[1]))
+	var sp := AnimalSpecies.get_species(species)
+	var n := count if count > 0 else _rng.randi_range(sp.pack.x, sp.pack.y)
 	for i in n:
 		var a := Animal.new()
 		a.species = species
@@ -43,7 +43,7 @@ func alarm(_who: Animal, target: Node3D) -> void:
 		if m.state == Animal.State.WANDER:
 			m._alert_on(target)
 			m._t += _rng.randf_range(0.0, 1.2)
-		elif m.species == "capy" and m.state == Animal.State.ALERT:
+		elif m.spec.attack_style == "cornered" and m.state == Animal.State.ALERT:
 			m._danger(target.global_position)
 
 
@@ -52,7 +52,7 @@ func member_died(_a: Animal) -> void:
 	if should_flee():
 		for m in members:
 			if not m.dead and m.state not in [Animal.State.FLEE, Animal.State.HIDE, Animal.State.DYING]:
-				if m.species == "capy":
+				if m.spec.attack_style == "cornered":
 					m._danger(_a.global_position)
 				else:
 					m._flee(_a.global_position)
@@ -60,7 +60,7 @@ func member_died(_a: Animal) -> void:
 
 ## Perdieron a una parte (perros: 1 de cada 3; jabalíes: 2 de cada 3): se van.
 func should_flee() -> bool:
-	var frac := float(Animal.SPECIES.get(species, Animal.SPECIES["dog"])["flee_frac"])
+	var frac := AnimalSpecies.get_species(species).flee_frac
 	return _start > 0 and float(_dead) >= ceilf(float(_start) * frac)
 
 

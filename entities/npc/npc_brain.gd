@@ -22,6 +22,8 @@ enum State { IDLE, PATROL, INVESTIGATE, COMBAT, SEARCH, RETREAT }
 const THINK := 0.1
 ## Capas que tapan la vista: mundo y follaje.
 const SIGHT_MASK := 1 | (1 << 8)
+## Ajustes generales de la IA (data/ai/ai_tuning.tres).
+var T: AiTuning = AiTuning.get_default()
 
 var npc: HumanNpc
 var state: State = State.IDLE
@@ -68,10 +70,6 @@ var follow_pos: Vector3 = Vector3.INF
 var follow_yaw: float = 0.0
 var _supp_point: Vector3 = Vector3.INF
 var _melee_cd: float = 0.0
-## A esta distancia (m) en vez de tirar te pega con el arma.
-const MELEE_RANGE := 1.8
-## A ciegas, tira como mucho esto (s) después de perderte.
-const SUPPRESS_MAX := 10.0
 var _dodge_t: float = 0.0
 ## Lo ve "a través" de un arbusto: no lo ve de verdad, pero el fogonazo o el
 ## movimiento lo delatan; tira al cuerpo, con más error y nunca a la cabeza.
@@ -79,16 +77,6 @@ var concealed: bool = false
 ## Cuánto hace que lo vio por última vez metido en un arbusto (para "tirarle al arbusto").
 var _bush_t: float = 99.0
 var _bush_lost: bool = false
-## Tiroteo de un compañero: a menos de ALLY_JOIN se suma; hasta ALLY_CHECK va a ver.
-const ALLY_JOIN := 45.0
-const ALLY_CHECK := 80.0
-## Un disparo o explosión más lejos que esto: solo alerta (no va hasta allá).
-const FAR_SHOT := 95.0
-## Escondido en un arbusto: a menos de esto te ven igual (alerta / tranquilo).
-const BUSH_SEEN_ALERT := 6.0
-const BUSH_SEEN_CALM := 3.5
-## Cuántos segundos le tiran al arbusto donde te perdieron antes de pasar a otra cosa.
-const BUSH_FIRE_TIME := 7.0
 
 
 func _init(n: HumanNpc) -> void:
@@ -187,7 +175,7 @@ func update(delta: float) -> void:
 ## Entre pensamientos: la mira sigue al blanco si lo ve.
 func _track(_delta: float) -> void:
 	if animal != null and is_instance_valid(animal) and not animal.dead:
-		npc.aim_point = animal.global_position + Vector3(0, float(animal._d["leg"]) + 0.2, 0)
+		npc.aim_point = animal.global_position + Vector3(0, animal.spec.leg + 0.2, 0)
 		return
 	if state == State.COMBAT and target_visible and target != null and is_instance_valid(target):
 		npc.aim_point = _aim_spot()
@@ -271,7 +259,7 @@ func _perceive(dt: float) -> void:
 	if seen == 0 and veiled > 0 and pl != null:
 		var spd0 := Vector2(pl.velocity.x, pl.velocity.z).length()
 		# De cerca un arbusto no esconde a nadie (alerta, a unos metros se nota el bulto)
-		var close := BUSH_SEEN_ALERT if alert else BUSH_SEEN_CALM
+		var close := T.bush_seen_alert if alert else T.bush_seen_calm
 		if pl.fired_recently(2.5) or spd0 > 1.5 or dist < close:
 			seen = 1
 			concealed = true
@@ -330,9 +318,9 @@ func on_noise(pos: Vector3, radius: float, source: Node) -> void:
 		var other := source as HumanNpc
 		if other.brain != null and other.brain.state == State.COMBAT and other.brain.last_known != Vector3.INF \
 				and state != State.COMBAT:
-			if d < ALLY_JOIN:
+			if d < T.ally_join:
 				_enter_combat(other.brain.last_known + _jitter(4.0), false)
-			elif d < ALLY_CHECK and state in [State.IDLE, State.PATROL]:
+			elif d < T.ally_check and state in [State.IDLE, State.PATROL]:
 				awareness = maxf(awareness, 0.6)
 				_investigate_at(other.global_position.lerp(npc.global_position, 0.4) + _jitter(6.0), false)
 			else:
@@ -350,7 +338,7 @@ func on_noise(pos: Vector3, radius: float, source: Node) -> void:
 			pos = thr.global_position + _jitter(clampf(away.length() * 0.35, 3.0, 9.0))
 			d = pos.distance_to(npc.global_position)
 	var err := _jitter(d * 0.12)
-	if radius >= 40.0 and d > FAR_SHOT:
+	if radius >= 40.0 and d > T.far_shot:
 		# Muy lejos: se pone alerta y mira para ese lado, pero no deja su puesto
 		awareness = maxf(awareness, 0.5)
 		if state in [State.IDLE, State.PATROL]:
@@ -408,8 +396,6 @@ func on_damaged(info: HitInfo) -> void:
 var animal: Animal = null
 var _animal_t: float = 0.0
 var _animal_scan: float = 0.0
-## Los ven recién de cerca (andan por el pasto, son bajos).
-const ANIMAL_SIGHT := 15.0
 
 
 ## Perros y jabalíes que se le vienen encima (o que lo atacaron) a menos de 15 m: les
@@ -428,7 +414,7 @@ func _animals(dt: float) -> bool:
 		return false
 	var d := npc.global_position.distance_to(animal.global_position)
 	_animal_t += dt
-	if d > ANIMAL_SIGHT * 1.6 or animal.state == Animal.State.FLEE and d > 8.0 or _animal_t > 25.0:
+	if d > T.animal_sight * 1.6 or animal.state == Animal.State.FLEE and d > 8.0 or _animal_t > 25.0:
 		animal = null
 		return false
 	# Si estás a la vista y el animal no está encima, sigue con vos
@@ -437,7 +423,7 @@ func _animals(dt: float) -> bool:
 	npc.stop()
 	npc.raised = true
 	npc.crouching = false
-	npc.aim_point = animal.global_position + Vector3(0, float(animal._d["leg"]) + 0.2, 0)
+	npc.aim_point = animal.global_position + Vector3(0, animal.spec.leg + 0.2, 0)
 	var p := prof()
 	# Blanco chico y rápido: más error si corre
 	var spd := Vector2(animal.velocity.x, animal.velocity.z).length()
@@ -455,7 +441,7 @@ func _animals(dt: float) -> bool:
 
 func _spot_animal() -> Animal:
 	var best: Animal = null
-	var best_d := ANIMAL_SIGHT
+	var best_d := T.animal_sight
 	var eye := npc.body.eye_position()
 	var fwd := npc.aim_forward()
 	for n in npc.get_tree().get_nodes_in_group("animals"):
@@ -465,7 +451,7 @@ func _spot_animal() -> Animal:
 		var d := a.global_position.distance_to(npc.global_position)
 		if d >= best_d:
 			continue
-		var hostile := a.species != "capy" and (a.state in [Animal.State.ALERT, Animal.State.ATTACK, Animal.State.RETREAT] or d < 8.0)
+		var hostile := a.spec.attack_style != "cornered" and (a.state in [Animal.State.ALERT, Animal.State.ATTACK, Animal.State.RETREAT] or d < 8.0)
 		if a.target == npc and a.state == Animal.State.ATTACK:
 			hostile = true
 		if not hostile:
@@ -676,13 +662,13 @@ func _melee_check() -> bool:
 	if target == null or not is_instance_valid(target) or not target_visible:
 		return false
 	var d := Vector2(target.global_position.x - npc.global_position.x, target.global_position.z - npc.global_position.z).length()
-	if d > MELEE_RANGE or absf(target.global_position.y - npc.global_position.y) > 1.0:
+	if d > T.melee_range or absf(target.global_position.y - npc.global_position.y) > 1.0:
 		return false
 	if _melee_cd > 0.0:
 		return _melee_cd > 0.8  # recién pegó: se recompone antes de tirar
 	_melee_cd = _rng.randf_range(1.6, 2.4)
 	npc.burst_left = 0
-	npc.melee(target, _rng.randf() < 0.3)
+	npc.melee(target, _rng.randf() < T.melee_knockdown)
 	return true
 
 
@@ -853,9 +839,9 @@ func _lost(dt: float, p: Dictionary) -> void:
 	var d := npc.global_position.distance_to(last_known)
 	# Se metió en un arbusto: le tira al arbusto (reconocimiento por fuego) desde donde
 	# está, en vez de ir a meterse adentro hasta chocarlo
-	if _bush_t < 1.5 or (unseen < BUSH_FIRE_TIME and _bush_lost):
+	if _bush_t < 1.5 or (unseen < T.bush_fire_time and _bush_lost):
 		_bush_lost = true
-		if unseen < BUSH_FIRE_TIME and d > 3.0 and d < 45.0 and npc.ammo_left() > 0:
+		if unseen < T.bush_fire_time and d > 3.0 and d < 45.0 and npc.ammo_left() > 0:
 			npc.stop()
 			_suppress_fire(dt, p)
 			return
@@ -1224,7 +1210,7 @@ func _suppress_fire(dt: float, p: Dictionary) -> void:
 		return
 	# A ciegas no se tira para siempre, ni todos a la vez: de a uno o dos por escuadra
 	var sq := _squad()
-	if unseen > SUPPRESS_MAX or (sq != null and npc.burst_left <= 0 and not sq.may_suppress(npc)):
+	if unseen > T.suppress_max_time or (sq != null and npc.burst_left <= 0 and not sq.may_suppress(npc)):
 		npc.burst_left = 0
 		npc.aim_point = last_known + Vector3(0, 1.2, 0)
 		return

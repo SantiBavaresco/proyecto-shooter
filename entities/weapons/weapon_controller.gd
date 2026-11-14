@@ -351,11 +351,18 @@ func scope_camera() -> Camera3D:
 	return view.scope_cam
 
 
+## Visores: el ojo más cerca (el visor ocupa más pantalla). Ajuste general.
+const SCOPE_EYE_RELIEF_MULT := 0.62
+
+
 func eye_relief_for(c: WeaponSlot) -> float:
-	if c.data.eye_relief > 0.0:
-		return c.data.eye_relief
-	var s := c.model.get_node("Sight")
-	return s.get_meta("eye_relief", 0.2) if s.has_meta("eye_relief") else 0.2
+	var r := c.data.eye_relief
+	if r <= 0.0:
+		var s := c.model.get_node("Sight")
+		r = s.get_meta("eye_relief", 0.2) if s.has_meta("eye_relief") else 0.2
+	if c.data.scope_mag > 1.0:
+		r *= SCOPE_EYE_RELIEF_MULT
+	return r
 
 
 func viewmodel_camera() -> Camera3D:
@@ -1241,6 +1248,8 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 
 ## Desde la cadera: 1 para calibres de pistola; escopetas y fusiles, más.
 func _hip_recoil_k(w: WeaponData) -> float:
+	if w.hip_recoil_mult > 0.0:
+		return w.hip_recoil_mult
 	if w.pellets > 1:
 		return 1.4
 	if w.caliber in PISTOL_CALIBERS:

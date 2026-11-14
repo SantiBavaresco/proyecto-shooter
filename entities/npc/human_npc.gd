@@ -15,15 +15,14 @@ const BODY_LAYER := 5
 const FOLIAGE_LAYER := 9
 const WALK_SPEED := 1.5
 const RUN_SPEED := 4.0
-## En combate, los tramos de más de SPRINT_MIN m los hace corriendo de verdad (sin tirar).
-const SPRINT_SPEED := 6.2
-const SPRINT_MIN := 5.0
 const CROUCH_SPEED := 1.0
 const TURN_SPEED := 5.0
 var _yaw_rate: float = 0.0
 const SHOT_HEAR := 160.0
 const SHOT_HEAR_SUPPRESSED := 35.0
 const DAMAGE_MODEL := preload("res://data/combat/damage_model.tres")
+## Ajustes generales de la IA (data/ai/ai_tuning.tres).
+var T: AiTuning = AiTuning.get_default()
 
 @export var loadout_id: String = "bandit_rifle"
 ## Grupo con el que se avisa (los del mismo escuadrón se pasan dónde estás).
@@ -54,9 +53,6 @@ var weapon: WeaponData
 var sight_id: String = "__fabrica"
 var muzzle_id: String = ""
 var mag: int = 0
-## Agonía al morir sin tiro en la cabeza (segundos).
-const AGONY_MIN := 20.0
-const AGONY_MAX := 30.0
 var _groan_t: float = 0.0
 ## Pistola que lleva de repuesto ("" = ninguna o ya la sacó) y sus cargadores.
 var sidearm_id: String = ""
@@ -215,7 +211,7 @@ func melee(t: Node3D, knockdown: bool) -> void:
 	look_yaw = atan2(-to.x, -to.z)
 	body.kick_melee()
 	var info := HitInfo.new()
-	info.damage = rng.randf_range(8.0, 15.0)
+	info.damage = rng.randf_range(T.melee_damage.x, T.melee_damage.y)
 	info.weapon_id = "melee"
 	info.zone = "torso"
 	info.source = self
@@ -369,16 +365,11 @@ func _capacity() -> int:
 	return weapon.mag_size
 
 
-## Le queda un solo cargador (o menos): tira de a poco y con más cuidado.
-## Munición: en combate no se les acaba (siempre tienen otro cargador "en el cuerpo"),
-## pero después de LOW_AMMO_AFTER tiros se portan como si les quedara poca (tiran
-## menos y con más cuidado) y a veces sacan la pistola.
-const LOW_AMMO_AFTER := 150
 var rounds_fired: int = 0
 
 
 func low_ammo() -> bool:
-	return rounds_fired >= LOW_AMMO_AFTER and not on_sidearm()
+	return rounds_fired >= T.low_ammo_after and not on_sidearm()
 
 
 func on_sidearm() -> bool:
@@ -506,8 +497,8 @@ func go_to(p: Vector3, speed := WALK_SPEED) -> void:
 	var d := Vector2(p.x - global_position.x, p.z - global_position.z).length()
 	var tactical := brain != null and brain.state in [NpcBrain.State.COMBAT, NpcBrain.State.RETREAT]
 	sprinting = tactical and speed >= WALK_SPEED * 1.4 and not crouching and not reloading_blocks_sprint() \
-		and d > (2.5 if sprinting else SPRINT_MIN)
-	move_speed = SPRINT_SPEED if sprinting else speed
+		and d > (2.5 if sprinting else T.sprint_min)
+	move_speed = T.sprint_speed if sprinting else speed
 	_stuck_t = 0.0
 
 
@@ -586,8 +577,8 @@ func _update_weapon(delta: float) -> void:
 	if mag <= 0:
 		if ammo_left() <= 0:
 			# "Se le acabó": muy gastado, saca la pistola (si tiene); si no, otro cargador
-			var tired := rounds_fired >= LOW_AMMO_AFTER
-			var chance := 1.0 if rounds_fired >= LOW_AMMO_AFTER + 90 else (0.4 if tired else 0.0)
+			var tired := rounds_fired >= T.low_ammo_after
+			var chance := 1.0 if rounds_fired >= T.low_ammo_after + 90 else (0.4 if tired else 0.0)
 			if sidearm_id != "" and rng.randf() < chance:
 				_draw_sidearm()
 				return
@@ -787,6 +778,7 @@ func refine_zone(zone: String, hit_pos: Vector3, dir: Vector3) -> String:
 
 ## Recibe un tiro (o esquirla). Devuelve true si lo mató.
 func apply_hit(info: HitInfo) -> bool:
+	Blood.on_hit(self, info, not dead)
 	if dead:
 		# Ya muerto: el tiro mueve el cuerpo; a la cabeza, al que agonizaba lo remata
 		body.push(info.position, info.direction.normalized() * clampf(info.damage * 0.25, 3.0, 15.0))
@@ -839,14 +831,14 @@ func _die(info: HitInfo) -> void:
 	# Sangre: tiro a la cabeza, chorro para atrás y charco rápido alrededor de la
 	# cabeza; si no, se va formando un charco debajo del cuerpo
 	if head:
-		Blood.spray(self, info.position, info.direction + Vector3.UP * 0.15, 55, 5.5)
+		Blood.headshot(self, info)
 		_blood_pool_later("Head", 1.1, 0.95, 3.5)
 	else:
 		_blood_pool_later("Spine2", 2.0, 0.8, 14.0)
 	if not head:
 		_pain("death_cry", true, 0.0)
 		if body.ragdoll != null and info != null and info.damage < 400.0:
-			body.ragdoll.start_agony(rng.randf_range(AGONY_MIN, AGONY_MAX))
+			body.ragdoll.start_agony(rng.randf_range(T.agony_time.x, T.agony_time.y))
 			_groan_t = rng.randf_range(1.2, 2.5)
 	# Golpe del cuerpo y del arma contra el piso
 	get_tree().create_timer(0.75, false).timeout.connect(func() -> void:

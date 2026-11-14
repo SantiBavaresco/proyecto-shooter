@@ -244,7 +244,7 @@ func test_lethal_shot_ragdolls_and_body_lies_on_ground() -> void:
 	b.apply_hit(_shot(b, "head", 30.0))
 	assert_eq(b.state, Animal.State.DEAD, "un tiro a la cabeza lo termina")
 	await physics_frames(60 * 4)
-	assert_true(a._rag[0].freeze, "el cuerpo se quedó quieto")
+	assert_true(a.body.is_frozen(), "el cuerpo se quedó quieto")
 	assert_gt(a.center().y, 0.08, "apoyado sobre el piso, no hundido (%.2f)" % a.center().y)
 	a._voice.stop()
 	a.apply_hit(_shot(a, "torso", 50.0))
@@ -316,7 +316,7 @@ func test_npc_shoots_attacking_dogs() -> void:
 		if n.brain.animal != null and n.mag < mag0:
 			shot_at = true
 		for m in pk.members:
-			if m.dead or m.hp < float(Animal.SPECIES["dog"]["hp"]):
+			if m.dead or m.hp < AnimalSpecies.get_species("dog").hp:
 				hurt = true
 		if hurt:
 			break
@@ -326,3 +326,23 @@ func test_npc_shoots_attacking_dogs() -> void:
 	for m in pk.members:
 		if not m.dead and m.global_position.distance_to(n.global_position) > 30.0:
 			assert_true(n.brain.animal != m, "no le sigue tirando a uno que se fue")
+
+
+func test_blood_splatters_wall_behind_and_floor_under_corpse() -> void:
+	await _arena()
+	_box_at(Vector3(0, 1.5, -14), Vector3(6, 3, 0.4))
+	var pk := _pack("boar", Vector3(0, 0.1, -12), 1)
+	await physics_frames(10)
+	var b := pk.members[0]
+	b.set_physics_process(false)
+	var cw := CombatWorld.get_for(player)
+	var hi := _shot(b, "torso", 20.0)
+	hi.direction = Vector3(0, 0, -1)
+	hi.position = b.body.center()
+	b.apply_hit(hi)
+	await physics_frames(2)
+	var walls := 0
+	for d in cw.find_children("*", "Decal", true, false):
+		if absf((d as Decal).global_basis.y.z) > 0.9:
+			walls += 1
+	assert_gt(walls, 0, "salpicadura en la pared de atrás")
