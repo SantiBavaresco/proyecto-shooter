@@ -683,9 +683,33 @@ func _free_spot(x: float, z: float, margin: float) -> bool:
 	return true
 
 
+# --- Animales ----------------------------------------------------------------------
+
+## Perros cimarrones y jabalíes: sueltos por el monte y el bañado, lejos del puesto.
+func _spawn_animals() -> void:
+	var k := 0
+	for spec: Array in [["dog", Vector3(-40, 0, -72), 26.0], ["dog", Vector3(70, 0, 150), 24.0],
+			["boar", Vector3(15, 0, -150), 20.0], ["boar", Vector3(-175, 0, -40), 20.0], ["boar", Vector3(150, 0, -60), 18.0]]:
+		k += 1
+		var p: Vector3 = spec[1]
+		# Que la querencia quede en tierra firme (cerca del punto pedido)
+		for i in 30:
+			if height(p.x, p.z) > WATER_Y + 0.6 and _free_spot(p.x, p.z, 1.0):
+				break
+			p = spec[1] + Vector3(_rng.randf_range(-25, 25), 0, _rng.randf_range(-25, 25))
+		var pk := AnimalPack.new()
+		pk.name = "Pack_%s_%d" % [spec[0], k]
+		pk.species = spec[0]
+		pk.roam = spec[2]
+		pk.seed_value = 500 + k
+		pk.position = ground(p) + Vector3(0, 0.1, 0)
+		add_child(pk)
+
+
 # --- Enemigos ----------------------------------------------------------------------
 
 func _spawn_enemies() -> void:
+	_spawn_animals()
 	var a := BASE_A
 	# Galpón: jefe en la oficina, tirador en la torre, guardias en el portón, patrullas
 	_npc("Jefe", "bandit_boss", a + Vector3(-17, 0, -12), PI, "galpon")

@@ -190,6 +190,7 @@ const ARENA_LOWCAL := [["bandit_pistol", Vector3(-58, 0, -90), "p22"], ["bandit_
 	["bandit_shotgun", Vector3(-54, 0, -86), "ou_hunt"]]
 
 var _arena_npcs: Array[HumanNpc] = []
+var _arena_packs: Array[AnimalPack] = []
 
 
 func _build_arena(geo: Node3D) -> void:
@@ -250,6 +251,21 @@ func _spawn_arena() -> void:
 	for sq in get_tree().get_nodes_in_group("squad_coordinator"):
 		if (sq as Squad).id == "arena":
 			sq.queue_free()
+	for pk in _arena_packs:
+		if is_instance_valid(pk):
+			pk.queue_free()
+	_arena_packs.clear()
+	if ArenaConsole.faction == "animals":
+		# Una jauría y una piara (en lados distintos de la zona)
+		for spec: Array in [["dog", Vector3(-58, 0.1, -88), 11], ["boar", Vector3(-38, 0.1, -92), 12]]:
+			var pk := AnimalPack.new()
+			pk.species = spec[0]
+			pk.roam = 12.0
+			pk.seed_value = spec[2] + randi() % 1000
+			pk.position = spec[1]
+			add_child(pk)
+			_arena_packs.append(pk)
+		return
 	var list: Array = {"military": ARENA_MILITARY, "lowcal": ARENA_LOWCAL}.get(ArenaConsole.faction, ARENA_SQUAD)
 	for i in list.size():
 		var e: Array = list[i]

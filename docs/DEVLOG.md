@@ -504,3 +504,8 @@
 ## 3.1.6
 - Talavera `_build_outdoor_props`: árboles caídos (`Structures.fallen_tree`), rollizos (`logs`), pilas de leña (`woodpile`), camiones (`truck`) y autos al costado del camino (`_road_at`) y alrededor de BASE_A. `_blocked` evita que la vegetación los atraviese.
 - `CoverIndex`: el caché compara el World3D (WeakRef), no solo su RID (un RID liberado se reusaba y devolvía el índice de otro mundo).
+
+## 3.1.7
+- Animales: `entities/animals/animal.gd` (Animal: perro y jabalí; cuerpo de cajas con patas animadas, cajas de impacto en la capa 6 con `zone_owner`; estados WANDER/ALERT/ATTACK/RETREAT/FLEE/DEAD; perros muerden y se abren, jabalíes embisten en línea recta con empuje; huyen de tiros lejanos) y `animal_pack.gd` (AnimalPack: crea el grupo, alarma compartida, huida al caer la mitad).
+- Sonidos: `tools/audio/gen_animals.py` (osciladores + ruido + filtros; sin licencias de terceros) → assets/audio/animals.
+- Talavera `_spawn_animals` (2 jaurías, 3 piaras); arena: facción "animals"; mapa: marcadores de animales.

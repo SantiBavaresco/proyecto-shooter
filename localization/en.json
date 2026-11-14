@@ -382,6 +382,7 @@
 	"arena.faction_bandits": "Enemies: bandits (5)",
 	"arena.faction_military": "Enemies: military (8)",
 	"arena.faction_lowcal": "Enemies: small pistols and shotguns (7)",
+	"arena.faction_animals": "Animals: dog pack and boar herd",
 	"loot.military": "Soldier",
 	"item.grenade_smoke": "RDG smoke grenade",
 	"item.grenade_smoke.desc": "Smoke canister: blocks sight for ~25 s. Hold [G] to throw it.",

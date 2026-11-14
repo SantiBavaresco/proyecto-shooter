@@ -241,6 +241,20 @@ func _draw_map() -> void:
 	for n in get_tree().get_nodes_in_group("player_corpse"):
 		var s := _w2s((n as Node3D).global_position)
 		_x(s, 8.0, Color(0.75, 0.45, 0.95), 3.0)
+	# Animales (marrón: perros círculo chico, jabalíes cuadradito)
+	if show_enemies:
+		for n in get_tree().get_nodes_in_group("animals"):
+			var an := n as Animal
+			var s := _w2s(an.global_position)
+			var col := Color(0.72, 0.5, 0.25) if an.species == "dog" else Color(0.5, 0.36, 0.22)
+			if an.species == "dog":
+				_view.draw_circle(s, 4.0, col)
+			else:
+				_view.draw_rect(Rect2(s - Vector2(4, 4), Vector2(8, 8)), col)
+			if an.state in [Animal.State.ATTACK, Animal.State.RETREAT]:
+				_view.draw_arc(s, 7.5, 0, TAU, 16, Color(1, 0.3, 0.2), 1.5)
+		for n in get_tree().get_nodes_in_group("animal_corpses"):
+			_x(_w2s((n as Node3D).global_position), 3.5, Color(0.6, 0.45, 0.3, 0.6), 1.5)
 	# Enemigos
 	if show_enemies:
 		for n in get_tree().get_nodes_in_group("ai_npc"):
