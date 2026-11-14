@@ -36,6 +36,8 @@ var _noise := FastNoiseLite.new()
 var _geo: Node3D
 var _rng := RandomNumberGenerator.new()
 var _pad_h: Array[float] = []
+## Lugares ocupados por objetos sueltos ([Vector2 centro, radio]): los árboles no crecen ahí.
+var _blocked: Array = []
 
 
 func _ready() -> void:
@@ -486,12 +488,113 @@ func _build_props() -> void:
 	for p: Vector3 in [Vector3(-95, 0, 82), Vector3(5, 0, 5), Vector3(80, 0, 50), Vector3(-40, 0, -60)]:
 		Structures.crates(_geo, _at(p), _rng.randf() * TAU, 2)
 		Structures.barrel(_geo, _at(p + Vector3(1.8, 0, 0.5)))
+	_build_outdoor_props()
 	var hidden := LootContainer.new()
 	hidden.name = "Hidden_Stash"
 	hidden.kind = "stash"
 	hidden.loot_seed = 701
 	hidden.position = _at(Vector3(-40, 0, -61.5)) + Vector3(0, 0.1, 0)
 	_geo.add_child(hidden)
+
+
+## Afuera de los predios: árboles caídos, troncos, pilas de leña, camiones y autos.
+func _build_outdoor_props() -> void:
+	var gfn := func(p: Vector3) -> Vector3: return ground(p)
+	var half := SIZE * 0.5 - 12.0
+	# Camiones y autos estacionados o abandonados al costado del camino
+	var road_cars := [[0.18, 1.0, "truck", "rust"], [0.33, -1.0, "car", "car_white"], [0.47, 1.0, "truck", "car_green"],
+		[0.62, -1.0, "car", "car_red"], [0.78, 1.0, "truck", "car_white"], [0.9, -1.0, "car", "car_green"]]
+	for rc: Array in road_cars:
+		var at := _road_at(float(rc[0]))
+		var p: Vector3 = at[0] + (at[1] as Vector3).cross(Vector3.UP).normalized() * float(rc[1]) * 7.5
+		if not _clear_of_pads(p, 4.0):
+			continue
+		var yaw := atan2(-(at[1] as Vector3).x, -(at[1] as Vector3).z) + _rng.randf_range(-0.35, 0.35)
+		var g := ground(p)
+		if String(rc[2]) == "truck":
+			Structures.truck(_geo, g, yaw, String(rc[3]), _rng.randf_range(-0.06, 0.06))
+			_block(p, 5.0)
+		else:
+			Structures.car_wreck(_geo, g, yaw, String(rc[3]))
+			_block(p, 3.5)
+	# Alrededor del galpón (afuera del alambrado): lo que dejaron tirado
+	var a := BASE_A
+	for ex: Array in [[Vector3(-46, 0, 26), 0.5, "truck"], [Vector3(44, 0, 30), 2.4, "car"], [Vector3(48, 0, -20), 1.4, "truck"],
+			[Vector3(-44, 0, -28), 0.2, "car"], [Vector3(10, 0, -44), 1.7, "car"]]:
+		var p: Vector3 = a + ex[0]
+		if _road_dist(p.x, p.z) < 6.0:
+			continue
+		if String(ex[2]) == "truck":
+			Structures.truck(_geo, ground(p), ex[1], ["rust", "car_white"][_rng.randi() % 2])
+			_block(p, 5.0)
+		else:
+			Structures.car_wreck(_geo, ground(p), ex[1], ["car_red", "car_white", "car_green"][_rng.randi() % 3])
+			_block(p, 3.5)
+	# Pilas de leña: junto a los lugares con gente y algunas en el monte
+	for wp: Array in [[CAMP + Vector3(9, 0, 8), 0.6], [CAMP + Vector3(-12, 0, -6), 2.1], [FARM + Vector3(14, 0, 10), 1.2],
+			[FARM + Vector3(-15, 0, -8), 0.2], [BASE_A + Vector3(-42, 0, 4), 1.57], [BASE_A + Vector3(38, 0, -36), 0.3],
+			[MIL_CAMP + Vector3(-14, 0, 6), 0.9], [BASE_B + Vector3(-18, 0, -12), 2.6], [CHECKPOINT + Vector3(14, 0, -10), 0.4]]:
+		var p: Vector3 = wp[0]
+		Structures.woodpile(_geo, ground(p) - Vector3(0, 0.05, 0), wp[1], _rng.randf_range(1.8, 3.0), _rng.randi_range(3, 5))
+		_block(p, 2.0)
+	# Árboles caídos y rollizos por el monte
+	var fallen := 0
+	var logs := 0
+	var tries := 0
+	while (fallen < 34 or logs < 40) and tries < 4000:
+		tries += 1
+		var x := _rng.randf_range(-half, half)
+		var z := _rng.randf_range(-half, half)
+		var p := Vector3(x, 0, z)
+		if not _free_spot(x, z, 5.0):
+			continue
+		var g := ground(p)
+		if g.y < WATER_Y + 0.4:
+			continue
+		var yaw := _rng.randf() * TAU
+		var dir := Vector3(cos(yaw), 0, -sin(yaw))
+		if fallen < 34:
+			var l := _rng.randf_range(8.0, 15.0)
+			var ra := ground(p - dir * l * 0.5)
+			var rb := ground(p + dir * l * 0.5)
+			if minf(ra.y, rb.y) < WATER_Y + 0.3 or not _free_spot(rb.x, rb.z, 2.0) or not _free_spot(ra.x, ra.z, 2.0):
+				continue
+			Structures.fallen_tree(_geo, ra, rb, _rng.randf_range(0.25, 0.42), _rng)
+			for k in 3:
+				_block(ra.lerp(rb, k / 2.0), 2.5)
+			fallen += 1
+			if fallen <= 3:
+				set_meta("fallen_%d" % fallen, (ra + rb) * 0.5)
+		else:
+			Structures.logs(_geo, g, yaw, gfn, _rng)
+			_block(p, 2.5)
+			logs += 1
+
+
+## Punto y dirección del camino a una fracción `t` (0–1) de su largo.
+func _road_at(t: float) -> Array:
+	var total := 0.0
+	for i in ROAD.size() - 1:
+		total += (ROAD[i + 1] - ROAD[i]).length()
+	var want := t * total
+	for i in ROAD.size() - 1:
+		var seg: Vector3 = ROAD[i + 1] - ROAD[i]
+		if want <= seg.length():
+			return [ROAD[i] + seg.normalized() * want, seg.normalized()]
+		want -= seg.length()
+	return [ROAD[ROAD.size() - 1], (ROAD[ROAD.size() - 1] - ROAD[ROAD.size() - 2]).normalized()]
+
+
+func _clear_of_pads(p: Vector3, margin: float) -> bool:
+	for pd: Array in PADS:
+		var c: Vector3 = pd[0]
+		if Vector2(p.x - c.x, p.z - c.z).length() < float(pd[1]) + margin:
+			return false
+	return true
+
+
+func _block(p: Vector3, radius: float) -> void:
+	_blocked.append([Vector2(p.x, p.z), radius])
 
 
 func _build_vegetation() -> void:
@@ -570,6 +673,9 @@ func _build_vegetation() -> void:
 func _free_spot(x: float, z: float, margin: float) -> bool:
 	if _road_dist(x, z) < 6.0 + margin * 0.3:
 		return false
+	for b: Array in _blocked:
+		if Vector2(x, z).distance_to(b[0]) < float(b[1]) + margin * 0.4:
+			return false
 	for p: Array in PADS:
 		var c: Vector3 = p[0]
 		if Vector2(x - c.x, z - c.z).length() < float(p[1]) + margin:

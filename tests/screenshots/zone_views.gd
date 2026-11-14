@@ -17,6 +17,8 @@ const VIEWS := [
 	["V8_monte", Vector3(60, 1.7, 60), Vector3(80, 1.5, 20), 72.0],
 	["V9_vista_alta_desde_el_puesto", Vector3(-205, 70, 205), Vector3(10, 0, -10), 55.0],
 	["V10_vista_alta_desde_el_rio", Vector3(230, 55, -60), Vector3(20, 0, 20), 55.0],
+	["V11_camion_afuera_del_galpon", Vector3(-22, 1.7, 14), Vector3(-11, 1.0, 1), 65.0],
+	["V12_lena_en_el_puesto", Vector3(-134, 1.7, 165), Vector3(-141, 0.6, 158), 65.0],
 ]
 
 
@@ -42,7 +44,12 @@ func _ready() -> void:
 	zone.add_child(cam)
 	cam.far = 1200.0
 	cam.current = true
-	for v: Array in VIEWS:
+	var views := VIEWS.duplicate()
+	for k in range(1, 4):
+		if zone.has_meta("fallen_%d" % k):
+			var fp: Vector3 = zone.get_meta("fallen_%d" % k)
+			views.append(["V%d_arbol_caido" % (12 + k), fp + Vector3(7, 1.7, 5), fp + Vector3(0, 0.6, 0), 65.0])
+	for v: Array in views:
 		var from: Vector3 = v[1]
 		var to: Vector3 = v[2]
 		var gf: float = zone.call("height", from.x, from.z)

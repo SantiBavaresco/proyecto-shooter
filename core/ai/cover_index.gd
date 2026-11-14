@@ -38,10 +38,12 @@ static func invalidate(n: Node3D) -> void:
 
 
 static func _index(n: Node3D) -> Dictionary:
-	var rid := n.get_world_3d().get_rid()
+	var world := n.get_world_3d()
+	var rid := world.get_rid()
 	if _cache.has(rid):
 		var c: Dictionary = _cache[rid]
-		if is_instance_valid(c["root"]) and Time.get_ticks_msec() - int(c["t"]) < 30000:
+		# El RID de un mundo liberado se puede reusar: se compara el mundo mismo
+		if (c["world"] as WeakRef).get_ref() == world and Time.get_ticks_msec() - int(c["t"]) < 30000:
 			return c
 	var root := n.get_tree().root
 	var entries: Array = []
@@ -64,7 +66,7 @@ static func _index(n: Node3D) -> Dictionary:
 		if not grid.has(k):
 			grid[k] = []
 		grid[k].append(e)
-	var c := {"root": root, "t": Time.get_ticks_msec(), "grid": grid}
+	var c := {"root": root, "world": weakref(world), "t": Time.get_ticks_msec(), "grid": grid}
 	_cache[rid] = c
 	return c
 

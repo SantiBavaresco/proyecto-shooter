@@ -461,6 +461,122 @@ static func car_wreck(parent: Node3D, pos: Vector3, yaw: float, color := "car_wh
 			cyl(r, Vector3(sx, 0.32, sz), 0.32, 0.22, mat("dark"), false, "metal", Vector3(0, 0, PI * 0.5), 12)
 
 
+## Algo largo y redondo tirado entre dos puntos del piso (tronco, rollizo): sigue la
+## pendiente y queda medio hundido.
+static func _lying(parent: Node3D, a: Vector3, b: Vector3, r: float, m: Material, collide := true) -> Node3D:
+	var d := b - a
+	var mid := (a + b) * 0.5 + Vector3.UP * r * 0.8
+	var y_ax := d.normalized()
+	var x_ax := y_ax.cross(Vector3.UP).normalized()
+	var z_ax := x_ax.cross(y_ax)
+	var n := Node3D.new()
+	n.transform = Transform3D(Basis(x_ax, y_ax, z_ax), mid)
+	parent.add_child(n)
+	cyl(n, Vector3.ZERO, r, d.length(), m, collide, "wood", Vector3.ZERO, 10)
+	return n
+
+
+## Árbol caído de `a` (la raíz) a `b` (la punta), con el plato de raíces levantado y
+## ramas rotas. Frena las balas: buena cobertura para tirarse atrás.
+static func fallen_tree(parent: Node3D, a: Vector3, b: Vector3, r: float, rng: RandomNumberGenerator) -> void:
+	var trunk := mat("trunk")
+	var t := _lying(parent, a, b, r, trunk)
+	var len := a.distance_to(b)
+	# Plato de raíces (disco de tierra y raíces parado en la base)
+	cyl(t, Vector3(0, -len * 0.5 - 0.15, 0), r * 3.2, 0.45, mat("dark"), true, "dirt", Vector3.ZERO, 10)
+	cyl(t, Vector3(0, -len * 0.5 - 0.2, r * 0.5), r * 2.4, 0.3, trunk, false, "", Vector3.ZERO, 8)
+	# Ramas rotas para arriba y a los costados (sin colisión: no traban al caminar)
+	for i in rng.randi_range(3, 5):
+		var along := rng.randf_range(-0.1, 0.45) * len
+		var ang := rng.randf_range(-1.2, 1.2)
+		var bl := rng.randf_range(1.0, 2.4)
+		var br := r * rng.randf_range(0.25, 0.4)
+		var dir := Vector3(sin(ang), 0.45, cos(ang)).normalized()
+		var bn := Node3D.new()
+		bn.position = Vector3(0, along, 0) + dir * bl * 0.5
+		bn.basis = Basis(Quaternion(Vector3.UP, dir))
+		t.add_child(bn)
+		cyl(bn, Vector3.ZERO, br, bl, trunk, false, "", Vector3.ZERO, 6)
+	# Algo de follaje seco en la punta
+	var leaves := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 1.3
+	sm.height = 1.6
+	sm.radial_segments = 8
+	sm.rings = 4
+	leaves.mesh = sm
+	leaves.material_override = mat("leaves_dry")
+	leaves.position = Vector3(0, len * 0.5 - 0.6, 0.2)
+	leaves.scale = Vector3(1.0, 1.4, 0.7)
+	t.add_child(leaves)
+
+
+## Uno o varios troncos cortados tirados (rollizos).
+static func logs(parent: Node3D, pos: Vector3, yaw: float, ground_fn: Callable, rng: RandomNumberGenerator) -> void:
+	var n := rng.randi_range(1, 3)
+	for i in n:
+		var l := rng.randf_range(2.2, 4.0)
+		var r := rng.randf_range(0.18, 0.32)
+		var off := Vector3(cos(yaw), 0, -sin(yaw)).rotated(Vector3.UP, PI * 0.5) * (i * 0.75)
+		var dir := Vector3(cos(yaw + rng.randf_range(-0.15, 0.15)), 0, -sin(yaw + rng.randf_range(-0.15, 0.15)))
+		var c := pos + off
+		var a: Vector3 = ground_fn.call(c - dir * l * 0.5)
+		var b: Vector3 = ground_fn.call(c + dir * l * 0.5)
+		var t := _lying(parent, a, b, r, mat("trunk"))
+		# Las puntas cortadas, más claras
+		for e: float in [-1.0, 1.0]:
+			cyl(t, Vector3(0, e * l * 0.5, 0), r * 0.94, 0.02, mat("wood"), false, "", Vector3.ZERO, 10)
+
+
+## Pila de leña partida (colisión de una sola caja; tapa a uno agachado).
+static func woodpile(parent: Node3D, pos: Vector3, yaw: float, length := 2.4, rows := 4) -> void:
+	var r := Node3D.new()
+	r.position = pos
+	r.rotation = Vector3(0, yaw, 0)
+	parent.add_child(r)
+	var lr := 0.11
+	var per := int(length / (lr * 2.05))
+	var wd := mat("wood")
+	var bk := mat("trunk")
+	for row in rows:
+		var n := per - row
+		for i in n:
+			var x := (i - (n - 1) * 0.5) * lr * 2.05
+			cyl(r, Vector3(x, lr + row * lr * 1.75, 0), lr, 0.95, bk if (i + row) % 3 else wd, false, "", Vector3(PI * 0.5, 0, 0), 6)
+	# Estacas a los costados
+	for sx: float in [-1.0, 1.0]:
+		box(r, Vector3(sx * (length * 0.5 + 0.08), rows * lr * 0.9, 0), Vector3(0.07, rows * lr * 1.9, 0.07), wd, false)
+	var h := rows * lr * 1.75 + lr
+	box(r, Vector3(0, h * 0.5, 0), Vector3(length, h, 0.95), wd, true, "wood").get_child(1).visible = false
+
+
+## Camión abandonado (cabina, chasis y caja de carga abierta).
+static func truck(parent: Node3D, pos: Vector3, yaw: float, color := "rust", tilt := 0.0) -> void:
+	var r := Node3D.new()
+	r.position = pos
+	r.rotation = Vector3(0, yaw, tilt)
+	parent.add_child(r)
+	var m := mat(color)
+	var dk := mat("dark")
+	var rs := mat("rust")
+	# Chasis
+	box(r, Vector3(0, 0.75, 0), Vector3(2.1, 0.35, 7.6), dk, true, "metal")
+	# Cabina adelante (-Z)
+	box(r, Vector3(0, 1.75, -2.75), Vector3(2.3, 1.7, 1.9), m, true, "metal")
+	box(r, Vector3(0, 1.25, -3.85), Vector3(2.2, 0.8, 0.5), m, true, "metal")
+	box(r, Vector3(0, 2.15, -3.71), Vector3(2.0, 0.75, 0.05), mat("glass"), false, "", Vector3(0.25, 0, 0))
+	# Caja de carga (piso y barandas)
+	box(r, Vector3(0, 1.0, 1.05), Vector3(2.4, 0.12, 5.3), rs, true, "metal")
+	for sx: float in [-1.15, 1.15]:
+		box(r, Vector3(sx, 1.55, 1.05), Vector3(0.1, 1.0, 5.3), rs, true, "metal")
+	box(r, Vector3(0, 1.55, -1.55), Vector3(2.4, 1.0, 0.1), rs, true, "metal")
+	box(r, Vector3(0, 1.4, 3.68), Vector3(2.4, 0.7, 0.1), rs, true, "metal", Vector3(-0.35, 0, 0))
+	# Ruedas
+	for sz: float in [-2.8, 1.2, 2.5]:
+		for sx: float in [-1.0, 1.0]:
+			cyl(r, Vector3(sx, 0.48, sz), 0.48, 0.32, dk, false, "metal", Vector3(0, 0, PI * 0.5), 12)
+
+
 ## Bloque de hormigón tipo New Jersey.
 static func jersey(parent: Node3D, pos: Vector3, yaw: float) -> void:
 	var r := Node3D.new()

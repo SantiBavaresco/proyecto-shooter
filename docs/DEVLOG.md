@@ -500,3 +500,7 @@
 - Sin quejidos en la agonía (`_update_agony` ya no llama `_pain("groan")`); queda `death_cry` al caer sin tiro en la cabeza.
 - Talavera: `height()` pondera el camino por (1 − peso del lugar plano): el camino ya no hunde BASE_A (alambrado/contenedores flotando). Más props en el patio de BASE_A.
 - Greybox: `ARENA_LOWCAL` (p22 ×2, bersa9, pistol, shotgun, sawedoff, ou_hunt); la consola rota bandits → military → lowcal.
+
+## 3.1.6
+- Talavera `_build_outdoor_props`: árboles caídos (`Structures.fallen_tree`), rollizos (`logs`), pilas de leña (`woodpile`), camiones (`truck`) y autos al costado del camino (`_road_at`) y alrededor de BASE_A. `_blocked` evita que la vegetación los atraviese.
+- `CoverIndex`: el caché compara el World3D (WeakRef), no solo su RID (un RID liberado se reusaba y devolvía el índice de otro mundo).
