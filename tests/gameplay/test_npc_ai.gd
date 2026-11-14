@@ -153,7 +153,10 @@ func test_npc_dies_and_body_is_lootable() -> void:
 	assert_true(n.dead)
 	await physics_frames(60)
 	assert_true(n.get_interact_text() != "", "se puede revisar")
-	assert_eq(n.inventory.count_of("w_akm"), 1, "el arma queda en el cuerpo")
+	assert_eq(n.inventory.count_of("w_akm"), 0, "el arma no queda en el cuerpo")
+	assert_true(n.dropped_weapon_item != null and is_instance_valid(n.dropped_weapon_item), "cae al piso")
+	if n.dropped_weapon_item != null:
+		assert_eq(n.dropped_weapon_item.stack.item.id, "w_akm", "es su arma (se agarra de ahí)")
 	assert_gt(n.inventory.count_of(ItemDB.standard_mag("akm")), 0, "y los cargadores")
 	assert_false(n.is_in_group("ai_npc"))
 
@@ -573,15 +576,17 @@ func test_npc_low_ammo_and_sidearm() -> void:
 	n.sidearm_mags = 1
 	n.spare_mags.clear()
 	n.loose_ammo = 0
-	assert_true(n.low_ammo(), "último cargador: cuida los tiros")
+	assert_false(n.low_ammo(), "recién empieza: tira normal")
+	n.rounds_fired = 999
+	assert_true(n.low_ammo(), "después de muchos tiros: cuida los tiros")
 	n.mag = 0
 	await physics_frames(90)
 	assert_eq(n.weapon.slot, 3, "sin balas saca la pistola")
 	assert_gt(n.mag, 0, "cargada")
 	n.apply_hit(_hit(n, "head_core", 500.0))
 	await physics_frames(5)
-	assert_eq(n.inventory.count_of("w_akm"), 1, "el fusil vacío queda en el cuerpo")
-	assert_eq(n.inventory.count_of(ItemDB.weapon_item_id("pistol")), 1, "y la pistola")
+	assert_eq(n.inventory.count_of("w_akm"), 1, "el fusil vacío queda en el cuerpo (colgado)")
+	assert_true(n.dropped_weapon_item != null and n.dropped_weapon_item.stack.item.id == ItemDB.weapon_item_id("pistol"), "y la pistola cae al piso")
 
 
 func test_npc_ejects_shells() -> void:
@@ -666,3 +671,74 @@ func test_small_pistols_and_shotguns_fight_and_reload() -> void:
 		assert_gt(shots[id], 0, "%s: tira" % id)
 		assert_gt(reloads[id], 0, "%s: recarga" % id)
 		assert_gt(shots[id], 2, "%s: sigue tirando después de recargar" % id)
+
+
+func test_npc_melee_when_player_is_close() -> void:
+	await _arena()
+	DebugTools.god_mode = true
+	var n := _npc(Vector3(0, 0.05, -1.3), FACE_SOUTH)
+	await physics_frames(10)
+	n.brain._enter_combat(player.global_position, true)
+	var stunned := false
+	var p0 := player.global_position
+	for f in 60 * 4:
+		await physics_frames(1)
+		if player.is_stunned():
+			stunned = true
+			break
+	assert_true(stunned, "encima tuyo: culatazo (te sacude)")
+	await physics_frames(20)
+	assert_gt(player.global_position.distance_to(p0), 0.5, "y te empuja")
+
+
+func test_headshot_blood_spray_and_pool() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0.05, -8), FACE_SOUTH)
+	await physics_frames(10)
+	n.helmet = null
+	var hi := HitInfo.new()
+	hi.damage = 300.0
+	hi.zone = "head_core"
+	hi.direction = Vector3(0, 0, -1)
+	hi.position = n.body.head_position()
+	hi.source = player
+	n.apply_hit(hi)
+	await physics_frames(60 * 3)
+	var cw := CombatWorld.get_for(player)
+	var decals := cw.find_children("*", "Decal", true, false)
+	assert_gt(float(decals.size()), 1.0, "manchas y charco")
+	var big := 0.0
+	for d in decals:
+		big = maxf(big, (d as Decal).size.x)
+	assert_gt(big, 0.4, "el charco se agranda (%.2f)" % big)
+
+
+func test_exposed_npc_moves_while_shooting() -> void:
+	await _arena()
+	DebugTools.god_mode = true
+	var n := _npc(Vector3(0, 0.05, -45), FACE_SOUTH, "bandit_rifle", 1)
+	await physics_frames(10)
+	n.brain._enter_combat(player.global_position, true)
+	var moved := 0.0
+	var last := n.global_position
+	var shots := 0
+	var mag0 := n.mag
+	for f in 60 * 8:
+		await physics_frames(1)
+		moved += n.global_position.distance_to(last)
+		last = n.global_position
+	shots = mag0 - n.mag
+	assert_gt(moved, 3.0, "al descubierto no se queda quieto (%.1f m)" % moved)
+	assert_gt(float(shots), 0.0, "y tira mientras")
+
+
+func test_npc_never_runs_dry_in_combat() -> void:
+	await _arena()
+	var n := _npc(Vector3(0, 0, -20), FACE_SOUTH)
+	await physics_frames(10)
+	n.sidearm_id = ""
+	n.spare_mags.clear()
+	n.loose_ammo = 0
+	n.mag = 0
+	await physics_frames(60 * 4)
+	assert_gt(n.mag, 0, "sin cargadores igual recarga (munición infinita en combate)")

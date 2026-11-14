@@ -49,6 +49,8 @@ var hinges: Array = []
 var agony_left: float = 0.0
 var agony_total: float = 0.0
 var _twitch_t: float = 0.0
+var _blood_t: float = 0.0
+var _last_blood := Vector3.INF
 var _rng := RandomNumberGenerator.new()
 
 
@@ -56,6 +58,11 @@ var _rng := RandomNumberGenerator.new()
 func start_agony(seconds: float) -> void:
 	agony_total = seconds
 	agony_left = seconds
+	# Mientras se mueve, brazos y piernas frenados (que no se sacudan como trapos)
+	for b: Variant in parts:
+		var rb := parts[b] as RigidBody3D
+		rb.angular_damp = 4.0
+		rb.linear_damp = 0.6
 	_twitch_t = _rng.randf_range(0.6, 1.2)
 	if frozen:
 		_unfreeze()
@@ -78,34 +85,34 @@ func _twitch(k: float) -> void:
 		return
 	var up := Vector3.UP
 	var along := (chest.global_position - hips.global_position).normalized()
-	match _rng.randi() % 5:
+	# Movimientos chicos y que respetan el cuerpo (nada de llevar brazos abajo del
+	# tronco ni girarlo entero): con bisagras y conos, poco empuje alcanza
+	match _rng.randi() % 4:
 		0, 1:
-			# Encoge una pierna (rodilla hacia el pecho) o la estira pateando
+			# Dobla una rodilla (el pie se arrastra hacia la cadera) y la vuelve a estirar
 			var side := "Left" if _rng.randf() < 0.5 else "Right"
 			var leg := parts.get(body.bone(side + "Leg")) as RigidBody3D
 			var thigh := parts.get(body.bone(side + "UpLeg")) as RigidBody3D
 			if leg != null and thigh != null:
-				var pull := (along * 1.0 + up * 0.6).normalized() * (_rng.randf_range(0.6, 1.0) if _rng.randf() < 0.7 else -0.7)
-				thigh.apply_central_impulse(pull * 9.0 * k)
-				leg.apply_central_impulse(pull * 4.0 * k + up * 1.5 * k)
+				var to_hip := (hips.global_position - leg.global_position)
+				to_hip.y = 0.0
+				leg.apply_central_impulse((to_hip.normalized() * 1.6 + up * 0.8) * k)
+				thigh.apply_central_impulse(up * 1.2 * k)
 		2:
-			# Se agarra donde le duele: un antebrazo hacia el pecho
+			# Mueve un brazo: levanta un poco la mano y la deja caer
 			var side2 := "Left" if _rng.randf() < 0.5 else "Right"
 			var fa := parts.get(body.bone(side2 + "ForeArm")) as RigidBody3D
 			if fa != null:
-				var to := (chest.global_position - fa.global_position).normalized()
-				fa.apply_central_impulse((to + up * 0.5).normalized() * 3.2 * k)
+				fa.apply_central_impulse(up * 1.1 * k)
 		3:
-			# Medio giro (de costado y vuelve)
-			var roll := along * _rng.randf_range(-1.0, 1.0) * 7.0 * k
-			chest.apply_torque_impulse(roll)
-			hips.apply_torque_impulse(roll * 0.8)
-		4:
-			# Levanta la cabeza y los hombros un poco y se deja caer
+			# Levanta apenas la cabeza y los hombros, o se ladea un poco
 			var head := parts.get(body.bone("Head")) as RigidBody3D
 			if head != null:
-				head.apply_central_impulse(up * 2.6 * k)
-			chest.apply_central_impulse(up * 7.0 * k)
+				head.apply_central_impulse(up * 1.0 * k)
+			if _rng.randf() < 0.5:
+				chest.apply_central_impulse(up * 2.5 * k)
+			else:
+				chest.apply_torque_impulse(along * _rng.randf_range(-1.0, 1.0) * 2.0 * k)
 	_still = 0.0
 
 
@@ -235,7 +242,9 @@ func _joint(a: RigidBody3D, b: RigidBody3D, kind: String, at: Vector3, right: Ve
 			ty = tx.cross(Vector3.FORWARD)
 		ty = ty.normalized()
 		c.transform = Transform3D(Basis(tx, ty, tx.cross(ty)).orthonormalized(), at)
-		var spans := {"spine": [0.35, 0.25], "neck": [0.6, 0.6], "shoulder": [1.3, 0.8], "hip": [1.0, 0.35]}
+		# Conos chicos: el cuerpo caído mantiene una forma de cuerpo (brazos al costado
+		# y no cruzados abajo, piernas que no se cruzan del todo)
+		var spans := {"spine": [0.25, 0.18], "neck": [0.5, 0.45], "shoulder": [0.95, 0.45], "hip": [0.7, 0.2]}
 		var sp: Array = spans.get(kind, [0.5, 0.3])
 		c.set_param(ConeTwistJoint3D.PARAM_SWING_SPAN, float(sp[0]))
 		c.set_param(ConeTwistJoint3D.PARAM_TWIST_SPAN, float(sp[1]))
@@ -281,6 +290,14 @@ func _physics_process(delta: float) -> void:
 	_t += delta
 	if agony_left > 0.0:
 		agony_left -= delta
+		# Se revuelca: va dejando manchas irregulares donde se mueve
+		_blood_t -= delta
+		var hips := parts.get(body.bone("Hips")) as RigidBody3D
+		if _blood_t <= 0.0 and hips != null:
+			_blood_t = _rng.randf_range(0.5, 1.1)
+			if hips.global_position.distance_to(_last_blood) > 0.15:
+				_last_blood = hips.global_position
+				Blood.stain(body, hips.global_position + Vector3(_rng.randf_range(-0.25, 0.25), 0, _rng.randf_range(-0.25, 0.25)), _rng.randf_range(0.25, 0.6))
 		_t = minf(_t, MAX_TIME - 3.0)  # no se congela mientras se mueve
 		_twitch_t -= delta
 		var k := clampf(agony_left / maxf(agony_total, 0.1), 0.0, 1.0)

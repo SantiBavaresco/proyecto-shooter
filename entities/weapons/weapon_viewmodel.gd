@@ -250,6 +250,12 @@ func _process(delta: float) -> void:
 	pos += kick_pos
 	rot += kick_rot
 
+	# Pegado a la pared: el arma se levanta (cañón para arriba), se corre al costado y
+	# se acerca al cuerpo
+	var wt := smooth(wc.wall_amount)
+	if wt > 0.0:
+		pos += Vector3(0.04, -0.035, 0.06) * wt
+		rot += Vector3(deg_to_rad(24), deg_to_rad(16), deg_to_rad(-8)) * wt
 	# Arma baja (usando un consumible)
 	var lt := smooth(wc.lower_amount)
 	if lt > 0.0:

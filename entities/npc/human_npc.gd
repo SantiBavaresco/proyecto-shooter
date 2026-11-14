@@ -63,6 +63,8 @@ var sidearm_id: String = ""
 var sidearm_mags: int = 0
 ## El arma larga, guardada al sacar la pistola (para el botín).
 var _primary: Dictionary = {}
+## El arma que se le cayó al morir (en el piso, para agarrar).
+var dropped_weapon_item: WorldItem = null
 ## Cargadores de repuesto (balas en cada uno) o munición suelta (escopetas).
 var spare_mags: Array[int] = []
 var loose_ammo: int = 0
@@ -207,6 +209,26 @@ func _join_squad() -> void:
 		squad_obj.add(self)
 
 
+## Culatazo: daño chico, te empuja, te sacude la vista y a veces te tira al piso.
+func melee(t: Node3D, knockdown: bool) -> void:
+	var to := t.global_position - global_position
+	look_yaw = atan2(-to.x, -to.z)
+	body.kick_melee()
+	var info := HitInfo.new()
+	info.damage = rng.randf_range(8.0, 15.0)
+	info.weapon_id = "melee"
+	info.zone = "torso"
+	info.source = self
+	info.direction = to.normalized()
+	info.position = t.global_position + Vector3(0, 1.3, 0)
+	info.distance = 1.0
+	if t.has_method("apply_hit"):
+		t.call("apply_hit", info)
+	if t.has_method("melee_hit"):
+		t.call("melee_hit", global_position, knockdown)
+	_play_at(SynthSfx.click("thud", 0.5, 0.06), 2.0)
+
+
 ## Agonizando en el piso (se mueve y se queja).
 func is_agonizing() -> bool:
 	return dead and body.ragdoll != null and body.ragdoll.is_agonizing()
@@ -217,6 +239,20 @@ func finish_off() -> void:
 	if body.ragdoll != null:
 		body.ragdoll.end_agony()
 	_voice.stop()
+
+
+## Charco debajo de esa parte del cuerpo, cuando ya cayó.
+func _blood_pool_later(bone_name: String, delay: float, size: float, seconds: float) -> void:
+	get_tree().create_timer(delay, false).timeout.connect(func() -> void:
+		if not is_inside_tree():
+			return
+		var at := global_position
+		var r := body.ragdoll
+		if r != null and r.parts.has(body.bone(bone_name)):
+			at = (r.parts[body.bone(bone_name)] as Node3D).global_position
+		elif bone_name == "Head":
+			at = body.head_position()
+		Blood.pool(self, at, size, seconds))
 
 
 func _update_agony(delta: float) -> void:
@@ -334,8 +370,15 @@ func _capacity() -> int:
 
 
 ## Le queda un solo cargador (o menos): tira de a poco y con más cuidado.
+## Munición: en combate no se les acaba (siempre tienen otro cargador "en el cuerpo"),
+## pero después de LOW_AMMO_AFTER tiros se portan como si les quedara poca (tiran
+## menos y con más cuidado) y a veces sacan la pistola.
+const LOW_AMMO_AFTER := 150
+var rounds_fired: int = 0
+
+
 func low_ammo() -> bool:
-	return ammo_left() <= _capacity() and not on_sidearm()
+	return rounds_fired >= LOW_AMMO_AFTER and not on_sidearm()
 
 
 func on_sidearm() -> bool:
@@ -541,12 +584,15 @@ func _update_weapon(delta: float) -> void:
 			_finish_reload()
 		return
 	if mag <= 0:
-		if ammo_left() > 0:
-			start_reload()
-		elif sidearm_id != "":
-			_draw_sidearm()
-		else:
-			burst_left = 0
+		if ammo_left() <= 0:
+			# "Se le acabó": muy gastado, saca la pistola (si tiene); si no, otro cargador
+			var tired := rounds_fired >= LOW_AMMO_AFTER
+			var chance := 1.0 if rounds_fired >= LOW_AMMO_AFTER + 90 else (0.4 if tired else 0.0)
+			if sidearm_id != "" and rng.randf() < chance:
+				_draw_sidearm()
+				return
+			spare_mags.append(_capacity())
+		start_reload()
 		return
 	if burst_left <= 0 or _cooldown > 0.0 or aim_point == Vector3.INF or not raised or (sprinting and is_moving()):
 		if burst_left <= 0:
@@ -578,6 +624,7 @@ func _ally_in_line() -> bool:
 
 
 func _fire(want: Vector3) -> void:
+	rounds_fired += 1
 	var w := weapon
 	mag -= 1
 	burst_left -= 1
@@ -789,6 +836,13 @@ func _die(info: HitInfo) -> void:
 		info.position if info != null else Vector3.INF, vel)
 	# Tiro en la cabeza: cae seco. Si no, grita y queda revolcándose un rato
 	var head := info != null and info.zone.begins_with("head")
+	# Sangre: tiro a la cabeza, chorro para atrás y charco rápido alrededor de la
+	# cabeza; si no, se va formando un charco debajo del cuerpo
+	if head:
+		Blood.spray(self, info.position, info.direction + Vector3.UP * 0.15, 55, 5.5)
+		_blood_pool_later("Head", 1.1, 0.95, 3.5)
+	else:
+		_blood_pool_later("Spine2", 2.0, 0.8, 14.0)
 	if not head:
 		_pain("death_cry", true, 0.0)
 		if body.ragdoll != null and info != null and info.damage < 400.0:
@@ -806,6 +860,27 @@ func _die(info: HitInfo) -> void:
 
 ## Al morir, todo lo que tenía pasa al botín: el arma (con lo que le quedaba en el
 ## cargador), los cargadores de repuesto, la munición, el blindaje y las granadas.
+## Cambia el arma que se le cayó (decorado) por el ítem real tirado en el piso, en el
+## mismo lugar y con el mismo envión.
+func _drop_weapon_item(wst: ItemStack) -> void:
+	var dw := body._dropped_weapon
+	var xf := Transform3D(global_basis, global_position + Vector3(0, 0.9, 0) + global_basis.z * -0.4)
+	var lv := Vector3.ZERO
+	var av := Vector3.ZERO
+	if dw != null and is_instance_valid(dw):
+		xf = dw.global_transform.orthonormalized()
+		if dw is RigidBody3D:
+			lv = (dw as RigidBody3D).linear_velocity
+			av = (dw as RigidBody3D).angular_velocity
+		dw.queue_free()
+	body._dropped_weapon = null
+	var wi := WorldItem.spawn(get_parent(), wst, xf.origin)
+	wi.global_basis = xf.basis
+	wi.linear_velocity = lv
+	wi.angular_velocity = av
+	dropped_weapon_item = wi
+
+
 func _fill_corpse() -> void:
 	# Lo que se saquea está gastado (los militares usan su equipo hasta romperlo)
 	var lc: Array = loadout.get("loot_condition", [weapon_condition - 0.1, weapon_condition + 0.05])
@@ -815,7 +890,9 @@ func _fill_corpse() -> void:
 		wst.state["sight"] = sight_id
 	if muzzle_id != "":
 		wst.state["muzzle"] = muzzle_id
-	inventory.add(wst)
+	# El arma que tenía en la mano queda en el piso (es un objeto de verdad: se agarra
+	# con [F]); no va además al inventario del cuerpo
+	_drop_weapon_item(wst)
 	var mid := ItemDB.standard_mag(weapon.id)
 	for r in spare_mags:
 		if mid != "":

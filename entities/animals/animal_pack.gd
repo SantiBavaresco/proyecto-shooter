@@ -43,19 +43,43 @@ func alarm(_who: Animal, target: Node3D) -> void:
 		if m.state == Animal.State.WANDER:
 			m._alert_on(target)
 			m._t += _rng.randf_range(0.0, 1.2)
+		elif m.species == "capy" and m.state == Animal.State.ALERT:
+			m._danger(target.global_position)
 
 
 func member_died(_a: Animal) -> void:
 	_dead += 1
 	if should_flee():
 		for m in members:
-			if not m.dead and m.state != Animal.State.FLEE:
-				m._flee(_a.global_position)
+			if not m.dead and m.state not in [Animal.State.FLEE, Animal.State.HIDE, Animal.State.DYING]:
+				if m.species == "capy":
+					m._danger(_a.global_position)
+				else:
+					m._flee(_a.global_position)
 
 
-## Perdieron a la mitad o más: se van.
+## Perdieron a una parte (perros: 1 de cada 3; jabalíes: 2 de cada 3): se van.
 func should_flee() -> bool:
-	return _start > 0 and _dead * 2 >= _start
+	var frac := float(Animal.SPECIES.get(species, Animal.SPECIES["dog"])["flee_frac"])
+	return _start > 0 and float(_dead) >= ceilf(float(_start) * frac)
+
+
+## Perros: de a dos como mucho se tiran a morder a la vez; el resto da vueltas.
+var _darting: Array[Animal] = []
+
+
+func can_dart(a: Animal) -> bool:
+	_darting = _darting.filter(func(x: Animal) -> bool: return is_instance_valid(x) and not x.dead and x.state == Animal.State.ATTACK)
+	if a in _darting:
+		return true
+	if _darting.size() >= 2:
+		return false
+	_darting.append(a)
+	return true
+
+
+func dart_done(a: Animal) -> void:
+	_darting.erase(a)
 
 
 func calm() -> void:

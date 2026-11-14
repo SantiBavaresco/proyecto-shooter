@@ -113,6 +113,7 @@ func _controls_tab() -> Control:
 	_add_check(grid, tr("options.invert_y"), "controls", "invert_y")
 	_add_check(grid, tr("options.head_bob"), "controls", "head_bob")
 	_add_check(grid, tr("options.aim_toggle"), "controls", "aim_toggle")
+	_add_check(grid, tr("options.crouch_toggle"), "controls", "crouch_toggle")
 
 	var header := Label.new()
 	header.text = tr("options.keybinds")

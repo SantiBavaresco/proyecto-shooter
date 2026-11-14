@@ -161,12 +161,12 @@ func _evaluate() -> void:
 	# Modo de la escuadra
 	if losses * 2 >= _initial and n <= 2 and _initial >= 3:
 		mode = "fall_back"
-	elif n >= 3 and _flank_t <= 0.0 and (min_unseen > 5.0 or (mode == "hold" and _mode_t > 8.0)):
-		# Te perdieron, o la pelea se estancó: uno o dos te rodean
+	elif n >= 2 and _flank_t <= 0.0 and (min_unseen > 4.0 or (mode == "hold" and _mode_t > 6.0)):
+		# Te perdieron, o la pelea se estancó: uno o dos te rodean y te entran
 		mode = "flank"
-		_flank_t = 20.0
-	elif mode == "flank" and _flank_t > 12.0:
-		pass  # dejan que los que rodean lleguen
+		_flank_t = 16.0
+	elif mode == "flank" and (_flank_t > 4.0 or _someone_with_role("assault", null) != null or _someone_with_role("flank", null) != null):
+		pass  # dejan que los que rodean lleguen y entren
 	elif avg_d > 24.0:
 		mode = "push"
 	else:
@@ -195,9 +195,9 @@ func _assign(fighters: Array[HumanNpc], n: int, avg_d: float, unseen: float) -> 
 	for m in free:
 		score[m] = _sup_score(m)
 	free.sort_custom(func(a: HumanNpc, b: HumanNpc) -> bool: return float(score[a]) > float(score[b]))
-	var sup_n := clampi(roundi(n * 0.35), 1, maxi(1, free.size() - 1))
+	var sup_n := clampi(roundi(n * 0.35), 1, mini(2, maxi(1, free.size() - 1)))
 	if mode == "hold":
-		sup_n = clampi(roundi(n * 0.5), 1, free.size())
+		sup_n = clampi(roundi(n * 0.5), 1, mini(2, free.size()))
 	for i in sup_n:
 		suppressors.append(free[i])
 	var rest: Array[HumanNpc] = free.slice(sup_n)
@@ -213,11 +213,18 @@ func _assign(fighters: Array[HumanNpc], n: int, avg_d: float, unseen: float) -> 
 			if rest.size() > 0 and leader != null:
 				say(leader, "fall_back")
 		"flank":
-			# Uno o dos rodean (por lados opuestos); el resto mantiene
+			# Uno o dos rodean (por lados opuestos) y después entran; el resto mantiene
 			var flankers := mini(2 if rest.size() >= 3 else 1, rest.size())
+			var busy := 0
+			for m in rest:
+				if m.brain.role in ["flank", "assault"]:
+					busy += 1
 			for i in rest.size():
 				var m := rest[i]
-				if i < flankers:
+				if m.brain.role in ["flank", "assault"]:
+					continue  # ya está en camino: que siga
+				if busy < flankers:
+					busy += 1
 					var f := m.brain._flank_point()
 					if f != Vector3.INF:
 						_give(m, "flank", f)
@@ -228,7 +235,7 @@ func _assign(fighters: Array[HumanNpc], n: int, avg_d: float, unseen: float) -> 
 			var movers := clampi(ceili(n / 3.0), 1, rest.size())
 			var moved := 0
 			for m in rest:
-				if m.brain.role in ["advance", "flank"] and not m.arrived():
+				if m.brain.role in ["advance", "flank", "assault"] and not m.arrived():
 					moved += 1
 					continue
 				if moved < movers and m.brain.role_age() > 2.0:
@@ -299,6 +306,26 @@ func _give(m: HumanNpc, role: String, dest: Vector3) -> void:
 		"suppress":
 			if m.voice_id == "" and leader != null and leader != m and leader.voice_id != "":
 				say(leader, "order_cover")
+
+
+## Fuego de cobertura: como mucho dos tirando a ciegas a la vez.
+var _supp_at: Dictionary = {}
+
+
+func may_suppress(m: HumanNpc) -> bool:
+	var now := Time.get_ticks_msec()
+	var busy := 0
+	for k: Variant in _supp_at.keys():
+		if not is_instance_valid(k) or (k as HumanNpc).dead:
+			_supp_at.erase(k)
+			continue
+		if k != m and now - int(_supp_at[k]) < 2500:
+			busy += 1
+	return busy < 2
+
+
+func note_suppress(m: HumanNpc) -> void:
+	_supp_at[m] = Time.get_ticks_msec()
 
 
 func _someone_with_role(role: String, not_m: HumanNpc) -> HumanNpc:

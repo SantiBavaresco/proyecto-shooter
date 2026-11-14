@@ -67,6 +67,11 @@ var _pending: Array = []
 var follow_pos: Vector3 = Vector3.INF
 var follow_yaw: float = 0.0
 var _supp_point: Vector3 = Vector3.INF
+var _melee_cd: float = 0.0
+## A esta distancia (m) en vez de tirar te pega con el arma.
+const MELEE_RANGE := 1.8
+## A ciegas, tira como mucho esto (s) después de perderte.
+const SUPPRESS_MAX := 10.0
 var _dodge_t: float = 0.0
 ## Lo ve "a través" de un arbusto: no lo ve de verdad, pero el fogonazo o el
 ## movimiento lo delatan; tira al cuerpo, con más error y nunca a la cabeza.
@@ -119,6 +124,7 @@ func set_role(r: String, dest := Vector3.INF, delay := 0.0) -> void:
 	role_dest = dest
 	if r in ["advance", "flank", "retreat"] and dest != Vector3.INF:
 		cover = dest
+	_side_sign = 0.0 if r != "flank" else _side_sign
 
 
 ## Rol que le dieron y todavía no cumple (está "tardando en obedecer").
@@ -145,6 +151,7 @@ func update(delta: float) -> void:
 			_pending = []
 			set_role(String(pr[0]), pr[1])
 	_burst_pause -= delta
+	_melee_cd -= delta
 	_grenade_t -= delta
 	_under_fire = maxf(0.0, _under_fire - delta)
 	_think_t -= delta
@@ -158,6 +165,9 @@ func update(delta: float) -> void:
 	var dt := THINK - _think_t
 	_think_t = THINK
 	_perceive(dt)
+	if _animals(dt):
+		_track(delta)
+		return
 	match state:
 		State.IDLE:
 			_idle(dt)
@@ -176,6 +186,9 @@ func update(delta: float) -> void:
 
 ## Entre pensamientos: la mira sigue al blanco si lo ve.
 func _track(_delta: float) -> void:
+	if animal != null and is_instance_valid(animal) and not animal.dead:
+		npc.aim_point = animal.global_position + Vector3(0, float(animal._d["leg"]) + 0.2, 0)
+		return
 	if state == State.COMBAT and target_visible and target != null and is_instance_valid(target):
 		npc.aim_point = _aim_spot()
 
@@ -370,6 +383,12 @@ func on_near_miss(origin: Vector3, _source: Node) -> void:
 
 
 func on_damaged(info: HitInfo) -> void:
+	# Lo mordió un animal: se defiende de ese (no es "el jugador")
+	if info.source is Animal:
+		animal = info.source as Animal
+		_animal_t = 0.0
+		awareness = maxf(awareness, 0.8)
+		return
 	_under_fire = 3.0
 	awareness = 1.2
 	var from := info.source as Node3D
@@ -381,6 +400,87 @@ func on_damaged(info: HitInfo) -> void:
 		last_known = pos + _jitter(2.0)
 	# Herido: cubrirse ya
 	_cover_t = 0.0
+
+
+# --- Animales ------------------------------------------------------------------------
+
+## Animal al que le está tirando (o null).
+var animal: Animal = null
+var _animal_t: float = 0.0
+var _animal_scan: float = 0.0
+## Los ven recién de cerca (andan por el pasto, son bajos).
+const ANIMAL_SIGHT := 15.0
+
+
+## Perros y jabalíes que se le vienen encima (o que lo atacaron) a menos de 15 m: les
+## tira. Los carpinchos los deja en paz salvo que lo muerdan. Devuelve true si está
+## ocupado con un animal (y no hace lo de siempre en este pensamiento).
+func _animals(dt: float) -> bool:
+	_animal_scan -= dt
+	if _animal_scan <= 0.0:
+		_animal_scan = 0.4
+		var a := _spot_animal()
+		if a != null and (animal == null or not is_instance_valid(animal) or animal.dead):
+			animal = a
+			_animal_t = 0.0
+	if animal == null or not is_instance_valid(animal) or animal.dead or animal.is_hidden():
+		animal = null
+		return false
+	var d := npc.global_position.distance_to(animal.global_position)
+	_animal_t += dt
+	if d > ANIMAL_SIGHT * 1.6 or animal.state == Animal.State.FLEE and d > 8.0 or _animal_t > 25.0:
+		animal = null
+		return false
+	# Si estás a la vista y el animal no está encima, sigue con vos
+	if state == State.COMBAT and target_visible and d > 5.0:
+		return false
+	npc.stop()
+	npc.raised = true
+	npc.crouching = false
+	npc.aim_point = animal.global_position + Vector3(0, float(animal._d["leg"]) + 0.2, 0)
+	var p := prof()
+	# Blanco chico y rápido: más error si corre
+	var spd := Vector2(animal.velocity.x, animal.velocity.z).length()
+	npc.aim_error_deg = _base_error(p, d) * (1.0 + spd * 0.12) * (1.0 + npc.stress * 0.5)
+	if not npc.reloading and npc.burst_left <= 0 and _burst_pause <= 0.0 and _clear_line():
+		var auto := npc.weapon.has_mode("auto")
+		npc.burst_left = _rng.randi_range(2, 4) if auto else 1
+		if npc.weapon.pellets > 1 or npc.weapon.bolt_action:
+			npc.burst_left = 1
+		_burst_pause = _rng.randf_range(0.25, 0.6) + (0.3 if not auto else 0.0)
+	if npc.has_method("speak") and _animal_t < dt * 1.5:
+		npc.call("speak", "contact", false)
+	return true
+
+
+func _spot_animal() -> Animal:
+	var best: Animal = null
+	var best_d := ANIMAL_SIGHT
+	var eye := npc.body.eye_position()
+	var fwd := npc.aim_forward()
+	for n in npc.get_tree().get_nodes_in_group("animals"):
+		var a := n as Animal
+		if a == null or a.dead or a.is_hidden():
+			continue
+		var d := a.global_position.distance_to(npc.global_position)
+		if d >= best_d:
+			continue
+		var hostile := a.species != "capy" and (a.state in [Animal.State.ALERT, Animal.State.ATTACK, Animal.State.RETREAT] or d < 8.0)
+		if a.target == npc and a.state == Animal.State.ATTACK:
+			hostile = true
+		if not hostile:
+			continue
+		# De espaldas solo los oye si están muy cerca
+		var to := a.global_position - npc.global_position
+		if d > 5.0 and rad_to_deg(Vector3(fwd.x, 0, fwd.z).angle_to(Vector3(to.x, 0, to.z))) > 80.0:
+			continue
+		var rq := PhysicsRayQueryParameters3D.create(eye, a.global_position + Vector3(0, 0.5, 0), 1 | (1 << 8))
+		rq.exclude = npc._exclude
+		if not npc.get_world_3d().direct_space_state.intersect_ray(rq).is_empty():
+			continue
+		best_d = d
+		best = a
+	return best
 
 
 ## Un compañero avisó dónde estás.
@@ -530,6 +630,9 @@ func _engage(dt: float, p: Dictionary) -> void:
 ## Lo ve: apunta y tira ráfagas (error según la dificultad, el estrés y si se mueve).
 func _fire_visible(dt: float, p: Dictionary) -> void:
 	npc.aim_point = _aim_spot()
+	# Encima tuyo: culatazo
+	if _melee_check():
+		return
 	reaction_left -= dt
 	var floor_k := float(p["settle_floor"])
 	var settle := clampf(track_time / float(p["settle_time"]), 0.0, 1.0)
@@ -548,7 +651,9 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 		npc.aim_error_deg *= 0.7
 	var dist := npc.global_position.distance_to(target.global_position)
 	var moving := npc.move_target != Vector3.INF and not npc.arrived()
-	var can_shoot := reaction_left <= 0.0 and not npc.reloading and (not moving or bool(p["move_shoot"])) \
+	if moving:
+		npc.aim_error_deg *= 1.5  # caminando tira peor
+	var can_shoot := reaction_left <= 0.0 and not npc.reloading and (not moving or bool(p["move_shoot"]) or _strafing) \
 		and not npc.sprinting
 	if can_shoot and npc.burst_left <= 0 and _burst_pause <= 0.0 and _clear_line():
 		var b: Array = p["burst"]
@@ -566,6 +671,21 @@ func _fire_visible(dt: float, p: Dictionary) -> void:
 		_aim_head = _rng.randf() < float(p["head_aim"])
 
 
+## Si lo tiene encima (y lo ve), le pega un culatazo. true si lo hizo (o lo está por hacer).
+func _melee_check() -> bool:
+	if target == null or not is_instance_valid(target) or not target_visible:
+		return false
+	var d := Vector2(target.global_position.x - npc.global_position.x, target.global_position.z - npc.global_position.z).length()
+	if d > MELEE_RANGE or absf(target.global_position.y - npc.global_position.y) > 1.0:
+		return false
+	if _melee_cd > 0.0:
+		return _melee_cd > 0.8  # recién pegó: se recompone antes de tirar
+	_melee_cd = _rng.randf_range(1.6, 2.4)
+	npc.burst_left = 0
+	npc.melee(target, _rng.randf() < 0.3)
+	return true
+
+
 ## Error de puntería (grados) a esa distancia: dispersión en metros que crece con la
 ## raíz de la distancia (ver Difficulty, "spread").
 func _base_error(p: Dictionary, dist: float) -> float:
@@ -575,6 +695,8 @@ func _base_error(p: Dictionary, dist: float) -> float:
 
 ## Dónde pararse peleando solo: cubrirse, asomarse, acercarse si no llega.
 func _position(dt: float, p: Dictionary, dist: float) -> void:
+	_strafing = false
+	npc.body.peek_lean = 0.0
 	_cover_t -= dt
 	var range_ok := dist < _weapon_range()
 	if npc.reloading and cover == Vector3.INF and _rng.randf() < float(p["cover"]) * dt * 3.0:
@@ -587,6 +709,7 @@ func _position(dt: float, p: Dictionary, dist: float) -> void:
 		elif want_cover and _rng.randf() < float(p["cover"]):
 			cover = _find_cover(target.global_position, false)
 	if cover != Vector3.INF:
+		_strafing = false
 		npc.go_to(cover, HumanNpc.RUN_SPEED if _under_fire > 0.0 else HumanNpc.WALK_SPEED * 1.6)
 		if npc.arrived():
 			npc.stop()
@@ -594,28 +717,118 @@ func _position(dt: float, p: Dictionary, dist: float) -> void:
 		else:
 			npc.crouching = false
 	else:
-		npc.stop()
-		# Sin cobertura: agachado achica el blanco (si agachado igual lo ve)
-		if dist > 8.0 and (_under_fire > 0.0 or float(p["cover"]) > 0.5):
-			npc.crouching = _crouched_sees() or npc.burst_left <= 0
-		else:
-			npc.crouching = false
+		# Sin cobertura: no se queda parado al descubierto; se va moviendo de costado
+		# mientras tira (peor puntería) y sigue buscando dónde cubrirse
+		_strafe(dt)
 
 
 ## A cubierto: agachado cuando no tira, se asoma (se para) para la ráfaga.
+var _strafing: bool = false
+var _strafe_t: float = 0.0
+var _strafe_side: float = 1.0
+
+
+## Al descubierto: camina de costado (cambiando de lado cada tanto), un poco hacia
+## adelante o atrás, y mira de nuevo si hay una cobertura cerca.
+func _strafe(dt: float) -> void:
+	_strafing = true
+	npc.crouching = false
+	_strafe_t -= dt
+	if target == null or not is_instance_valid(target):
+		return
+	if _strafe_t <= 0.0 or npc.arrived() or npc.is_stuck():
+		_strafe_t = _rng.randf_range(1.4, 3.0)
+		if _rng.randf() < 0.6:
+			_strafe_side = -_strafe_side
+		var to := target.global_position - npc.global_position
+		to.y = 0.0
+		var side := to.normalized().cross(Vector3.UP) * _strafe_side
+		var p := npc.global_position + side * _rng.randf_range(2.5, 4.5) + to.normalized() * _rng.randf_range(-1.5, 1.0)
+		var map := npc.get_world_3d().navigation_map
+		if NavigationServer3D.map_get_iteration_id(map) > 0:
+			p = NavigationServer3D.map_get_closest_point(map, p)
+		npc.go_to(p, HumanNpc.WALK_SPEED * 1.1)
+		# Cobertura cerca: la próxima vez va para ahí
+		_cover_t = minf(_cover_t, 1.0)
+
+
+## A cubierto. Cobertura baja: agachado atrás y se para solo para tirar. Cobertura alta:
+## parado atrás, y para tirar da un paso al costado inclinándose y vuelve.
 func _peek(dt: float, p: Dictionary) -> void:
 	_peek_t -= dt
+	if _cover_kind_at != cover:
+		_cover_kind_at = cover
+		_classify_cover()
 	if npc.reloading or npc.is_healing():
-		npc.crouching = true
+		npc.crouching = _cover_kind != "tall"
+		npc.body.peek_lean = 0.0
+		_go_back_to_cover()
 		return
-	if npc.burst_left > 0:
-		npc.crouching = _crouched_sees()
-		return
-	if _peek_t <= 0.0:
-		_peek_t = float(p["burst_pause"]) + _rng.randf_range(0.3, 1.2)
-		npc.crouching = _under_fire > 0.0 or _rng.randf() < 0.5
-		if not _crouched_sees() and npc.crouching and _burst_pause <= 0.1:
+	var firing := npc.burst_left > 0 or (_burst_pause <= 0.2 and target_visible)
+	match _cover_kind:
+		"tall":
 			npc.crouching = false
+			if firing and _peek_side != 0.0:
+				var out := cover + _peek_dir * 0.75
+				if npc.global_position.distance_to(out) > 0.25:
+					npc.go_to(out, HumanNpc.WALK_SPEED)
+				npc.body.peek_lean = _peek_side
+			else:
+				npc.body.peek_lean = 0.0
+				_go_back_to_cover()
+		_:
+			npc.body.peek_lean = 0.0
+			# Baja (o ninguna): agachado; se para para tirar si agachado no ve
+			if firing:
+				npc.crouching = _crouched_sees()
+			else:
+				npc.crouching = true
+
+
+var _cover_kind: String = ""
+var _cover_kind_at: Vector3 = Vector3.INF
+var _peek_side: float = 0.0
+var _peek_dir: Vector3 = Vector3.ZERO
+
+
+func _go_back_to_cover() -> void:
+	if cover != Vector3.INF and npc.global_position.distance_to(cover) > 0.35:
+		npc.go_to(cover, HumanNpc.WALK_SPEED)
+	else:
+		npc.stop()
+
+
+## ¿Qué tan alta es la cobertura (respecto de donde estás)? Y para qué lado asomarse.
+func _classify_cover() -> void:
+	_cover_kind = "low"
+	_peek_side = 0.0
+	var threat := last_known if last_known != Vector3.INF else (target.global_position if target != null and is_instance_valid(target) else Vector3.INF)
+	if threat == Vector3.INF or cover == Vector3.INF:
+		return
+	var space := npc.get_world_3d().direct_space_state
+	var to := threat - cover
+	to.y = 0.0
+	if to.length() < 0.5:
+		return
+	var f := to.normalized()
+	var stand := cover + Vector3(0, 1.55, 0)
+	var q := PhysicsRayQueryParameters3D.create(stand, stand + f * 2.0, 1)
+	q.exclude = npc._exclude
+	if space.intersect_ray(q).is_empty():
+		return  # parado ve por arriba: es baja
+	_cover_kind = "tall"
+	# Asomarse por el lado que está libre
+	var right := f.cross(Vector3.UP).normalized()
+	for side: float in ([1.0, -1.0] if _rng.randf() < 0.5 else [-1.0, 1.0]):
+		var from := stand + right * side * 0.8
+		var q2 := PhysicsRayQueryParameters3D.create(from, from + f * 2.0, 1)
+		q2.exclude = npc._exclude
+		var q3 := PhysicsRayQueryParameters3D.create(stand, from, 1)
+		q3.exclude = npc._exclude
+		if space.intersect_ray(q2).is_empty() and space.intersect_ray(q3).is_empty():
+			_peek_side = side
+			_peek_dir = right * side
+			return
 
 
 func _is_foliage(hit: Dictionary) -> bool:
@@ -745,7 +958,7 @@ func _aim_spot() -> Vector3:
 		# Tira al bulto dentro del arbusto: al cuerpo, sin cabeza, a donde vio el fogonazo
 		var j := _jitter(0.35)
 		j.y = -absf(j.y)  # nunca para arriba (hacia la cabeza)
-		return pts[1].lerp(pts[2], _rng.randf()) + j
+		return pts[1].lerp(pts[2], _rng.randf_range(0.25, 1.0)) + j
 	if pts.size() >= 3:
 		# A lo que se ve: el pecho; si está tapado, la cabeza o la cadera
 		if not _vis[1]:
@@ -865,17 +1078,46 @@ func _claimed_covers() -> Array[Vector3]:
 	return out
 
 
-## Un punto a un costado de donde lo vio por última vez, para entrarle de flanco.
+var _side_sign: float = 0.0
+
+
+## Un punto a un costado de donde lo vio por última vez (a 8–12 m de ese lugar, de
+## costado), para entrarle de flanco. Prefiere una cobertura ahí.
 func _flank_point() -> Vector3:
 	var map := npc.get_world_3d().navigation_map
 	var to := last_known - npc.global_position
 	to.y = 0.0
 	if to.length() < 1.0:
 		return Vector3.INF
-	var side := to.normalized().cross(Vector3.UP) * (1.0 if _rng.randf() < 0.5 else -1.0)
-	var p := last_known - to.normalized() * 10.0 + side * _rng.randf_range(12.0, 18.0)
-	var c := NavigationServer3D.map_get_closest_point(map, p)
-	return c if c.distance_to(p) < 6.0 else Vector3.INF
+	# El lado: el que le queda más a mano (o al azar), y no el mismo que otro flanqueador
+	if _side_sign == 0.0:
+		_side_sign = 1.0 if _rng.randf() < 0.5 else -1.0
+		var sq := _squad()
+		if sq != null:
+			for m in sq.alive():
+				if m != npc and m.brain.role in ["flank", "assault"] and m.brain._side_sign != 0.0:
+					_side_sign = -m.brain._side_sign
+	var side := to.normalized().cross(Vector3.UP) * _side_sign
+	for k in 3:
+		var p := last_known + side * _rng.randf_range(8.0, 12.0) - to.normalized() * _rng.randf_range(0.0, 4.0)
+		var c := NavigationServer3D.map_get_closest_point(map, p)
+		if c.distance_to(p) < 5.0:
+			var cv := _find_cover_near(c, last_known)
+			return cv if cv != Vector3.INF else c
+		side = side.rotated(Vector3.UP, 0.35 * _side_sign)
+	return Vector3.INF
+
+
+## Cobertura a 4 m de `at` que tape de `threat` (o INF).
+func _find_cover_near(at: Vector3, threat: Vector3) -> Vector3:
+	for e: Array in CoverIndex.near(npc, at, 4.0):
+		var p: Vector3 = e[0]
+		var away := (p - threat)
+		away.y = 0
+		if away.length() < 1.0:
+			continue
+		return p + away.normalized() * (float(e[1]) + 0.6)
+	return Vector3.INF
 
 
 func _jitter(r: float) -> Vector3:
@@ -908,9 +1150,35 @@ func _squad_combat(dt: float, p: Dictionary) -> void:
 				else:
 					npc.burst_left = 0
 					npc.aim_point = lk
+			elif role == "flank" and not target_visible and unseen > 1.5 and last_known != Vector3.INF:
+				# Llegó al costado y no te ve: entra (de a uno, rápido, tirando si te ve)
+				set_role("assault", last_known)
+				if npc.voice_id != "" and _squad() != null:
+					_squad().say(npc, "moving")
 			else:
 				cover = role_dest
 				_hold(dt, p)
+		"assault":
+			# Entra hasta donde te vio por última vez; si llega y no estás, te busca
+			var dest := last_known if last_known != Vector3.INF else role_dest
+			var dd := npc.global_position.distance_to(dest)
+			if target_visible:
+				if dd < 8.0:
+					npc.stop()
+				else:
+					npc.go_to(dest, HumanNpc.WALK_SPEED * 1.6)
+				_fire_visible(dt, p)
+				if role_age() > 6.0:
+					set_role("hold")
+			elif dd > 2.5:
+				npc.go_to(dest, HumanNpc.RUN_SPEED if dd > 10.0 else HumanNpc.WALK_SPEED * 1.6)
+				npc.crouching = false
+				npc.burst_left = 0
+				npc.aim_point = lk
+			else:
+				set_role("")
+				last_known = dest
+				_start_search()
 		"suppress":
 			_hold(dt, p)
 			if not target_visible:
@@ -921,6 +1189,8 @@ func _squad_combat(dt: float, p: Dictionary) -> void:
 
 ## A cubierto donde está (o en una cobertura cerca): se asoma y tira si lo ve.
 func _hold(dt: float, p: Dictionary) -> void:
+	_strafing = false
+	npc.body.peek_lean = 0.0
 	_cover_t -= dt
 	if cover == Vector3.INF and _cover_t <= 0.0 and last_known != Vector3.INF:
 		_cover_t = _rng.randf_range(3.0, 6.0)
@@ -929,9 +1199,13 @@ func _hold(dt: float, p: Dictionary) -> void:
 		npc.go_to(cover, HumanNpc.RUN_SPEED if _under_fire > 0.0 else HumanNpc.WALK_SPEED * 1.6)
 		npc.crouching = false
 	elif cover == Vector3.INF:
-		# Sin dónde cubrirse: agachado (se para solo para tirar si agachado no ve)
-		npc.stop()
-		npc.crouching = _crouched_sees() or npc.burst_left <= 0
+		# Sin dónde cubrirse: si lo ve, se mueve de costado tirando; si no, agachado
+		if target_visible:
+			_strafe(dt)
+		else:
+			_strafing = false
+			npc.stop()
+			npc.crouching = _crouched_sees() or npc.burst_left <= 0
 	else:
 		npc.stop()
 		_peek(dt, p)
@@ -948,6 +1222,12 @@ func _hold(dt: float, p: Dictionary) -> void:
 func _suppress_fire(dt: float, p: Dictionary) -> void:
 	if last_known == Vector3.INF:
 		return
+	# A ciegas no se tira para siempre, ni todos a la vez: de a uno o dos por escuadra
+	var sq := _squad()
+	if unseen > SUPPRESS_MAX or (sq != null and npc.burst_left <= 0 and not sq.may_suppress(npc)):
+		npc.burst_left = 0
+		npc.aim_point = last_known + Vector3(0, 1.2, 0)
+		return
 	reaction_left -= dt
 	if reaction_left > 0.0 or npc.reloading:
 		return
@@ -960,10 +1240,13 @@ func _suppress_fire(dt: float, p: Dictionary) -> void:
 		npc.crouching = false
 	if npc.burst_left <= 0 and _burst_pause <= 0.0 and _clear_line():
 		var auto := npc.weapon.has_mode("auto")
-		npc.burst_left = _rng.randi_range(3, 6) if auto else _rng.randi_range(1, 2)
+		# Tiros sueltos o ráfagas cortas (no vaciar el cargador contra la pared)
+		npc.burst_left = _rng.randi_range(1, 3) if auto else 1
 		if npc.weapon.pellets > 1 or npc.weapon.bolt_action:
 			npc.burst_left = 1
-		var pause := float(p["burst_pause"]) * _rng.randf_range(0.8, 1.6) + (0.5 if not auto else 0.0)
+		if sq != null:
+			sq.note_suppress(npc)
+		var pause := float(p["burst_pause"]) * _rng.randf_range(1.4, 2.6) + (0.6 if not auto else 0.3)
 		# Si le queda poca munición, cubre con menos
 		if npc.ammo_left() < npc.weapon.mag_size * 2:
 			pause *= 2.0

@@ -41,6 +41,7 @@
 		"ar15": {"rail": [0, 0.058, -0.03], "riser": 0.0},
 		"g3": {"rail": [0, 0.04, -0.06], "riser": 0.013, "no_rear": true},
 		"sr22": {"rail": [0, 0.062, -0.09], "riser": 0.03, "fold_irons": true},
+		"bolt22": {"rail": [0, 0.0148, -0.005], "riser": 0.014},
 		"hk416": {"rail": [0, 0.031, -0.07], "riser": 0.0, "default": "optic_reddot", "fold_irons": true},
 		"scarl": {"rail": [0, 0.034, -0.07], "riser": 0.0, "default": "optic_reddot", "fold_irons": true},
 		"svd": {"rail": [0, 0, 0], "riser": 0.0, "default": "optic_pso"}

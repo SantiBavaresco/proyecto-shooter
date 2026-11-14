@@ -123,3 +123,24 @@ func test_npc_finds_cover_in_the_woods() -> void:
 			assert_lt(c.distance_to(h.global_position), 15.0, "%s: cerca" % h.name)
 	assert_gt(float(found), float(tried) * 0.6, "en el monte encuentran detrás de qué cubrirse (%d de %d)" % [found, tried])
 	assert_gt(float(CoverIndex.near(player, Vector3(92, 0, -118), 20.0).size()), 5.0, "hay troncos y arbustos indexados")
+
+
+func test_start_kit_and_camp_stash() -> void:
+	await physics_frames(10)
+	var pinv := player.inventory
+	assert_true(pinv.equipment.get("helmet") != null, "arranca con casco")
+	assert_true(pinv.equipment.get("backpack") != null, "y con mochila")
+	var stash := level.find_child("CampStash", true, false) as LootContainer
+	stash.ensure_filled()
+	for w in ["ak74", "rifle", "xm2010", "bolt22", "pistol"]:
+		assert_eq(stash.inventory.count_of(ItemDB.weapon_item_id(w)), 1, "en el alijo: %s" % w)
+		var wd := load("res://data/weapons/%s.tres" % w) as WeaponData
+		if wd.reload_type == "rounds":
+			assert_gt(stash.inventory.count_of(ItemDB.ammo_id(wd.caliber)), 0, "con balas: %s" % w)
+		else:
+			assert_gt(stash.inventory.count_of(ItemDB.standard_mag(w)), 0, "con cargadores: %s" % w)
+	for s in stash.inventory.stacks:
+		if s.item.id == ItemDB.weapon_item_id("bolt22"):
+			assert_eq(String(s.state.get("sight", "")), "optic_acog", "la .22 con mira")
+		if s.item.id == ItemDB.weapon_item_id("pistol"):
+			assert_eq(String(s.state.get("muzzle", "")), "supp_pistol", "la pistola con silenciador")

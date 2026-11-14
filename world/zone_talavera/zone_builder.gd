@@ -76,6 +76,16 @@ func _ready() -> void:
 
 
 ## Altura del terreno en (x, z).
+## Nivel del agua (para los carpinchos, que se esconden abajo).
+func water_level() -> float:
+	return WATER_Y
+
+
+## Se puede nadar ahí (del lado de acá de la pared del río).
+func swimmable(x: float, _z: float) -> bool:
+	return x < 172.0 and absf(_z) < SIZE * 0.5 - 4.0
+
+
 ## Rectángulo (x, z) que muestra el mapa.
 func map_rect() -> Rect2:
 	return Rect2(-SIZE * 0.5, -SIZE * 0.5, SIZE, SIZE)
@@ -262,12 +272,24 @@ func _build_camp() -> void:
 	var stash := LootContainer.new()
 	stash.name = "CampStash"
 	stash.kind = "stash"
-	stash.contents = [["w_ak74", 1], [ItemDB.standard_mag("ak74"), 3], ["ammo_545x39", 90], ["vest_light", 1], ["helmet_steel", 1],
-		["rig_medium", 1], ["backpack_small", 1], ["medkit", 2], ["bandage", 4], ["grenade_rg5", 2], ["water", 2], ["canned_meat", 2]]
+	# Para elegir con qué salir: fusil AR-74, FMR (7,62), rifle .300 con visor, rifle
+	# de cerrojo .22 con mira y pistola con silenciador, con sus cargadores
+	stash.contents = [["w_ak74", 1], [ItemDB.standard_mag("ak74"), 3], [ItemDB.ammo_id("5.45×39"), 90],
+		[ItemDB.weapon_item_id("rifle"), 1], [ItemDB.standard_mag("rifle"), 3], [ItemDB.ammo_id("7.62×51"), 60],
+		[ItemDB.weapon_item_id("xm2010"), 1], [ItemDB.standard_mag("xm2010"), 3], [ItemDB.ammo_id(".308"), 30],
+		[ItemDB.weapon_item_id("bolt22"), 1], [ItemDB.standard_mag("bolt22"), 3], [ItemDB.ammo_id(".22 LR"), 100],
+		[ItemDB.weapon_item_id("pistol"), 1], [ItemDB.standard_mag("pistol"), 3], [ItemDB.ammo_id("9×19"), 60],
+		["vest_light", 1], ["rig_medium", 1], ["medkit", 2], ["bandage", 4], ["grenade_rg5", 2], ["water", 2], ["canned_meat", 2]]
 	stash.position = c + Vector3(-3.5, 0, 1.5)
 	stash.rotation = Vector3(0, 1.2, 0)
 	_geo.add_child(stash)
 	_fill_mags(stash)
+	# La .22 con mira y la pistola con silenciador
+	for s in stash.inventory.stacks:
+		if s.item.id == ItemDB.weapon_item_id("bolt22"):
+			s.state["sight"] = "optic_acog"
+		elif s.item.id == ItemDB.weapon_item_id("pistol"):
+			s.state["muzzle"] = "supp_pistol"
 
 
 ## Los cargadores del contenido fijo vienen llenos.
@@ -704,6 +726,39 @@ func _spawn_animals() -> void:
 		pk.seed_value = 500 + k
 		pk.position = ground(p) + Vector3(0, 0.1, 0)
 		add_child(pk)
+	# Carpinchos: en la orilla, con agua honda cerca (ahí se meten si los asustan)
+	var spots: Array[Vector3] = []
+	var tries := 0
+	while spots.size() < 3 and tries < 3000:
+		tries += 1
+		var x := _rng.randf_range(-SIZE * 0.5 + 15.0, 165.0)
+		var z := _rng.randf_range(-SIZE * 0.5 + 15.0, SIZE * 0.5 - 15.0)
+		var h := height(x, z)
+		if h < WATER_Y + 0.3 or h > WATER_Y + 1.6 or not _free_spot(x, z, 1.0):
+			continue
+		var near_deep := false
+		for i in 12:
+			var a := TAU * i / 12.0
+			var q := Vector2(x, z) + Vector2(sin(a), cos(a)) * 14.0
+			if height(q.x, q.y) < WATER_Y - 1.0 and swimmable(q.x, q.y):
+				near_deep = true
+				break
+		if not near_deep:
+			continue
+		var ok := true
+		for s2 in spots:
+			if Vector2(s2.x - x, s2.z - z).length() < 70.0:
+				ok = false
+		if ok:
+			spots.append(Vector3(x, h, z))
+	for i in spots.size():
+		var pk := AnimalPack.new()
+		pk.name = "Pack_capy_%d" % (i + 1)
+		pk.species = "capy"
+		pk.roam = 14.0
+		pk.seed_value = 900 + i
+		pk.position = spots[i] + Vector3(0, 0.1, 0)
+		add_child(pk)
 
 
 # --- Enemigos ----------------------------------------------------------------------
@@ -776,6 +831,9 @@ func _npc(nm: String, loadout: String, pos: Vector3, yaw: float, squad: String, 
 func _camp_kit(p: Player) -> void:
 	p.inventory.strip_all()
 	p.inventory.give_respawn_kit()
+	# Arranca con casco y mochila puestos
+	p.inventory.place_equipped(ItemStack.make("helmet_steel"), "helmet")
+	p.inventory.place_equipped(ItemStack.make("backpack_small"), "backpack")
 	p.inventory.receive(ItemStack.make("water", 1))
 	p.inventory.money = 300
 	p.inventory.changed.emit()

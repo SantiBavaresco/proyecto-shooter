@@ -246,9 +246,13 @@ func _draw_map() -> void:
 		for n in get_tree().get_nodes_in_group("animals"):
 			var an := n as Animal
 			var s := _w2s(an.global_position)
-			var col := Color(0.72, 0.5, 0.25) if an.species == "dog" else Color(0.5, 0.36, 0.22)
+			var col := {"dog": Color(0.72, 0.5, 0.25), "boar": Color(0.5, 0.36, 0.22), "capy": Color(0.85, 0.7, 0.45)}.get(an.species, Color.WHITE) as Color
+			if an.is_hidden():
+				col.a = 0.35
 			if an.species == "dog":
 				_view.draw_circle(s, 4.0, col)
+			elif an.species == "capy":
+				_view.draw_colored_polygon(PackedVector2Array([s + Vector2(0, -5), s + Vector2(5, 4), s + Vector2(-5, 4)]), col)
 			else:
 				_view.draw_rect(Rect2(s - Vector2(4, 4), Vector2(8, 8)), col)
 			if an.state in [Animal.State.ATTACK, Animal.State.RETREAT]:

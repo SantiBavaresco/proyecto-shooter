@@ -179,6 +179,69 @@ def boar_snort():
     return finish(x * env_ad(n, 0.015, 3.0), 0.7)
 
 
+# --- Carpincho -------------------------------------------------------------------------
+
+def capy_click():
+    """Castañeteo de dientes y ronroneo suave (anda tranquilo, en grupo)."""
+    out = []
+    k = int(rng.integers(5, 12))
+    for i in range(k):
+        n = int(rng.uniform(0.006, 0.012) * SR)
+        c = bandpass(rng.normal(0, 1, n), 1800, 5000) * env_ad(n, 0.001, 6.0)
+        out.append(c)
+        out.append(silence(rng.uniform(0.03, 0.07)))
+    x = np.concatenate(out)
+    # Ronroneo grave de fondo
+    dur = len(x) / SR
+    t = t_of(dur)
+    purr = pulses(rng.uniform(55, 70), dur, 1.0) * (0.5 + 0.5 * np.sin(2 * np.pi * 18 * t))
+    x = x + lowpass(purr, 400)[:len(x)] * 0.35
+    return finish(x, 0.5)
+
+
+def capy_bark():
+    """Alarma: un "¡juf!" seco y grave, de a 1–3 (avisa al grupo)."""
+    out = []
+    for i in range(int(rng.integers(1, 4))):
+        dur = rng.uniform(0.09, 0.15)
+        n = int(dur * SR)
+        v = pulses(np.linspace(rng.uniform(150, 190), 110, n), dur, 1.8)
+        x = formants(v, [(450, 1.0), (1100, 0.5)]) + bandpass(rng.normal(0, 1, n), 300, 1800) * 0.9
+        out.append(x * env_ad(n, 0.005, 5.0))
+        out.append(silence(rng.uniform(0.15, 0.35)))
+    return finish(np.concatenate(out), 0.85)
+
+
+def capy_whistle():
+    dur = rng.uniform(0.25, 0.45)
+    n = int(dur * SR)
+    t = t_of(dur)
+    f = np.interp(t, [0, dur * 0.3, dur], [1700, 2300, 1500]) * rng.uniform(0.9, 1.1)
+    x = np.sin(2 * np.pi * np.cumsum(f / SR)) + bandpass(rng.normal(0, 1, n), 1500, 3500) * 0.15
+    return finish(x * env_ad(n, 0.03, 2.0), 0.6)
+
+
+def capy_squeal():
+    dur = rng.uniform(0.35, 0.6)
+    n = int(dur * SR)
+    t = t_of(dur)
+    f0 = np.interp(t, [0, 0.05, dur], [600, 1000, 650])
+    v = pulses(f0, dur, 1.6)
+    x = formants(v, [(1200, 1.0), (2500, 0.5)]) + bandpass(rng.normal(0, 1, n), 1000, 4000) * 0.3
+    return finish(x * env_ad(n, 0.01, 2.2))
+
+
+def knife_cut():
+    """Cuchillo cortando cuero (para cuerear): 2–3 pasadas de ruido agudo."""
+    parts = []
+    for k in range(int(rng.integers(2, 4))):
+        n = int(rng.uniform(0.12, 0.22) * SR)
+        x = bandpass(rng.normal(0, 1, n), 1500, 6000) * np.sin(np.linspace(0, np.pi, n)) ** 2
+        parts.append(x)
+        parts.append(silence(rng.uniform(0.08, 0.2)))
+    return finish(np.concatenate(parts), 0.6)
+
+
 def main():
     for i in range(6):
         save(f'dog_bark_{i}', dog_barks(rng.uniform(0.2, 0.9), int(rng.integers(1, 4))))
@@ -196,6 +259,16 @@ def main():
         save(f'boar_squeal_{i}', boar_squeal())
     for i in range(3):
         save(f'boar_snort_{i}', boar_snort())
+    for i in range(4):
+        save(f'capy_click_{i}', capy_click())
+    for i in range(4):
+        save(f'capy_bark_{i}', capy_bark())
+    for i in range(3):
+        save(f'capy_whistle_{i}', capy_whistle())
+    for i in range(3):
+        save(f'capy_squeal_{i}', capy_squeal())
+    for i in range(3):
+        save(f'knife_cut_{i}', knife_cut())
     print('ok', len(os.listdir(OUT)))
 
 

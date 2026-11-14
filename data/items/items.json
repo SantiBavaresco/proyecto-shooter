@@ -48,6 +48,9 @@
 		{"id": "scrap_electronics", "kind": "misc", "size": [2, 1], "weight": 0.8, "stack": 4, "price": 140},
 		{"id": "drone", "kind": "misc", "size": [3, 3], "weight": 1.1, "stack": 1, "price": 900,
 			"model": "res://assets/models/props/drone/drone.glb", "model_scale": 0.55},
-		{"id": "tools_basic", "kind": "misc", "size": [2, 2], "weight": 2.2, "stack": 1, "price": 500}
+		{"id": "tools_basic", "kind": "misc", "size": [2, 2], "weight": 2.2, "stack": 1, "price": 500},
+		{"id": "hide_dog", "kind": "misc", "size": [2, 2], "weight": 0.9, "stack": 1, "price": 60},
+		{"id": "hide_boar", "kind": "misc", "size": [3, 2], "weight": 2.4, "stack": 1, "price": 180},
+		{"id": "hide_capy", "kind": "misc", "size": [3, 2], "weight": 1.6, "stack": 1, "price": 220}
 	]
 }

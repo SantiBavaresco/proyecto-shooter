@@ -18,6 +18,7 @@ const DEFAULTS: Dictionary = {
 		"invert_y": false,
 		"head_bob": true,
 		"aim_toggle": true,
+		"crouch_toggle": false,
 	},
 	"audio": {
 		"master": 1.0,

@@ -165,6 +165,12 @@ var inv: PlayerInventory = null
 var lowered: bool = false
 ## 0 = arriba, 1 = abajo (para la vista).
 var lower_amount: float = 0.0
+## Pegado a una pared: el arma no entra, se levanta y se corre (0 libre – 1 trabada).
+## A partir de WALL_BLOCK no se puede apuntar ni tirar.
+var wall_amount: float = 0.0
+const WALL_BLOCK := 0.5
+## Calibres de pistola: desde la cadera patean igual que apuntando (los demás, más).
+const PISTOL_CALIBERS := ["9×19", "9×18", ".45 ACP", ".22 LR", ".380 ACP", ".32 ACP", "9×21", "5.7×28", "4.6×30"]
 
 
 func setup(p: Player, with_default_weapons := true) -> void:
@@ -397,6 +403,7 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 	_cooldown -= delta
 	_advance_state(delta)
 	lower_amount = move_toward(lower_amount, 1.0 if lowered else 0.0, delta / 0.25)
+	wall_amount = move_toward(wall_amount, _wall_target(), delta / 0.15)
 
 	# Manos vacías o arma baja (usando un consumible): solo cambiar de arma e interactuar
 	if current() == null or lowered:
@@ -454,7 +461,8 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 
 	# Cerrojo: si se mantiene el gatillo, se acciona sin sacar el ojo del visor
 	var keep_aim := state == State.CYCLING and aiming and cmd.fire
-	var want_aim := cmd.aim and (state == State.READY or state == State.DRAW or keep_aim) and not player.is_sprinting
+	var want_aim := cmd.aim and (state == State.READY or state == State.DRAW or keep_aim) and not player.is_sprinting \
+		and wall_amount < WALL_BLOCK
 	if want_aim != aiming:
 		aiming = want_aim
 		EventBus.aim_changed.emit(aiming)
@@ -473,7 +481,7 @@ func physics_tick(cmd: PlayerCommand, delta: float) -> void:
 		_slam_pending = false
 		if c.mag > 0 and c.malfunction == "":
 			_fire(c, true)
-	if state == State.READY and _cooldown <= 0.0 and _sprint_block <= 0.0:
+	if state == State.READY and _cooldown <= 0.0 and _sprint_block <= 0.0 and wall_amount < WALL_BLOCK:
 		var wants := cmd.fire_pressed if c.mode() == "semi" else cmd.fire
 		if wants and c.malfunction != "":
 			# Trabada o sin bala en la recámara: el gatillo no hace nada
@@ -1004,13 +1012,18 @@ func _fire(c: WeaponSlot, accidental := false) -> void:
 		var tracer := false
 		combat.fire_projectile(origin, dir, w, player, [player.get_rid()], tracer, muzzle_world)
 
-	# Retroceso de cámara (subida + desvío lateral) y patada visual del arma
-	var mult := lerpf(1.0, w.recoil_ads_mult, ads_amount)
+	# Retroceso de cámara (subida + desvío lateral) y patada visual del arma. Desde la
+	# cadera, lo que no es de pistola salta bastante más (sin culata al hombro)
+	var hip_k := _hip_recoil_k(w)
+	var a := WeaponViewmodel.smooth(ads_amount)
+	var mult := lerpf(hip_k, w.recoil_ads_mult, a)
+	var yaw_mult := lerpf(hip_k * 1.4, w.recoil_ads_mult, a)
 	if player.stance == Player.Stance.CROUCHING:
 		mult *= 0.85
-	player.apply_recoil(deg_to_rad(w.recoil_pitch * mult),
-		deg_to_rad(_rng.randf_range(-w.recoil_yaw, w.recoil_yaw) * mult), w.recoil_recovery)
-	view.kick(w, ads_amount, _rng.randf_range(-1.5, 1.5))
+		yaw_mult *= 0.85
+	player.apply_recoil(deg_to_rad(w.recoil_pitch * mult * _rng.randf_range(0.85, 1.2)),
+		deg_to_rad(_rng.randf_range(-w.recoil_yaw, w.recoil_yaw) * yaw_mult), w.recoil_recovery)
+	view.kick(w, ads_amount, _rng.randf_range(-1.5, 1.5) * lerpf(hip_k, 1.0, a))
 
 	if not c.suppressed():
 		view.flash()
@@ -1224,6 +1237,34 @@ func _update_interaction(cmd: PlayerCommand) -> void:
 	elif cmd.interact_alt and target != null and target.has_method("interact_alt"):
 		target.call("interact_alt", player)
 		_clear_hint()
+
+
+## Desde la cadera: 1 para calibres de pistola; escopetas y fusiles, más.
+func _hip_recoil_k(w: WeaponData) -> float:
+	if w.pellets > 1:
+		return 1.4
+	if w.caliber in PISTOL_CALIBERS:
+		return 1.0
+	return 1.8
+
+
+## ¿Cuánto choca el arma con lo que tiene adelante? Rayo desde la cámara del largo del
+## arma (fusil ~0,85 m, pistola ~0,5 m).
+func _wall_target() -> float:
+	var c := current()
+	if c == null or player.camera == null:
+		return 0.0
+	var reach := 0.5 if c.data.slot == 3 else 0.85
+	var cam := player.camera
+	var from := cam.global_position
+	var to := from - cam.global_basis.z * reach
+	var q := PhysicsRayQueryParameters3D.create(from, to, 1)
+	q.exclude = [player.get_rid()]
+	var hit := player.get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		return 0.0
+	var d := from.distance_to(hit["position"] as Vector3)
+	return clampf((reach - d) / (reach * 0.55), 0.0, 1.0)
 
 
 ## Borra el cartel de interacción (después de agarrar algo, al abrir menús, al morir).

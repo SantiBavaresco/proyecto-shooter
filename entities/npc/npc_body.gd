@@ -117,6 +117,9 @@ func _ready() -> void:
 			skeleton.set_bone_pose_scale(b, Vector3.ONE * 0.0001)
 	_index_bones()
 	_scale_model(inst)
+	# Capa visual 2: la sangre del piso (Decals, capa 1) no se pinta sobre los cuerpos
+	for g in inst.find_children("*", "GeometryInstance3D", true, false):
+		(g as GeometryInstance3D).layers = CHARACTER_VISUAL_LAYER
 	_add_hitboxes()
 
 
@@ -192,6 +195,13 @@ func _visit(b: int, visited: Dictionary) -> void:
 
 
 ## Escala a la altura de una persona, parado sobre el origen.
+const SCALE_FIX := {"swat_remaster": 1.13}
+const CHARACTER_VISUAL_LAYER := 2
+## Asomarse de costado detrás de una cobertura alta: -1 izquierda, 1 derecha.
+var peek_lean: float = 0.0
+var _peek_lean_s: float = 0.0
+
+
 func _scale_model(inst: Node3D) -> void:
 	var lo := INF
 	var hi := -INF
@@ -204,6 +214,11 @@ func _scale_model(inst: Node3D) -> void:
 		return
 	var h := (hi - lo) * 1.06
 	var k := HEIGHT / h
+	# Algunos modelos traen un hueso de punta muy por encima de la cabeza (quedaban
+	# más bajos que el resto): corrección medida a ojo contra los demás
+	for key: String in SCALE_FIX:
+		if scene_path.contains(key):
+			k *= float(SCALE_FIX[key])
 	inst.scale = Vector3.ONE * k
 	var hips := xf * _rest_global[bone("Hips")].origin
 	inst.position = Vector3(-hips.x * k, -(lo - (hi - lo) * 0.02) * k, -hips.z * k)
@@ -397,6 +412,8 @@ var _lod_t: float = 0.0
 
 
 func _process(delta: float) -> void:
+	_melee_t = maxf(0.0, _melee_t - delta)
+	_peek_lean_s = lerpf(_peek_lean_s, peek_lean, 1.0 - exp(-8.0 * delta))
 	if skeleton == null:
 		return
 	if dead:
@@ -490,7 +507,7 @@ func _solve(stride: float, phase: float, move_dir: Vector2, fold: float) -> void
 		var si := spine_names.find(sn)
 		if si >= 0:
 			var rot := Basis(up, (_yaw_s + blade) * w) * Basis(right, (_pitch_s * w) - lean * 0.2 * (1.0 if si == 0 else 0.5) - breath) \
-				* Basis(fwd, -(sway * 2.0 + bank) * w * 0.8)
+				* Basis(fwd, -(sway * 2.0 + bank) * w * 0.8 - _peek_lean_s * 0.22)
 			t.basis = rot * t.basis
 		elif sn == "Neck":
 			# La cabeza compensa el balanceo (mirada estable)
@@ -589,7 +606,20 @@ func _weapon_transform(g: Array[Transform3D], up: Vector3, fwd: Vector3, right: 
 	var walk := clampf(_stride_amp / 0.5, 0.0, 1.0) * (1.0 - fold)
 	pos += up * ((sin(_phase * 2.0) * 0.012 * walk * (1.0 - r * 0.6) + sin(_breath) * 0.004) * unit)
 	pos += aim_right * (sin(_phase) * 0.01 * walk * (1.0 - r * 0.7) * unit)
+	# Culatazo: el arma va para adelante y gira (golpe con la culata/el cajón)
+	if _melee_t > 0.0:
+		var k := sin(clampf(1.0 - _melee_t / MELEE_TIME, 0.0, 1.0) * PI)
+		pos += aim_fwd * (0.32 * k * unit) + up * (0.08 * k * unit)
+		basis = Basis(aim_right, 0.6 * k) * basis
 	return Transform3D(basis.scaled(Vector3.ONE * unit), pos)
+
+
+const MELEE_TIME := 0.35
+var _melee_t: float = 0.0
+
+
+func kick_melee() -> void:
+	_melee_t = MELEE_TIME
 
 
 func _arm_ik(g: Array[Transform3D], sname: String, target: Vector3, up: Vector3, fwd: Vector3, right: Vector3, side: float) -> void:

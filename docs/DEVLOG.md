@@ -509,3 +509,11 @@
 - Animales: `entities/animals/animal.gd` (Animal: perro y jabalí; cuerpo de cajas con patas animadas, cajas de impacto en la capa 6 con `zone_owner`; estados WANDER/ALERT/ATTACK/RETREAT/FLEE/DEAD; perros muerden y se abren, jabalíes embisten en línea recta con empuje; huyen de tiros lejanos) y `animal_pack.gd` (AnimalPack: crea el grupo, alarma compartida, huida al caer la mitad).
 - Sonidos: `tools/audio/gen_animals.py` (osciladores + ruido + filtros; sin licencias de terceros) → assets/audio/animals.
 - Talavera `_spawn_animals` (2 jaurías, 3 piaras); arena: facción "animals"; mapa: marcadores de animales.
+
+## 3.1.8
+- Animales: reescritura de `Animal` (carpinchos con zambullida `HIDE` usando `water_level()`/`swimmable()` del nivel, acorralado → muerde; perros cobardes con `circle`/`dart`/`feint` y `AnimalPack.can_dart` (máx. 2); jabalíes 220 hp, 9,6 m/s, territorio 26 m, carga con giro limitado hasta `CHARGE_LOCK` 3,2 m; `reach_up` para no morder en altura). Zonas `chest` (letal) y `torso`; `DYING` (se arrastra 6–14 s) y ragdoll de cajas con bisagras; cuerear (`hide_*`, 45%).
+- NPC ↔ animales: `NpcBrain._animals` (15 m, LOS, hostiles), mordidas a NPC no disparan combate contra el jugador.
+- NPC: arma al morir → `WorldItem` real (`dropped_weapon_item`); flanqueo `flank` → `assault` → búsqueda; `Squad.may_suppress` (máx. 2 a ciegas, `SUPPRESS_MAX` 10 s, ráfagas 1–3); `_strafe` al descubierto; `_peek` con cobertura baja/alta (`peek_lean`); culatazo `melee()` + `Player.melee_hit`; `rounds_fired`/`LOW_AMMO_AFTER` 150 con recarga infinita; `SCALE_FIX` swat_remaster ×1,13; ragdoll de agonía con conos más chicos y amortiguación.
+- Sangre: `core/fx/blood.gd` (CPUParticles + Decals con texturas de tools/fx/gen_blood.py; personajes en capa visual 2 para que no se les pinte).
+- Armas: `_hip_recoil_k` (×1,8 fusiles, ×1,4 escopetas desde la cadera); `wall_amount` (rayo del largo del arma; bloquea apuntar y tirar; pose levantada).
+- Opción `controls/crouch_toggle`. Isla: casco y mochila puestos; alijo con ak74, rifle (FMR), xm2010, bolt22+optic_acog (montura nueva), pistol+supp_pistol.

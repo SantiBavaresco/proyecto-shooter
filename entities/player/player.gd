@@ -199,6 +199,32 @@ func _process(delta: float) -> void:
 
 ## Patada de retroceso: sube la mira (pitch) y la desvía (yaw), en radianes.
 ## `recovery` es la fracción que la cámara recupera sola al dejar de disparar.
+## Golpe cuerpo a cuerpo (culatazo): empuja para atrás, sacude y ladea la cámara, y a
+## veces te tira al piso (quedás agachado un momento).
+var _stun: float = 0.0
+var _stun_roll: float = 0.0
+var _time_stun: float = 0.0
+var _knock_t: float = 0.0
+
+
+func melee_hit(from: Vector3, knockdown: bool) -> void:
+	var dir := global_position - from
+	dir.y = 0.0
+	dir = dir.normalized() if dir.length() > 0.05 else -global_basis.z
+	velocity += dir * 6.5 + Vector3.UP * 1.2
+	_stun = 1.0
+	_stun_roll = (1.0 if randf() < 0.5 else -1.0) * 0.25
+	apply_recoil(deg_to_rad(randf_range(5.0, 9.0)), deg_to_rad(randf_range(-14.0, 14.0)), 0.25)
+	combat_stress = minf(1.0, combat_stress + 0.5)
+	if knockdown:
+		_knock_t = 1.4
+		_set_stance(Stance.CROUCHING)
+
+
+func is_stunned() -> bool:
+	return _stun > 0.3
+
+
 func apply_recoil(pitch: float, yaw_kick: float, recovery: float) -> void:
 	_recoil_pending += Vector2(yaw_kick, pitch)
 	_recoil_recovery_frac = recovery
@@ -279,6 +305,16 @@ func _update_camera_effects(delta: float) -> void:
 		camera.position = Vector3(cos(_bob_time * 0.5) * amp * 0.6, absf(sin(_bob_time)) * amp, 0.0)
 	else:
 		camera.position = camera.position.lerp(Vector3.ZERO, 1.0 - exp(-10.0 * delta))
+	# Golpe: la cámara se sacude y se ladea, y vuelve de a poco
+	_knock_t = maxf(0.0, _knock_t - delta)
+	_stun = maxf(0.0, _stun - delta * 0.9)
+	if _stun > 0.0:
+		var st := _stun * _stun
+		camera.rotation.z = sin(_time_stun * 23.0) * 0.06 * st + _stun_roll * st
+		camera.position += Vector3(sin(_time_stun * 31.0), cos(_time_stun * 27.0), 0.0) * 0.02 * st
+		_time_stun += delta
+	elif camera.rotation.z != 0.0:
+		camera.rotation.z = 0.0
 
 
 ## 0..0.9 según los enemigos en combate contra vos (ver _update_zones).
@@ -466,6 +502,9 @@ func _gravity() -> float:
 # --- Posturas ---------------------------------------------------------------
 
 func _update_stance(cmd: PlayerCommand, on_floor: bool) -> void:
+	# Te tiraron al piso de un golpe: no te levantás enseguida
+	if _knock_t > 0.0:
+		cmd.crouch = true
 	match stance:
 		Stance.STANDING:
 			if cmd.crouch:

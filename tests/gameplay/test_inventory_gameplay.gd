@@ -578,6 +578,12 @@ func _dead_npc(at: Vector3, lo := "bandit_rifle") -> HumanNpc:
 	hi.position = n.body.head_position()
 	n.apply_hit(hi)
 	await physics_frames(5)
+	# El arma que tenía en la mano cae al piso; para estas pruebas de saqueo se la
+	# vuelve a poner en el cuerpo (como un arma colgada)
+	var wi := n.dropped_weapon_item
+	if wi != null and is_instance_valid(wi):
+		n.inventory.add(wi.stack)
+		wi.queue_free()
 	return n
 
 
@@ -659,13 +665,12 @@ func test_reload_with_corpse_mags_in_rig() -> void:
 		hi.position = n.body.head_position()
 		n.apply_hit(hi)
 		await physics_frames(3)
-		var w: ItemStack = null
+		# El arma está en el piso: se agarra de ahí
+		var w: ItemStack = n.dropped_weapon_item.stack if n.dropped_weapon_item != null else null
 		var mags: Array = []
 		var wfam := ItemDB.standard_mag(wid)
 		for st in n.inventory.stacks:
-			if st.item.kind == "weapon" and st.item.weapon().id == wid:
-				w = st
-			elif st.item.kind == "mag" and st.item.id == wfam:
+			if st.item.kind == "mag" and st.item.id == wfam:
 				mags.append(st)
 		# Chaleco vacío con lugar para los cargadores
 		if pinv.equipment.get("rig") != null:
@@ -675,6 +680,8 @@ func test_reload_with_corpse_mags_in_rig() -> void:
 		var old := pinv.equipment.get(slot) as ItemStack
 		if old != null:
 			pinv.take_equipped(slot)
+		n.inventory.add(w)
+		n.dropped_weapon_item.queue_free()
 		pinv.equip(w, slot, n.inventory)
 		for m: ItemStack in mags:
 			var rigs: Array = (pinv.equipment["rig"] as ItemStack).contents

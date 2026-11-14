@@ -114,7 +114,7 @@ func test_squad_assigns_roles_and_suppresses() -> void:
 	assert_true(sq != null and sq.commanded, "tienen comandante")
 	assert_true(roles.has("suppress"), "alguien cubre (%s)" % [roles.keys()])
 	assert_true(roles.has("advance") or roles.has("flank"), "alguien avanza o flanquea (%s)" % [roles.keys()])
-	assert_gt(float(shots[0]), 3.0, "fuego de cobertura sin verlo")
+	assert_gt(float(shots[0]), 1.0, "fuego de cobertura sin verlo (medido: de a uno o dos)")
 	var closest := INF
 	for m in team:
 		closest = minf(closest, m.global_position.distance_to(player.global_position))
@@ -271,7 +271,7 @@ func test_military_loot_is_worn() -> void:
 	hi.direction = Vector3(0, 0, -1)
 	hi.position = n.body.head_position()
 	n.apply_hit(hi)
-	var w: ItemStack = null
+	var w: ItemStack = n.dropped_weapon_item.stack if n.dropped_weapon_item != null else null
 	var v: ItemStack = null
 	for st in n.inventory.stacks:
 		if st.item.kind == "weapon" and st.item.weapon().slot != 3:
@@ -335,3 +335,44 @@ func test_smoke_spreads_with_wind_and_lasts_60s() -> void:
 	c.t = 61.0
 	assert_lt(c.radius(), 0.5, "a los 60 s se fue")
 	c.queue_free()
+
+
+func test_flanker_closes_in_when_player_hides() -> void:
+	await _arena(true)
+	DebugTools.god_mode = true
+	# Te vieron y te escondiste atrás de la pared: alguien tiene que ir a buscarte
+	var team := _squad(3, Vector3(0, 0.05, -30))
+	await physics_frames(30)
+	for m in team:
+		m.brain.on_callout(player.global_position)
+	var roles := {}
+	var closest := INF
+	for i in 60 * 30:
+		await physics_frames(1)
+		for m in team:
+			if m.dead:
+				continue
+			roles[m.brain.role] = true
+			closest = minf(closest, m.global_position.distance_to(player.global_position))
+	assert_true(roles.has("flank") or roles.has("assault"), "alguien flanquea (%s)" % [roles.keys()])
+	assert_lt(closest, 10.0, "y se acerca de verdad (%.1f m)" % closest)
+
+
+func test_npc_crouches_behind_low_cover() -> void:
+	await _arena()
+	DebugTools.god_mode = true
+	var n := _npc(Vector3(-6, 0.05, -21.2), 0.0, "bandit_rifle", 1, "akm")
+	await physics_frames(10)
+	n.brain._enter_combat(player.global_position, true)
+	n.brain.cover = Vector3(-6, 0.05, -21.0)
+	n.brain._cover_t = 999.0  # que no cambie de cobertura durante la prueba
+	var crouched := 0
+	var frames := 0
+	for f in 60 * 8:
+		await physics_frames(1)
+		if n.brain.cover != Vector3.INF and n.global_position.distance_to(n.brain.cover) < 0.6 and n.burst_left <= 0:
+			frames += 1
+			if n.crouching:
+				crouched += 1
+	assert_gt(frames, 60, "estuvo en la cobertura")
+	assert_gt(float(crouched) / maxf(frames, 1), 0.7, "detrás de lo bajo, agachado cuando no tira (%d/%d)" % [crouched, frames])

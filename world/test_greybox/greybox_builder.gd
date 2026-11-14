@@ -257,7 +257,7 @@ func _spawn_arena() -> void:
 	_arena_packs.clear()
 	if ArenaConsole.faction == "animals":
 		# Una jauría y una piara (en lados distintos de la zona)
-		for spec: Array in [["dog", Vector3(-58, 0.1, -88), 11], ["boar", Vector3(-38, 0.1, -92), 12]]:
+		for spec: Array in [["dog", Vector3(-58, 0.1, -88), 11], ["boar", Vector3(-38, 0.1, -92), 12], ["capy", Vector3(-48, 0.1, -80), 13]]:
 			var pk := AnimalPack.new()
 			pk.species = spec[0]
 			pk.roam = 12.0
